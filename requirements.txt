@@ -1,0 +1,7 @@
+Flask
+supabase
+gunicorn
+python-dotenv
+openpyxl
+xhtml2pdf
+reportlab
