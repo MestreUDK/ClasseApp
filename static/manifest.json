@@ -1,0 +1,22 @@
+{
+    "name": "Turma Online",
+    "short_name": "TurmaOn", 
+    "version": "2.2",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#f4f4f4",
+    "theme_color": "#007bff",
+    "description": "Aplicativo para controle de frequência de alunos.",
+    "icons": [
+        {
+            "src": "/static/icon/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/icon/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

@@ -1,0 +1,248 @@
+/* --- ESTILOS GERAIS --- */
+body { 
+    font-family: sans-serif; 
+    margin: 2em; 
+    background-color: #f4f4f4; 
+}
+h1, h2, h3 { 
+    color: #333; 
+}
+h3 { margin-top: 0; }
+ul { list-style-type: none; padding: 0; }
+
+/* --- NAVEGAÇÃO E BUSCA GLOBAL --- */
+nav { 
+    margin-bottom: 2em; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+    flex-wrap: wrap; 
+    gap: 1em; 
+}
+nav .links { display: flex; gap: 10px; }
+nav a { 
+    padding: 8px 12px; 
+    background: #ddd; 
+    text-decoration: none; 
+    color: #333; 
+    border-radius: 4px; 
+}
+nav a:hover { background: #ccc; }
+nav form { display: flex; }
+nav form input[type="search"] { 
+    border: 1px solid #ccc; 
+    padding: 8px; 
+    border-radius: 4px 0 0 4px; 
+    width: auto; 
+    margin-bottom: 0; 
+    background: #fff; 
+    box-shadow: none;
+}
+nav form button { 
+    background-color: #007bff; 
+    color: white; 
+    padding: 8px 12px; 
+    border: none; 
+    border-radius: 0 4px 4px 0; 
+    cursor: pointer;
+}
+nav form button:hover { background-color: #0056b3; }
+
+/* --- FORMULÁRIOS E INPUTS --- */
+form { 
+    background: #fff; 
+    padding: 1em; 
+    border-radius: 8px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+}
+input[type="text"], input[type="date"] { 
+    width: 95%; 
+    padding: 8px; 
+    margin-bottom: 10px; 
+    border: 1px solid #ccc; 
+    border-radius: 4px; 
+    font-size: 1.1em;
+}
+button { 
+    background-color: #007bff; 
+    color: white; 
+    padding: 10px 15px; 
+    border: none; 
+    border-radius: 4px; 
+    cursor: pointer; 
+}
+button:hover { background-color: #0056b3; }
+
+/* --- MENSAGENS DE STATUS --- */
+#msg-erro { color: red; font-weight: bold; }
+#msg-sucesso { color: green; font-weight: bold; }
+
+/* --- LAYOUT COLUNAS (P/ Detalhe, Frequência, Busca) --- */
+.container, .container-resultados { display: flex; flex-wrap: wrap; gap: 2em; }
+.coluna, .coluna-resultados { 
+    flex: 1; 
+    min-width: 300px; 
+    background: #fff; 
+    padding: 1em; 
+    border-radius: 8px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* --- BOTÕES DE AÇÃO (Genéricos) --- */
+.botoes-acao {
+    display: flex;
+    gap: 10px; 
+    margin-top: 15px;
+}
+.botoes-acao a, .botoes-acao button {
+    text-decoration: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    border: none;
+    cursor: pointer;
+}
+a.botao-gerenciar { background-color: #17a2b8; }
+a.botao-gerenciar:hover { background-color: #138496; }
+a.botao-edit { background-color: #ffc107; }
+a.botao-edit:hover { background-color: #e0a800; }
+button.botao-delete, button.remover { background-color: #dc3545; }
+button.botao-delete:hover, button.remover:hover { background-color: #c82333; }
+a.botao-acao { 
+    display: inline-block; 
+    background-color: #28a745; 
+    color: white; 
+    padding: 10px 15px; 
+    text-decoration: none; 
+    border-radius: 4px; 
+    margin-top: 10px; 
+    margin-bottom: 20px; 
+}
+a.botao-acao:hover { background-color: #218838; }
+
+/* --- CARDS (index.html, alunos.html) --- */
+div.turma, div.aluno { 
+    background: #fff; 
+    padding: 1em; 
+    margin-top: 1em; 
+    border-radius: 8px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+div.aluno {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.item-resultado {
+    background: #fff;
+    padding: 1em;
+    margin-bottom: 1em;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.item-resultado a { text-decoration: none; color: #007bff; font-weight: bold; }
+.item-resultado a:hover { text-decoration: underline; }
+
+/* --- PÁGINA DE FREQUÊNCIA --- */
+.chamada-container { background: #fff; padding: 1em; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+li.aluno-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 8px; border-bottom: 1px solid #eee; }
+li.aluno-item:last-child { border-bottom: none; }
+.aluno-nome { font-size: 1.1em; }
+.botoes-frequencia button {
+    padding: 8px 12px; font-size: 0.9em; cursor: pointer;
+    border: 1px solid #ccc; background-color: #f0f0f0; color: #555;
+    min-width: 40px;
+}
+.botoes-frequencia button.presente { border-radius: 4px 0 0 4px; }
+.botoes-frequencia button.ausente { border-radius: 0 4px 4px 0; border-left: none; }
+.botoes-frequencia button.presente.active { background-color: #28a745; color: white; border-color: #28a745; }
+.botoes-frequencia button.ausente.active { background-color: #dc3545; color: white; border-color: #dc3545; }
+
+/* --- PÁGINA DETALHE TURMA (BUSCA) --- */
+#lista-busca-alunos {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+.aluno-busca-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.aluno-busca-item:last-child { border-bottom: none; }
+.aluno-busca-item button {
+    background-color: #28a745; /* Botão verde "Adicionar" */
+    font-size: 0.9em;
+    padding: 6px 10px;
+}
+.aluno-busca-item button:hover { background-color: #218838; }
+li.aluno-vinculado-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 8px; border-bottom: 1px solid #eee; }
+
+/* --- PÁGINA DE FREQUÊNCIA (HISTÓRICO) --- */
+.tag-data {
+    background-color: #e9ecef;
+    color: #333;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.9em;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    transition: background 0.2s;
+}
+.tag-data:hover {
+    background-color: #dde2e6;
+    border-color: #ccc;
+}
+
+/* --- DASHBOARD (HOME) --- */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5em;
+    margin-bottom: 2em;
+}
+
+.dash-card {
+    background: #fff;
+    padding: 1.5em;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    border-bottom: 4px solid transparent;
+    transition: transform 0.2s;
+}
+
+.dash-card:hover {
+    transform: translateY(-3px);
+}
+
+/* Cores específicas para cada card */
+.card-alunos { border-bottom-color: #007bff; }
+.card-turmas { border-bottom-color: #28a745; }
+.card-freq { border-bottom-color: #ffc107; }
+
+.card-icon {
+    font-size: 2.5em;
+    margin-right: 15px;
+    opacity: 0.8;
+}
+
+.card-info h3 {
+    margin: 0;
+    font-size: 0.9em;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.card-info p {
+    margin: 5px 0 0;
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #333;
+}
