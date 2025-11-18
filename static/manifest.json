@@ -1,6 +1,6 @@
 {
-    "name": "Turma Online",
-    "short_name": "TurmaOn", 
+    "name": "Gerenciador de Classe",
+    "short_name": "ClasseApp", 
     "version": "2.2",
     "start_url": "/",
     "display": "standalone",
