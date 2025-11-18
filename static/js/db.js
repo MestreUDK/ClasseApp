@@ -3,7 +3,8 @@
 // Abre (ou cria) o banco de dados local
 function openDB() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open('TurmaOnDB', 1);
+        // MUDANÇA AQUI: De 'TurmaOnDB' para 'ClasseAppDB'
+        const request = indexedDB.open('ClasseAppDB', 1);
 
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
@@ -23,10 +24,10 @@ async function salvarOffline(dados) {
     const db = await openDB();
     const tx = db.transaction('frequencia_pendente', 'readwrite');
     const store = tx.objectStore('frequencia_pendente');
-    
+
     // Adiciona timestamp para saber a ordem
     dados.criado_em = new Date().toISOString();
-    
+
     store.add(dados);
     return tx.complete;
 }
@@ -38,7 +39,7 @@ async function getPendentes() {
         const tx = db.transaction('frequencia_pendente', 'readonly');
         const store = tx.objectStore('frequencia_pendente');
         const request = store.getAll();
-        
+
         request.onsuccess = () => resolve(request.result);
     });
 }
