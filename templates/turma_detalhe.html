@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Gerenciar Turma{% endblock %}
+
+{% block content %}
+    <h1 id="nome-turma">Carregando turma...</h1>
+    <p id="msg-erro" style="color: red; font-weight: bold; display: none;"></p>
+
+    <div style="margin-bottom: 1.5em;">
+        <a href="" id="link-frequencia" class="botao-acao">Marcar Frequência (Chamada)</a>
+        <a href="" id="link-stats" class="botao-acao" style="background-color: #ffc107;">Ver Estatísticas</a>
+    </div>
+
+    <div class="container">
+        <div class="coluna">
+            <h2>Vincular Aluno</h2>
+            <label for="busca-aluno">Buscar por nome ou matrícula:</label>
+            <input type="text" id="busca-aluno" placeholder="Digite para buscar...">
+            <div id="lista-busca-alunos">
+                <p style="padding: 10px; color: #777;">Digite ao menos 2 caracteres...</p>
+            </div>
+        </div>
+
+        <div class="coluna">
+            <h2>Alunos na Turma</h2>
+            <ul id="lista-alunos-vinculados">
+                <li>Carregando...</li>
+            </ul>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/turma_detalhe.js') }}"></script>
+{% endblock %}

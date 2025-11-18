@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Turma{% endblock %}
+
+{% block content %}
+    <h1>Editar Turma</h1>
+
+    <form id="form-edit-turma">
+        <div>
+            <label for="nome">Nome da Turma:</label>
+            <input type="text" id="nome" name="nome" required>
+        </div>
+        <div>
+            <label for="descricao">Descrição (opcional):</label>
+            <input type="text" id="descricao" name="descricao">
+        </div>
+        
+        <button type="submit">Salvar Alterações</button>
+        
+        <p id="msg-erro" style="display: none; margin-top: 10px; color: red; font-weight: bold;"></p>
+        <p id="msg-sucesso" style="display: none; margin-top: 10px; color: green; font-weight: bold;"></p>
+    </form>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/editar_turma.js') }}"></script>
+{% endblock %}

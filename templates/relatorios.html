@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Relatórios{% endblock %}
+
+{% block content %}
+    <h1>Relatórios e Exportação</h1>
+    <p>Selecione a turma e o tipo de relatório que deseja gerar.</p>
+
+    <div class="card-form">
+        <label for="select-turma">Selecione a Turma:</label>
+        <select id="select-turma">
+            <option value="">Carregando turmas...</option>
+        </select>
+
+        <div class="box-opcao">
+            <h3>📊 Relatório Geral (Desempenho)</h3>
+            <p>Resumo de faltas e presenças de todo o período.</p>
+            <div class="botoes-export">
+                <button onclick="baixarGeral('xlsx')" class="btn-excel">Baixar Excel (.xlsx)</button>
+                <button onclick="baixarGeral('pdf')" class="btn-pdf">Baixar PDF</button>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="box-opcao">
+            <h3>📅 Relatório Diário (Chamada)</h3>
+            <p>Lista de presença de um dia específico.</p>
+            <input type="date" id="data-relatorio">
+            <div class="botoes-export">
+                <button onclick="baixarDiario('xlsx')" class="btn-excel">Baixar Excel (.xlsx)</button>
+                <button onclick="baixarDiario('pdf')" class="btn-pdf">Baixar PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .card-form { background: #fff; padding: 1.5em; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        select, input[type="date"] { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        
+        .box-opcao { margin: 20px 0; }
+        .box-opcao h3 { margin-bottom: 5px; color: #333; }
+        .box-opcao p { color: #666; font-size: 0.9em; margin-bottom: 10px; }
+        
+        .botoes-export { display: flex; gap: 10px; flex-wrap: wrap; }
+        
+        button { border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; flex: 1; min-width: 120px; }
+        .btn-excel { background-color: #217346; } /* Verde Excel */
+        .btn-excel:hover { background-color: #1a5c38; }
+        .btn-pdf { background-color: #b30b00; } /* Vermelho PDF */
+        .btn-pdf:hover { background-color: #8f0900; }
+    </style>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/relatorios.js') }}"></script>
+{% endblock %}

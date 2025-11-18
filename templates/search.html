@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}Resultados da Busca{% endblock %}
+
+{% block content %}
+    <h1>Resultados da busca por: "<span id="termo-buscado"></span>"</h1>
+    <p id="status-busca">Buscando...</p>
+
+    <div class="container-resultados">
+        <div class="coluna-resultados">
+            <h2>Alunos Encontrados</h2>
+            <div id="resultados-alunos"></div>
+        </div>
+
+        <div class="coluna-resultados">
+            <h2>Turmas Encontradas</h2>
+            <div id="resultados-turmas"></div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+{% endblock %}

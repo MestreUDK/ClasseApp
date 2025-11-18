@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}Estatísticas da Turma{% endblock %}
+
+{% block content %}
+    <h1 id="nome-turma">Carregando...</h1>
+    
+    <a href="" id="link-voltar" class="botao-acao" style="margin-bottom: 1em; background-color: #6c757d;">Voltar para Turma</a>
+
+    <div class="coluna">
+        <h2>Estatísticas de Presença</h2>
+        
+        <p id="status-stats">Carregando dados...</p>
+
+        <div class="legenda-stats">
+            <span class="badge">P</span> = Presenças
+            <span class="badge">T</span> = Total de Aulas
+            <span class="badge">%</span> = Frequência
+        </div>
+
+        <table id="stats-table">
+            <thead>
+                <tr>
+                    <th>Aluno</th>
+                    <th class="center" title="Presenças">P</th>
+                    <th class="center" title="Total de Aulas">T</th>
+                    <th class="center" title="Frequência">%</th>
+                </tr>
+            </thead>
+            <tbody id="stats-tbody">
+                </tbody>
+        </table>
+        
+        <p class="dica-mobile">* Toque no nome do aluno para editar seus dados.</p>
+    </div>
+
+    <style>
+        /* Estilos específicos para esta tabela ficar boa no mobile */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5em;
+            font-size: 0.95em; /* Fonte um pouco menor */
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 4px; /* Menos preenchimento lateral */
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+            color: #333;
+            font-weight: bold;
+        }
+        .center {
+            text-align: center;
+            width: 40px; /* Largura fixa para colunas de números */
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        td.porcentagem {
+            font-weight: bold;
+        }
+        
+        /* Estilo da Legenda */
+        .legenda-stats {
+            background-color: #e9ecef;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #555;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .badge {
+            background: #333;
+            color: #fff;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .dica-mobile {
+            font-size: 0.8em;
+            color: #777;
+            margin-top: 8px;
+            font-style: italic;
+        }
+        /* Link no nome do aluno */
+        td a.link-aluno {
+            text-decoration: none;
+            color: #007bff;
+            font-weight: 600;
+            display: block; /* Aumenta a área de toque */
+        }
+    </style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const TURMA_ID = window.location.pathname.split('/')[2];
+    
+    const h1Titulo = document.getElementById('nome-turma');
+    const statusEl = document.getElementById('status-stats');
+    const tableBody = document.getElementById('stats-tbody');
+
+    document.getElementById('link-voltar').href = `/turma/${TURMA_ID}`;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        carregarDetalhesTurma();
+        carregarEstatisticas();
+    });
+
+    async function carregarDetalhesTurma() {
+        try {
+            const response = await fetch(`/api/turmas/${TURMA_ID}`);
+            const turma = await response.json();
+            if (!response.ok) throw new Error(turma.error);
+            h1Titulo.textContent = `Estatísticas: ${turma.nome}`;
+        } catch (error) {
+            console.error(error);
+            h1Titulo.textContent = 'Erro ao carregar turma';
+        }
+    }
+
+    async function carregarEstatisticas() {
+        try {
+            const response = await fetch(`/api/turma/${TURMA_ID}/stats`);
+            const stats = await response.json();
+
+            if (!response.ok) throw new Error(stats.error);
+
+            if (stats.length === 0) {
+                statusEl.textContent = 'Sem dados de frequência.';
+                return;
+            }
+
+            statusEl.style.display = 'none';
+            tableBody.innerHTML = '';
+
+            stats.forEach(aluno => {
+                const tr = document.createElement('tr');
+                
+                let corPorcentagem = '';
+                if (aluno.porcentagem_presenca < 50) corPorcentagem = 'color: #dc3545;';
+                else if (aluno.porcentagem_presenca >= 75) corPorcentagem = 'color: #28a745;';
+
+                tr.innerHTML = `
+                    <td>
+                        <a href="/aluno/editar/${aluno.aluno_id}" class="link-aluno">
+                            ${aluno.nome_completo}
+                        </a>
+                    </td>
+                    <td class="center">${aluno.total_presencas}</td>
+                    <td class="center">${aluno.total_registros}</td>
+                    <td class="center porcentagem" style="${corPorcentagem}">
+                        ${aluno.porcentagem_presenca || 0}%
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+        } catch (error) {
+            console.error(error);
+            statusEl.textContent = `Erro: ${error.message}`;
+            statusEl.style.color = 'red';
+        }
+    }
+</script>
+{% endblock %}

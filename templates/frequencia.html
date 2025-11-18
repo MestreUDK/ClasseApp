@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Frequência da Turma{% endblock %}
+
+{% block content %}
+    <h1 id="nome-turma">Carregando...</h1>
+
+    <a href="" id="link-voltar" class="botao-acao" style="margin-bottom: 1em; background-color: #6c757d;">Voltar para Turma</a>
+
+    <div class="chamada-container">
+        <h2>Data da Chamada</h2>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <input type="date" id="data-picker" style="margin-bottom: 0; max-width: 200px;">
+            <a href="#" id="link-exportar" class="botao-acao" style="background-color: #17a2b8; margin: 0;">
+                Exportar .xlsx
+            </a>
+        </div>
+
+        <ul id="lista-chamada" style="margin-top: 1.5em;">
+            <li>Carregando alunos...</li>
+        </ul>
+
+        <hr style="margin: 2em 0; border: 0; border-top: 1px solid #eee;">
+        <h3>Histórico de Dias Letivos</h3>
+        <div id="lista-datas-anteriores" style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <p style="color: #777;">Carregando histórico...</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/db.js') }}"></script> 
+    <script src="{{ url_for('static', filename='js/frequencia.js') }}"></script>
+{% endblock %}
