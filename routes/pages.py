@@ -1,6 +1,6 @@
 # routes/pages.py
 
-from flask import Blueprint, render_template, request, send_from_directory
+from flask import Blueprint, render_template, request, send_from_directory, jsonify # <-- ADICIONEI jsonify AQUI
 import os
 
 pages_bp = Blueprint('pages_bp', __name__)
@@ -46,7 +46,6 @@ def serve_sw():
 # --- ESTATÍSTICA ---
 @pages_bp.route('/turma/<uuid:turma_id>/estatisticas')
 def page_estatisticas(turma_id):
-    """ Rota que renderiza a página de Estatísticas da Turma. """
     return render_template('estatisticas.html')
 
 # --- DIÁRIO ---
@@ -58,3 +57,12 @@ def page_diario():
 @pages_bp.route('/relatorios')
 def page_relatorios():
     return render_template('relatorios.html')
+
+# --- HEALTH CHECK (PARA CRON-JOB) ---
+@pages_bp.route('/health')
+def health_check():
+    """ 
+    Rota leve para manter o site acordado.
+    Retorna JSON 200 OK.
+    """
+    return jsonify({"status": "online", "message": "ClasseApp is running"}), 200
