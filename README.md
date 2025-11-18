@@ -1,2 +1,2 @@
 # ClasseApp
-Aplicação para servir de frequência dos alunos da turma
+Aplicação para servir de frequência dos alunos da turma para Multi-usuários
