@@ -1,18 +1,27 @@
 # routes/frequencia.py
 
 from flask import Blueprint, jsonify, request
+from flask_login import login_required, current_user # <-- Importar
 from utils import supabase 
 
 frequencia_bp = Blueprint('frequencia_bp', __name__)
 
+# Função auxiliar para verificar dono da turma
+def verificar_dono_turma(turma_id):
+    res, _ = supabase.table('turmas').select('id').eq('id', turma_id).eq('user_id', current_user.id).execute()
+    return len(res[1]) > 0
+
 @frequencia_bp.route('/frequencia', methods=['GET'])
+@login_required
 def get_frequencia():
     try:
         turma_id = request.args.get('turma_id')
         data = request.args.get('data')
 
-        if not turma_id or not data:
-            return jsonify({"error": "turma_id e data são obrigatórios"}), 400
+        if not turma_id or not data: return jsonify({"error": "Faltam dados."}), 400
+
+        # Verifica segurança
+        if not verificar_dono_turma(turma_id): return jsonify({"error": "Acesso negado."}), 403
 
         data, count = supabase.table('frequencia') \
             .select('aluno_id, presente') \
@@ -25,42 +34,34 @@ def get_frequencia():
         return jsonify({"error": str(e)}), 500
 
 @frequencia_bp.route('/frequencia', methods=['POST'])
+@login_required
 def set_frequencia():
     try:
         dados = request.get_json()
-        data, count = supabase.table('frequencia').upsert(
-            {
-                'turma_id': dados.get('turma_id'),
-                'aluno_id': dados.get('aluno_id'),
-                'data': dados.get('data'),
-                'presente': dados.get('presente')
-            },
-            on_conflict='data, aluno_id, turma_id' 
-        ).execute()
+        turma_id = dados.get('turma_id')
+        
+        # Verifica segurança antes de salvar
+        if not verificar_dono_turma(turma_id): return jsonify({"error": "Acesso negado."}), 403
+
+        data, count = supabase.table('frequencia').upsert({
+            'turma_id': turma_id,
+            'aluno_id': dados.get('aluno_id'),
+            'data': dados.get('data'),
+            'presente': dados.get('presente')
+        }, on_conflict='data, aluno_id, turma_id').execute()
 
         return jsonify(data[1][0]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --- NOVA ROTA: Buscar Datas com Chamada ---
 @frequencia_bp.route('/turma/<uuid:turma_id>/datas_chamada', methods=['GET'])
+@login_required
 def get_datas_chamada(turma_id):
-    """ Retorna as datas únicas que possuem registros de frequência para esta turma. """
     try:
-        # Usamos .select('data') e o próprio python/supabase para filtrar duplicatas seria pesado.
-        # Melhor usar SQL RPC se fosse big data, mas para uso simples, o Supabase não tem 'DISTINCT' direto no cliente simples.
-        # Truque: Buscar dados ordenados e filtrar no Python é viável para turmas pequenas.
-        
-        # Maneira mais eficiente no Supabase sem criar RPC: Criar uma view ou usar RPC.
-        # Vamos simplificar criando uma RPC rápida para garantir performance.
-        
-        # (Veja o passo extra de SQL abaixo para criar 'get_datas_unicas')
-        data, count = supabase.rpc(
-            'get_datas_unicas', 
-            {'p_turma_id': str(turma_id)}
-        ).execute()
-        
-        return jsonify(data[1])
+        # Verifica segurança
+        if not verificar_dono_turma(turma_id): return jsonify({"error": "Acesso negado."}), 403
 
+        data, count = supabase.rpc('get_datas_unicas', {'p_turma_id': str(turma_id)}).execute()
+        return jsonify(data[1])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
