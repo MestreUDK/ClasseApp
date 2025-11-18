@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        @page { size: a4 portrait; margin: 1cm; }
+        body { font-family: sans-serif; font-size: 10pt; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 16pt; color: #007bff; }
+        .header p { margin: 5px 0 0; font-size: 12pt; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #000; padding: 8px; text-align: center; }
+        th { background-color: #e9ecef; font-weight: bold; }
+        .nome { text-align: left; }
+        .porcentagem-baixa { color: red; font-weight: bold; }
+        .porcentagem-alta { color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Relatório de Desempenho Geral</h1>
+        <p>Turma: <strong>{{ turma_nome }}</strong></p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 55%;" class="nome">Aluno</th>
+                <th style="width: 15%;">Presenças</th>
+                <th style="width: 15%;">Total Aulas</th>
+                <th style="width: 15%;">Freq. %</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for aluno in stats %}
+            {% set porc = aluno.porcentagem_presenca or 0 %}
+            <tr>
+                <td class="nome">{{ aluno.nome_completo }}</td>
+                <td>{{ aluno.total_presencas }}</td>
+                <td>{{ aluno.total_registros }}</td>
+                <td class="{% if porc < 75 %}porcentagem-baixa{% else %}porcentagem-alta{% endif %}">
+                    {{ porc }}%
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

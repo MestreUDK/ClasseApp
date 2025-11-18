@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        @page { size: a4 portrait; margin: 1cm; }
+        body { font-family: sans-serif; font-size: 10pt; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 16pt; color: #007bff; }
+        .header p { margin: 5px 0 0; font-size: 12pt; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+        th { background-color: #e9ecef; font-weight: bold; }
+        .status-presente { color: green; font-weight: bold; }
+        .status-falta { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Relatório de Frequência Diária</h1>
+        <p>{{ turma_nome }}</p>
+        <p>Data da Chamada: <strong>{{ data_chamada }}</strong></p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 70%;">Aluno</th>
+                <th style="width: 30%; text-align: center;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for aluno in lista_alunos %}
+            <tr>
+                <td>{{ aluno.nome_completo }}</td>
+                <td style="text-align: center;" class="status-{{ 'presente' if aluno.presente else 'falta' }}">
+                    {{ 'PRESENTE' if aluno.presente else 'FALTA' }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
