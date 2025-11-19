@@ -12,6 +12,7 @@
             <option value="">Carregando turmas...</option>
         </select>
 
+        <!-- Opção 1: Relatório Geral -->
         <div class="box-opcao">
             <h3>📊 Relatório Geral (Desempenho)</h3>
             <p>Resumo de faltas e presenças de todo o período.</p>
@@ -23,6 +24,7 @@
 
         <hr>
 
+        <!-- Opção 2: Relatório Diário -->
         <div class="box-opcao">
             <h3>📅 Relatório Diário (Chamada)</h3>
             <p>Lista de presença de um dia específico.</p>
@@ -32,7 +34,21 @@
                 <button onclick="baixarDiario('pdf')" class="btn-pdf">Baixar PDF</button>
             </div>
         </div>
-    </div>
+
+        <hr>
+
+        <!-- Opção 3: Boletim de Notas (ADICIONADO AQUI) -->
+        <div class="box-opcao">
+            <h3>📝 Boletim de Notas</h3>
+            <p>Planilha com todas as avaliações e notas da turma.</p>
+            <div class="botoes-export">
+                <!-- Mantive os estilos inline roxos que você definiu -->
+                <button onclick="baixarNotas('xlsx')" class="btn-excel" style="background-color: #6f42c1;">Baixar Excel</button>
+                <button onclick="baixarNotas('pdf')" class="btn-pdf" style="background-color: #6610f2;">Baixar PDF</button>
+            </div>
+        </div>
+
+    </div> <!-- Fim do card-form -->
 
     <style>
         /* Estilos EXCLUSIVOS desta página (sem afetar o resto do site) */
@@ -51,7 +67,7 @@
         
         .botoes-export { display: flex; gap: 10px; flex-wrap: wrap; }
         
-        /* CORREÇÃO: Aplicamos estilo apenas aos botões DESTA área, não globais */
+        /* Estilo dos botões DESTA área */
         .botoes-export button { 
             border: none; 
             padding: 10px 15px; 
@@ -73,3 +89,4 @@
 {% block scripts %}
     <script src="{{ url_for('static', filename='js/relatorios.js') }}"></script>
 {% endblock %}
+
