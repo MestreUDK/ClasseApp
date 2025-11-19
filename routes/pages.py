@@ -73,3 +73,14 @@ def page_diario():
 @login_required
 def page_relatorios():
     return render_template('relatorios.html')
+
+# --- NOTAS ---
+@pages_bp.route('/turma/<uuid:turma_id>/avaliacoes')
+@login_required
+def page_avaliacoes(turma_id):
+    return render_template('avaliacoes.html')
+
+@pages_bp.route('/avaliacao/<uuid:avaliacao_id>/lancamento')
+@login_required
+def page_lancamento_notas(avaliacao_id):
+    return render_template('lancamento_notas.html')
