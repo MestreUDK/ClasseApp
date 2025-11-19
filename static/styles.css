@@ -10,7 +10,7 @@
     --nav-bg: #ffffff;
     --shadow: 0 2px 4px rgba(0,0,0,0.1);
     --input-bg: #ffffff;
-    --bottom-nav-height: 70px; /* Altura da barra no celular */
+    --icon-bg: #e9ecef;
 }
 
 /* --- TEMA ESCURO --- */
@@ -25,6 +25,7 @@
     --nav-bg: #1e1e1e;
     --shadow: 0 2px 4px rgba(0,0,0,0.3);
     --input-bg: #2c2c2c;
+    --icon-bg: #333333;
 }
 
 /* --- GERAL --- */
@@ -74,20 +75,67 @@ nav .links a {
     gap: 5px;
 }
 nav .links a:hover { background: rgba(0,0,0,0.05); }
-
-/* Ícones SVG nos links (escondidos no desktop se quiser, ou mostrados) */
 nav .links svg { width: 20px; height: 20px; }
 
-/* Grupo Direito (Busca + Perfil + DarkMode) */
+/* Grupo Direito (Busca + Perfil) */
 .nav-right {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-grow: 1;
+    justify-content: flex-end;
+}
+
+/* Botão de Perfil (Ícone Redondo) */
+.btn-perfil-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--icon-bg);
+    color: var(--text-main);
+    text-decoration: none;
+    transition: background 0.2s;
+    border: 1px solid var(--border-color);
+    flex-shrink: 0; /* Impede que o ícone amasse */
+}
+.btn-perfil-icon:hover {
+    background-color: var(--border-color);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+/* Busca na Navbar */
+nav form { 
+    display: flex; 
+    margin: 0; 
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    border: none;
+}
+nav form input[type="search"] {
+    margin: 0;
+    border-radius: 20px 0 0 20px;
+    padding: 8px 15px;
+    border-right: none;
+    width: 150px;
+    background-color: var(--input-bg);
+    color: var(--text-main);
+}
+nav form button {
+    border-radius: 0 20px 20px 0;
+    padding: 8px 15px;
+    margin: 0;
+    background-color: var(--primary);
+    color: white;
 }
 
 /* --- BARRA DE NAVEGAÇÃO INFERIOR (MOBILE) --- */
 @media (max-width: 768px) {
-    /* Esconde os links do topo */
+    /* Move os links para baixo */
     nav .links {
         position: fixed;
         bottom: 0;
@@ -107,10 +155,9 @@ nav .links svg { width: 20px; height: 20px; }
         font-size: 0.75em;
         padding: 5px;
         color: var(--text-sec);
-        background: none !important; /* Remove fundo cinza no mobile */
+        background: none !important;
     }
     
-    /* Link ativo ou hover no mobile fica colorido */
     nav .links a:hover, nav .links a.active {
         color: var(--primary);
     }
@@ -119,29 +166,28 @@ nav .links svg { width: 20px; height: 20px; }
         margin-bottom: 2px;
     }
 
-    /* Ajusta o topo para ficar só a busca e perfil */
+    /* Ajusta o topo para a busca e perfil */
     nav {
-        justify-content: flex-end; /* Empurra busca pra direita */
+        justify-content: flex-end;
+    }
+    
+    .nav-right {
+        width: 100%;
+        justify-content: space-between; /* Separa a busca do perfil */
+    }
+    
+    nav form {
+        flex-grow: 1; /* Busca ocupa o espaço disponível */
+        margin-right: 10px;
+    }
+    
+    nav form input[type="search"] {
+        width: 100%;
+        max-width: none;
     }
 }
 
-/* --- BOTÕES DE ÍCONE (Perfil e Tema) --- */
-.btn-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: rgba(0,0,0,0.05);
-    color: var(--text-main);
-    border: 1px solid var(--border-color);
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.btn-icon:hover { background-color: rgba(0,0,0,0.1); }
-
-/* --- FORMULÁRIOS --- */
+/* --- FORMULÁRIOS E INPUTS (CORRIGIDO) --- */
 form, .card-form, .chamada-container { 
     background: var(--bg-card); 
     padding: 1.5em; 
@@ -149,9 +195,24 @@ form, .card-form, .chamada-container {
     box-shadow: var(--shadow);
     margin-bottom: 1.5em;
     border: 1px solid var(--border-color);
+    color: var(--text-main);
 }
 
-input[type="text"], input[type="date"], input[type="password"], input[type="email"], select, textarea, input[type="search"] { 
+/* Força cor dos títulos dentro dos cartões */
+.card-form h2, .card-form h3, 
+.chamada-container h2, .chamada-container h3 {
+    color: var(--text-main); 
+    margin-top: 0;
+}
+
+label {
+    color: var(--text-main);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 5px;
+}
+
+input[type="text"], input[type="date"], input[type="password"], input[type="email"], select, textarea { 
     width: 100%; 
     padding: 12px; 
     margin-bottom: 10px; 
@@ -161,28 +222,6 @@ input[type="text"], input[type="date"], input[type="password"], input[type="emai
     background-color: var(--input-bg);
     color: var(--text-main);
     box-sizing: border-box;
-}
-
-/* Busca no Header */
-nav form { 
-    background: none; 
-    padding: 0; 
-    box-shadow: none; 
-    margin: 0; 
-    border: none;
-    display: flex;
-}
-nav form input[type="search"] {
-    margin: 0;
-    border-radius: 20px 0 0 20px;
-    padding: 8px 15px;
-    border-right: none;
-    width: 150px;
-}
-nav form button {
-    border-radius: 0 20px 20px 0;
-    padding: 8px 15px;
-    margin: 0;
 }
 
 /* --- BOTÕES GERAIS --- */
@@ -203,30 +242,137 @@ button:hover { opacity: 0.9; }
 .botao-gerenciar { background-color: #17a2b8; color: white; }
 .botao-edit { background-color: #ffc107; color: #000; }
 .botao-delete, .remover { background-color: #dc3545; color: white; }
+a.botao-acao { 
+    display: inline-block; 
+    background-color: #28a745; 
+    color: white; 
+    padding: 10px 15px; 
+    text-decoration: none; 
+    border-radius: 4px; 
+    margin-top: 10px; 
+    margin-bottom: 20px; 
+}
 
-/* --- CARDS E LISTAS --- */
-.dash-card, .turma, .aluno, .item-resultado { 
-    background: var(--bg-card); 
+/* --- MENSAGENS DE STATUS --- */
+#msg-erro { color: red; font-weight: bold; }
+#msg-sucesso { color: green; font-weight: bold; }
+
+/* --- LAYOUT COLUNAS --- */
+.container, .container-resultados { display: flex; flex-wrap: wrap; gap: 2em; }
+.coluna, .coluna-resultados { 
+    flex: 1; 
+    min-width: 300px; 
+    background: var(--bg-card); /* Corrigido para tema */
     padding: 1em; 
-    margin-top: 1em; 
-    border-radius: 12px; 
-    box-shadow: var(--shadow);
+    border-radius: 8px; 
+    box-shadow: var(--shadow); /* Corrigido para tema */
     border: 1px solid var(--border-color);
 }
 
-/* Dashboard Grid */
+/* --- CARDS E LISTAS --- */
+div.turma, div.aluno { 
+    background: var(--bg-card); 
+    padding: 1em; 
+    margin-top: 1em; 
+    border-radius: 8px; 
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+}
+div.aluno {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.item-resultado {
+    background: var(--bg-card);
+    padding: 1em;
+    margin-bottom: 1em;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+}
+.item-resultado a { text-decoration: none; color: var(--primary); font-weight: bold; }
+.item-resultado a:hover { text-decoration: underline; }
+
+/* --- PÁGINA DE FREQUÊNCIA --- */
+li.aluno-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 8px; border-bottom: 1px solid var(--border-color); }
+li.aluno-item:last-child { border-bottom: none; }
+.aluno-nome { font-size: 1.1em; color: var(--text-main); }
+
+.botoes-frequencia button {
+    padding: 8px 12px; font-size: 0.9em; cursor: pointer;
+    border: 1px solid var(--border-color); 
+    background-color: var(--icon-bg); 
+    color: var(--text-main);
+    min-width: 40px;
+}
+.botoes-frequencia button.presente { border-radius: 4px 0 0 4px; }
+.botoes-frequencia button.ausente { border-radius: 0 4px 4px 0; border-left: none; }
+.botoes-frequencia button.presente.active { background-color: #28a745; color: white; border-color: #28a745; }
+.botoes-frequencia button.ausente.active { background-color: #dc3545; color: white; border-color: #dc3545; }
+
+/* --- PÁGINA DETALHE TURMA --- */
+#lista-busca-alunos {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+.aluno-busca-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+.aluno-busca-item:last-child { border-bottom: none; }
+.aluno-busca-item button {
+    background-color: #28a745; 
+    font-size: 0.9em;
+    padding: 6px 10px;
+}
+li.aluno-vinculado-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 8px; border-bottom: 1px solid var(--border-color); }
+
+/* --- HISTÓRICO --- */
+.tag-data {
+    background-color: var(--icon-bg);
+    color: var(--text-main);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.9em;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    transition: background 0.2s;
+}
+.tag-data:hover {
+    background-color: var(--border-color);
+}
+
+/* --- DASHBOARD --- */
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1em;
+    gap: 1.5em;
+    margin-bottom: 2em;
 }
-.card-icon { font-size: 2em; margin-right: 15px; }
 
-/* --- TABELAS E TAGS --- */
-table th { background-color: rgba(0,0,0,0.05); color: var(--text-main); }
-table td { border-color: var(--border-color); }
-.tag-data, .badge, .legenda-stats { 
-    background-color: rgba(0,0,0,0.05); 
-    color: var(--text-main); 
-    border: 1px solid var(--border-color); 
+.dash-card {
+    background: var(--bg-card);
+    padding: 1.5em;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    border-bottom: 4px solid transparent;
+    transition: transform 0.2s;
+    border: 1px solid var(--border-color);
 }
+.dash-card:hover { transform: translateY(-3px); }
+
+.card-alunos { border-bottom-color: #007bff; }
+.card-turmas { border-bottom-color: #28a745; }
+.card-freq { border-bottom-color: #ffc107; }
+
+.card-icon { font-size: 2.5em; margin-right: 15px; opacity: 0.8; }
+.card-info h3 { margin: 0; font-size: 0.9em; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1px; }
+.card-info p { margin: 5px 0 0; font-size: 1.8em; font-weight: bold; color: var(--text-main); }
