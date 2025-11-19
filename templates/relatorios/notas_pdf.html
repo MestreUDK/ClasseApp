@@ -4,13 +4,24 @@
     <style>
         @page { size: a4 landscape; margin: 1cm; } /* Paisagem para caber mais notas */
         body { font-family: sans-serif; font-size: 10pt; }
+        
         .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 16pt; color: #007bff; }
+        .header h1 { margin: 0; font-size: 16pt; color: #6610f2; } /* Roxo */
+        .header p { margin: 5px 0 0; font-size: 12pt; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #000; padding: 6px; text-align: center; }
-        th { background-color: #e9ecef; font-weight: bold; }
-        .nome { text-align: left; width: 30%; }
-        .total { font-weight: bold; background-color: #f8f9fa; }
+        th, td { border: 1px solid #444; padding: 8px; text-align: center; }
+        
+        th { 
+            background-color: #6610f2; 
+            color: white; 
+            font-weight: bold; 
+            font-size: 9pt;
+        }
+        
+        .nome-col { text-align: left; background-color: #f8f9fa; width: 30%; }
+        
+        tr:nth-child(even) { background-color: #f2f2f2; }
     </style>
 </head>
 <body>
@@ -19,27 +30,32 @@
         <p>Turma: <strong>{{ turma_nome }}</strong></p>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th class="nome">Aluno</th>
-                {% for col in colunas %}
-                    <th>{{ col }}</th>
+    {% if not alunos_notas %}
+        <p style="text-align: center; margin-top: 50px; color: #666;">
+            Nenhuma nota registrada para esta turma.
+        </p>
+    {% else %}
+        <table>
+            <thead>
+                <tr>
+                    <th class="nome-col" style="color: white; text-align: center;">Aluno</th>
+                    {% for avaliacao in colunas_avaliacoes %}
+                        <th>{{ avaliacao }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for nome_aluno, notas in alunos_notas.items() %}
+                <tr>
+                    <td class="nome-col"><strong>{{ nome_aluno }}</strong></td>
+                    {% for avaliacao in colunas_avaliacoes %}
+                        <td>{{ notas.get(avaliacao, '-') }}</td>
+                    {% endfor %}
+                </tr>
                 {% endfor %}
-                <th>Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for linha in linhas %}
-            <tr>
-                <td class="nome">{{ linha.nome }}</td>
-                {% for nota in linha.notas %}
-                    <td>{{ nota }}</td>
-                {% endfor %}
-                <td class="total">{{ linha.total }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    {% endif %}
 </body>
 </html>
+
