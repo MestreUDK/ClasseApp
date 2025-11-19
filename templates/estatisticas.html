@@ -35,66 +35,76 @@
     </div>
 
     <style>
-        /* Estilos específicos para esta tabela ficar boa no mobile */
+        /* Estilos da Tabela */
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 0.5em;
-            font-size: 0.95em; /* Fonte um pouco menor */
+            font-size: 0.95em;
         }
         th, td {
-            border: 1px solid #ddd;
-            padding: 8px 4px; /* Menos preenchimento lateral */
+            border: 1px solid var(--border-color); /* Borda dinâmica */
+            padding: 8px 4px;
             text-align: left;
         }
+        
+        /* Cabeçalho da tabela (Usa fundo de ícone para contraste suave) */
         th {
-            background-color: #f4f4f4;
-            color: #333;
+            background-color: var(--icon-bg);
+            color: var(--text-main);
             font-weight: bold;
         }
+        
         .center {
             text-align: center;
-            width: 40px; /* Largura fixa para colunas de números */
+            width: 40px;
         }
+
+        /* Linhas pares (Zebra): Usa a cor de fundo do corpo para contraste sutil */
         tr:nth-child(even) {
-            background-color: #f9f9f9;
+            background-color: var(--bg-body);
         }
+        
         td.porcentagem {
             font-weight: bold;
         }
         
-        /* Estilo da Legenda */
+        /* Estilo da Legenda (Adaptado ao tema) */
         .legenda-stats {
-            background-color: #e9ecef;
+            background-color: var(--icon-bg);
             padding: 8px;
             border-radius: 4px;
             font-size: 0.85em;
-            color: #555;
+            color: var(--text-main);
             margin-bottom: 10px;
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+            border: 1px solid var(--border-color);
         }
+        
         .badge {
-            background: #333;
-            color: #fff;
+            background: var(--text-main); /* Inverte cor (texto vira fundo) */
+            color: var(--bg-card);        /* Fundo vira texto */
             padding: 1px 5px;
             border-radius: 3px;
             font-weight: bold;
             font-size: 0.9em;
         }
+
         .dica-mobile {
             font-size: 0.8em;
-            color: #777;
+            color: var(--text-sec);
             margin-top: 8px;
             font-style: italic;
         }
+
         /* Link no nome do aluno */
         td a.link-aluno {
             text-decoration: none;
-            color: #007bff;
+            color: var(--primary);
             font-weight: 600;
-            display: block; /* Aumenta a área de toque */
+            display: block;
         }
     </style>
 {% endblock %}
