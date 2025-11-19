@@ -5,19 +5,19 @@
 {% block content %}
     <h1>Meu Perfil</h1>
 
-    <div class="card-form">
+    <div class="card-form perfil-card">
         <div style="text-align: center; margin-bottom: 20px;">
-            <div style="width: 80px; height: 80px; background: #e9ecef; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 40px;">
+            <div class="avatar-circle">
                 👤
             </div>
             <h2 style="margin: 10px 0 5px;">Minha Conta</h2>
-            <p style="color: #666; margin: 0;">{{ email }}</p>
+            <p class="email-text">{{ email }}</p>
         </div>
 
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
 
         <h3>Alterar Senha</h3>
-        
+
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -26,7 +26,7 @@
             {% endif %}
         {% endwith %}
 
-        <form method="POST">
+        <form method="POST" style="background: none; padding: 0; box-shadow: none; border: none;">
             <label for="password">Nova Senha:</label>
             <div style="display: flex; gap: 10px;">
                 <input type="password" id="password" name="password" placeholder="Digite a nova senha" required>
@@ -34,19 +34,40 @@
             </div>
         </form>
 
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
 
         <h3 style="color: #dc3545;">Zona de Perigo</h3>
-        <p>Deseja sair da sua conta?</p>
-        
+        <p style="color: var(--text-sec);">Deseja sair da sua conta?</p>
+
         <a href="/logout" class="btn-logout">Sair do Sistema (Logout)</a>
     </div>
 
     <style>
-        .card-form { background: #fff; padding: 2em; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
-        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        
+        /* Estilos específicos apenas para centralizar e ajustar layout */
+        .perfil-card {
+            max-width: 500px; 
+            margin: 0 auto;
+        }
+
+        .avatar-circle {
+            width: 80px; 
+            height: 80px; 
+            background: var(--icon-bg); /* Cor dinâmica */
+            color: var(--text-main);    /* Cor dinâmica */
+            border-radius: 50%; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 40px;
+            border: 1px solid var(--border-color);
+        }
+
+        .email-text {
+            color: var(--text-sec); /* Cinza que se adapta */
+            margin: 0;
+        }
+
+        /* Botão de Logout */
         .btn-logout {
             display: block;
             width: 100%;
@@ -59,9 +80,11 @@
             font-weight: bold;
             margin-top: 10px;
             box-sizing: border-box;
+            border: none;
         }
         .btn-logout:hover { background-color: #c82333; }
-        
+
+        /* Alertas */
         .alert { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
         .alert.success { background: #d4edda; color: #155724; }
         .alert.error { background: #f8d7da; color: #721c24; }
