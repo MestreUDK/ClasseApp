@@ -13,23 +13,23 @@ from routes.search import search_bp
 from routes.estatisticas import estatisticas_bp
 from routes.exportar import exportar_bp
 from routes.diario import diario_bp
-from routes.auth import auth_bp # <-- NOVO IMPORT
-from models import User # <-- NOVO IMPORT
+from routes.auth import auth_bp 
+from routes.dashboard import dashboard_bp 
+from routes.perfil import perfil_bp # <-- NOVO IMPORT
+from models import User 
 
 app = Flask(__name__)
 
-# CONFIGURAÇÃO DE SEGURANÇA (IMPORTANTE)
+# CONFIGURAÇÃO DE SEGURANÇA
 app.secret_key = os.environ.get("SECRET_KEY", "minha_chave_secreta_super_segura")
 
 # Configura o Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'auth_bp.login' # Para onde ir se não estiver logado
+login_manager.login_view = 'auth_bp.login' 
 
 @login_manager.user_loader
 def load_user(user_id):
-    # Como não guardamos sessão no banco local, recriamos o objeto User apenas com o ID
-    # Em um app maior, buscaríamos dados extras no banco aqui
     return User(id=user_id, email=None)
 
 # Registra Blueprints
@@ -41,7 +41,9 @@ app.register_blueprint(search_bp, url_prefix='/api')
 app.register_blueprint(estatisticas_bp, url_prefix='/api')
 app.register_blueprint(exportar_bp, url_prefix='/api')
 app.register_blueprint(diario_bp, url_prefix='/api')
-app.register_blueprint(auth_bp) # <-- NOVO REGISTRO (sem prefixo api)
+app.register_blueprint(dashboard_bp, url_prefix='/api')
+app.register_blueprint(auth_bp) 
+app.register_blueprint(perfil_bp) # <-- NOVO REGISTRO (sem prefixo api)
 
 if __name__ == "__main__":
     app.run()
