@@ -28,7 +28,7 @@ def estilizar_cabecalho_excel(ws):
         cell.fill = PatternFill(start_color="007BFF", end_color="007BFF", fill_type="solid")
         cell.alignment = Alignment(horizontal="center")
 
-# --- ROTAS EXCEL (.xlsx) - MANTIDAS ---
+# --- ROTAS EXCEL (.xlsx) ---
 
 @exportar_bp.route('/exportar/turma/<uuid:turma_id>/frequencia', methods=['GET'])
 def exportar_frequencia_dia_excel(turma_id):
@@ -111,7 +111,60 @@ def exportar_frequencia_geral_excel(turma_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --- ROTAS PDF (CORRIGIDAS - SEM 'WITH') ---
+@exportar_bp.route('/exportar/turma/<uuid:turma_id>/notas', methods=['GET'])
+def exportar_notas_excel(turma_id):
+    try:
+        res_turma = supabase.table('turmas').select('nome').eq('id', turma_id).single().execute()
+        turma_nome = res_turma.data['nome']
+
+        res_av = supabase.table('avaliacoes').select('*').eq('turma_id', turma_id).order('data').execute()
+        avaliacoes = res_av.data
+
+        res_alunos = supabase.table('turmas_alunos').select('alunos(id, nome_completo)').eq('turma_id', turma_id).execute()
+        alunos = [item['alunos'] for item in res_alunos.data]
+        alunos.sort(key=lambda x: x['nome_completo'])
+
+        av_ids = [av['id'] for av in avaliacoes]
+        notas_map = {}
+        if av_ids:
+            res_notas = supabase.table('notas').select('*').in_('avaliacao_id', av_ids).execute()
+            for n in res_notas.data:
+                notas_map[f"{n['aluno_id']}-{n['avaliacao_id']}"] = n['valor']
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Boletim"
+
+        headers = ['Aluno'] + [av['nome'] for av in avaliacoes] + ['Total']
+        ws.append(headers)
+
+        for aluno in alunos:
+            row = [aluno['nome_completo']]
+            soma_notas = 0
+            for av in avaliacoes:
+                key = f"{aluno['id']}-{av['id']}"
+                nota = notas_map.get(key)
+                if nota is not None:
+                    row.append(nota)
+                    soma_notas += float(nota)
+                else:
+                    row.append('-')
+            row.append(soma_notas)
+            ws.append(row)
+
+        estilizar_cabecalho_excel(ws)
+        ws.column_dimensions['A'].width = 30
+
+        file_buffer = io.BytesIO()
+        wb.save(file_buffer)
+        file_buffer.seek(0)
+
+        return send_file(file_buffer, as_attachment=True, download_name=f"Boletim_{turma_nome}.xlsx", mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- ROTAS PDF (CORRIGIDAS) ---
 
 @exportar_bp.route('/exportar/turma/<uuid:turma_id>/frequencia/pdf', methods=['GET'])
 def exportar_frequencia_dia_pdf(turma_id):
@@ -127,7 +180,6 @@ def exportar_frequencia_dia_pdf(turma_id):
 
         html = render_template('relatorios/diario_pdf.html', turma_nome=turma_nome, data_chamada=data_chamada, lista_alunos=lista_alunos)
 
-        # Cria o buffer e NÃO fecha ele (o Flask fecha depois de enviar)
         pdf_buffer = gerar_pdf_bytes(html)
 
         if pdf_buffer:
@@ -169,4 +221,63 @@ def exportar_frequencia_geral_pdf(turma_id):
 
     except Exception as e:
         print(f"Erro PDF Geral: {e}")
+        return jsonify({"error": f"Erro ao gerar PDF: {str(e)}"}), 500
+
+@exportar_bp.route('/exportar/turma/<uuid:turma_id>/notas/pdf', methods=['GET'])
+def exportar_notas_pdf(turma_id):
+    try:
+        res_turma = supabase.table('turmas').select('nome').eq('id', turma_id).single().execute()
+        turma_nome = res_turma.data['nome']
+
+        res_av = supabase.table('avaliacoes').select('*').eq('turma_id', turma_id).order('data').execute()
+        avaliacoes = res_av.data
+
+        res_alunos = supabase.table('turmas_alunos').select('alunos(id, nome_completo)').eq('turma_id', turma_id).execute()
+        alunos = [item['alunos'] for item in res_alunos.data]
+        alunos.sort(key=lambda x: x['nome_completo'])
+
+        av_ids = [av['id'] for av in avaliacoes]
+        notas_map = {}
+        if av_ids:
+            res_notas = supabase.table('notas').select('*').in_('avaliacao_id', av_ids).execute()
+            for n in res_notas.data:
+                notas_map[f"{n['aluno_id']}-{n['avaliacao_id']}"] = n['valor']
+
+        linhas_tabela = []
+        for aluno in alunos:
+            notas_aluno = []
+            soma = 0
+            for av in avaliacoes:
+                val = notas_map.get(f"{aluno['id']}-{av['id']}")
+                if val is not None:
+                    notas_aluno.append(val)
+                    soma += float(val)
+                else:
+                    notas_aluno.append('-')
+            
+            linhas_tabela.append({
+                'nome': aluno['nome_completo'],
+                'notas': notas_aluno,
+                'total': soma
+            })
+
+        html = render_template('relatorios/notas_pdf.html', 
+                               turma_nome=turma_nome, 
+                               colunas=[av['nome'] for av in avaliacoes], 
+                               linhas=linhas_tabela)
+
+        pdf_buffer = gerar_pdf_bytes(html)
+
+        if pdf_buffer:
+            return send_file(
+                pdf_buffer, 
+                as_attachment=True, 
+                download_name=f"Boletim_{turma_nome}.pdf", 
+                mimetype='application/pdf'
+            )
+        else:
+            return jsonify({"error": "Erro na conversão do PDF (pisa)"}), 500
+
+    except Exception as e:
+        print(f"Erro PDF Notas: {e}")
         return jsonify({"error": f"Erro ao gerar PDF: {str(e)}"}), 500
