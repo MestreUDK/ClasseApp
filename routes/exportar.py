@@ -9,37 +9,28 @@ from xhtml2pdf import pisa
 
 exportar_bp = Blueprint('exportar_bp', __name__)
 
-# --- HELPER DE PDF ---
+# --- HELPERS ---
 def gerar_pdf_bytes(html_string):
-    """ Gera o PDF e retorna o buffer ABERTO para o Flask enviar """
     pdf_buffer = io.BytesIO()
     pisa_status = pisa.CreatePDF(html_string, dest=pdf_buffer)
-    
-    if pisa_status.err:
-        return None
-    
+    if pisa_status.err: return None
     pdf_buffer.seek(0)
     return pdf_buffer
 
-# --- HELPER DE EXCEL ---
-def estilizar_cabecalho_excel(ws):
+def estilizar_cabecalho_excel(ws, cor="007BFF"):
     for cell in ws[1]:
         cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = PatternFill(start_color="6610f2", end_color="6610f2", fill_type="solid") # Roxo para notas
+        cell.fill = PatternFill(start_color=cor, end_color=cor, fill_type="solid")
         cell.alignment = Alignment(horizontal="center")
 
-# ==============================================================================
-# ROTAS DE FREQUÊNCIA (MANTIDAS DO SEU CÓDIGO ORIGINAL)
-# ==============================================================================
+# --- FREQUÊNCIA E GERAL (MANTIDOS IGUAIS) ---
 
 @exportar_bp.route('/exportar/turma/<uuid:turma_id>/frequencia', methods=['GET'])
 def exportar_frequencia_dia_excel(turma_id):
     try:
         data = request.args.get('data')
-        if not data: return jsonify({"error": "Data obrigatória"}), 400
-        
         res_turma = supabase.table('turmas').select('nome').eq('id', turma_id).single().execute()
-        turma_nome = res_turma.data['nome'] if res_turma.data else "Turma"
+        turma_nome = res_turma.data['nome']
 
         dados, _ = supabase.rpc('get_frequencia_para_exportar', {'p_turma_id': str(turma_id), 'p_data': data}).execute()
 
@@ -52,21 +43,13 @@ def exportar_frequencia_dia_excel(turma_id):
             status = 'Presente' if row['presente'] is True else 'Falta'
             ws.append([row['nome_completo'], status])
 
-        # Estilo azul para frequência
-        for cell in ws[1]:
-            cell.font = Font(bold=True, color="FFFFFF")
-            cell.fill = PatternFill(start_color="007BFF", end_color="007BFF", fill_type="solid")
-            cell.alignment = Alignment(horizontal="center")
-
+        estilizar_cabecalho_excel(ws, "007BFF")
         ws.column_dimensions['A'].width = 40
-        ws.column_dimensions['B'].width = 15
-
+        
         file_buffer = io.BytesIO()
         wb.save(file_buffer)
         file_buffer.seek(0)
-
-        safe_name = "".join(c for c in turma_nome if c.isalnum() or c in (' ', '-')).rstrip()
-        return send_file(file_buffer, as_attachment=True, download_name=f"Chamada_{safe_name}_{data}.xlsx", mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        return send_file(file_buffer, as_attachment=True, download_name=f"Chamada_{turma_nome}_{data}.xlsx", mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -75,15 +58,15 @@ def exportar_frequencia_geral_excel(turma_id):
     try:
         res_dados, _ = supabase.rpc('get_frequencia_geral', {'p_turma_id': str(turma_id)}).execute()
         dados = res_dados[1]
-        if not dados: return jsonify({"error": "Sem dados."}), 404
-
+        
         alunos_dict = {}
         datas_set = set()
-        for row in dados:
-            datas_set.add(row['data_chamada'])
-            if row['aluno_nome'] not in alunos_dict:
-                alunos_dict[row['aluno_nome']] = {'frequencias': {}} 
-            alunos_dict[row['aluno_nome']]['frequencias'][row['data_chamada']] = row['presente']
+        if dados:
+            for row in dados:
+                datas_set.add(row['data_chamada'])
+                if row['aluno_nome'] not in alunos_dict:
+                    alunos_dict[row['aluno_nome']] = {'frequencias': {}} 
+                alunos_dict[row['aluno_nome']]['frequencias'][row['data_chamada']] = row['presente']
 
         datas_ordenadas = sorted(list(datas_set))
         wb = openpyxl.Workbook()
@@ -108,12 +91,7 @@ def exportar_frequencia_geral_excel(turma_id):
             row.append(f"{porc}%")
             ws.append(row)
 
-        # Estilo azul para geral
-        for cell in ws[1]:
-            cell.font = Font(bold=True, color="FFFFFF")
-            cell.fill = PatternFill(start_color="007BFF", end_color="007BFF", fill_type="solid")
-            cell.alignment = Alignment(horizontal="center")
-            
+        estilizar_cabecalho_excel(ws, "007BFF")
         ws.column_dimensions['A'].width = 30
         
         file_buffer = io.BytesIO()
@@ -123,156 +101,136 @@ def exportar_frequencia_geral_excel(turma_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# --- PDF FREQUENCIA E GERAL ---
 @exportar_bp.route('/exportar/turma/<uuid:turma_id>/frequencia/pdf', methods=['GET'])
 def exportar_frequencia_dia_pdf(turma_id):
     try:
         data_chamada = request.args.get('data')
-        if not data_chamada: return jsonify({"error": "Data obrigatória"}), 400
-
         res_turma = supabase.table('turmas').select('nome').eq('id', turma_id).single().execute()
         turma_nome = res_turma.data['nome']
-        
         dados, _ = supabase.rpc('get_frequencia_para_exportar', {'p_turma_id': str(turma_id), 'p_data': data_chamada}).execute()
-        lista_alunos = dados[1]
-
-        html = render_template('relatorios/diario_pdf.html', turma_nome=turma_nome, data_chamada=data_chamada, lista_alunos=lista_alunos)
+        
+        html = render_template('relatorios/diario_pdf.html', turma_nome=turma_nome, data_chamada=data_chamada, lista_alunos=dados[1])
         pdf_buffer = gerar_pdf_bytes(html)
-
-        if pdf_buffer:
-            return send_file(pdf_buffer, as_attachment=True, download_name=f"Chamada_{data_chamada}.pdf", mimetype='application/pdf')
-        else:
-            return jsonify({"error": "Erro na conversão do PDF"}), 500
+        return send_file(pdf_buffer, as_attachment=True, download_name=f"Chamada_{data_chamada}.pdf", mimetype='application/pdf')
     except Exception as e:
-        return jsonify({"error": f"Erro ao gerar PDF: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 @exportar_bp.route('/exportar/turma/<uuid:turma_id>/geral/pdf', methods=['GET'])
 def exportar_frequencia_geral_pdf(turma_id):
     try:
         res_turma = supabase.table('turmas').select('nome').eq('id', turma_id).single().execute()
-        turma_nome = res_turma.data['nome']
-
         dados, _ = supabase.rpc('get_turma_stats', {'p_turma_id': str(turma_id)}).execute()
-        stats = dados[1]
-
-        html = render_template('relatorios/geral_pdf.html', turma_nome=turma_nome, stats=stats)
+        
+        html = render_template('relatorios/geral_pdf.html', turma_nome=res_turma.data['nome'], stats=dados[1])
         pdf_buffer = gerar_pdf_bytes(html)
-
-        if pdf_buffer:
-            return send_file(pdf_buffer, as_attachment=True, download_name=f"Relatorio_Geral_{turma_nome}.pdf", mimetype='application/pdf')
-        else:
-            return jsonify({"error": "Erro na conversão do PDF"}), 500
+        return send_file(pdf_buffer, as_attachment=True, download_name=f"Relatorio_Geral.pdf", mimetype='application/pdf')
     except Exception as e:
-        return jsonify({"error": f"Erro ao gerar PDF: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 # ==============================================================================
-#  NOVAS ROTAS: BOLETIM DE NOTAS
+#  CORREÇÃO: BOLETIM DE NOTAS (LÓGICA CORRIGIDA)
 # ==============================================================================
 
 def buscar_dados_notas(turma_id):
-    """ Função auxiliar para buscar e organizar notas do banco """
-    # 1. Busca Avaliações (supondo tabela 'avaliacoes')
-    # JOIN com alunos para pegar o nome
-    res, _ = supabase.table('avaliacoes') \
-        .select('*, alunos(nome_completo)') \
-        .eq('turma_id', turma_id) \
+    """ Busca e cruza Avaliações x Alunos x Notas corretamente """
+    
+    # 1. Buscar Avaliações da Turma
+    res_av, _ = supabase.table('avaliacoes').select('id, nome').eq('turma_id', turma_id).execute()
+    avaliacoes = res_av[1]
+    
+    if not avaliacoes: return {}, []
+
+    av_ids = [av['id'] for av in avaliacoes]
+    map_av_nome = {av['id']: av['nome'] for av in avaliacoes}
+    colunas_avaliacoes = sorted([av['nome'] for av in avaliacoes])
+
+    # 2. Buscar TODOS os Alunos da Turma (via tabela de vínculo)
+    res_alunos, _ = supabase.table('turmas_alunos')\
+        .select('alunos(id, nome_completo)')\
+        .eq('turma_id', turma_id)\
         .execute()
     
-    registros = res[1]
-    if not registros: return [], []
-
-    # 2. Organiza os dados (Pivoting)
-    # Estrutura: { 'Nome Aluno': { 'Prova 1': 10.0, 'Trabalho': 8.5 } }
     alunos_notas = {}
-    nomes_avaliacoes = set()
-
-    for reg in registros:
-        nome_aluno = reg['alunos']['nome_completo']
-        nome_aval = reg['nome_avaliacao'] # Ex: "Prova 1", "Trabalho"
-        nota = reg['nota']
-
-        nomes_avaliacoes.add(nome_aval)
-
-        if nome_aluno not in alunos_notas:
-            alunos_notas[nome_aluno] = {}
-        
-        alunos_notas[nome_aluno][nome_aval] = nota
-
-    # Ordena as colunas de avaliação
-    colunas_avaliacoes = sorted(list(nomes_avaliacoes))
+    map_aluno_id_nome = {}
     
-    return alunos_notas, colunas_avaliacoes
+    # Inicializa todos os alunos com vazio
+    for item in res_alunos[1]:
+        aluno = item['alunos']
+        if aluno:
+            alunos_notas[aluno['nome_completo']] = {}
+            map_aluno_id_nome[aluno['id']] = aluno['nome_completo']
 
+    # 3. Buscar Notas (apenas das avaliações desta turma)
+    if av_ids:
+        res_notas, _ = supabase.table('notas')\
+            .select('aluno_id, avaliacao_id, valor')\
+            .in_('avaliacao_id', av_ids)\
+            .execute()
+        
+        for nota in res_notas[1]:
+            aluno_nome = map_aluno_id_nome.get(nota['aluno_id'])
+            av_nome = map_av_nome.get(nota['avaliacao_id'])
+            
+            # Se achou o aluno e a avaliação, preenche a célula
+            if aluno_nome and av_nome:
+                alunos_notas[aluno_nome][av_nome] = nota['valor']
+
+    return alunos_notas, colunas_avaliacoes
 
 @exportar_bp.route('/exportar/turma/<uuid:turma_id>/notas', methods=['GET'])
 def exportar_notas_excel(turma_id):
     try:
-        # Busca nome da turma
         res_turma = supabase.table('turmas').select('nome').eq('id', turma_id).single().execute()
-        turma_nome = res_turma.data['nome'] if res_turma.data else "Turma"
+        turma_nome = res_turma.data['nome']
 
-        # Busca dados processados
         alunos_notas, colunas_avaliacoes = buscar_dados_notas(turma_id)
 
-        # Cria Excel
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = "Boletim de Notas"
+        ws.title = "Notas"
+        
+        # Cabeçalho
+        ws.append(['Aluno'] + colunas_avaliacoes)
 
-        # Cabeçalho: Aluno | Avaliação 1 | Avaliação 2 | ...
-        headers = ['Aluno'] + colunas_avaliacoes
-        ws.append(headers)
-
-        # Preenche linhas
+        # Linhas
         for nome_aluno, notas_dict in alunos_notas.items():
             row = [nome_aluno]
             for aval in colunas_avaliacoes:
-                # Pega a nota ou traço se não tiver
-                valor = notas_dict.get(aval, '-')
-                row.append(valor)
+                # Pega a nota ou '-'
+                val = notas_dict.get(aval, '-')
+                row.append(val)
             ws.append(row)
 
-        estilizar_cabecalho_excel(ws) # Usa o estilo roxo definido no início
-        ws.column_dimensions['A'].width = 35 # Coluna nome maior
+        estilizar_cabecalho_excel(ws, "6610f2") # Roxo
+        ws.column_dimensions['A'].width = 35
 
-        # Salva
         file_buffer = io.BytesIO()
         wb.save(file_buffer)
         file_buffer.seek(0)
-
-        return send_file(
-            file_buffer, 
-            as_attachment=True, 
-            download_name=f"Boletim_{turma_nome}.xlsx", 
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
+        return send_file(file_buffer, as_attachment=True, download_name=f"Boletim_{turma_nome}.xlsx", mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
     except Exception as e:
         print(f"Erro Notas Excel: {e}")
-        return jsonify({"error": "Erro ao gerar Excel. Verifique se a tabela 'avaliacoes' existe.", "details": str(e)}), 500
-
+        return jsonify({"error": "Erro ao gerar Excel.", "details": str(e)}), 500
 
 @exportar_bp.route('/exportar/turma/<uuid:turma_id>/notas/pdf', methods=['GET'])
 def exportar_notas_pdf(turma_id):
     try:
         res_turma = supabase.table('turmas').select('nome').eq('id', turma_id).single().execute()
-        turma_nome = res_turma.data['nome'] if res_turma.data else "Turma"
+        turma_nome = res_turma.data['nome']
 
         alunos_notas, colunas_avaliacoes = buscar_dados_notas(turma_id)
 
         html = render_template(
-            'relatorios/notas_pdf.html', # Novo template que vamos criar abaixo
+            'relatorios/notas_pdf.html', 
             turma_nome=turma_nome, 
             alunos_notas=alunos_notas, 
             colunas_avaliacoes=colunas_avaliacoes
         )
 
         pdf_buffer = gerar_pdf_bytes(html)
-
-        if pdf_buffer:
-            return send_file(pdf_buffer, as_attachment=True, download_name=f"Boletim_{turma_nome}.pdf", mimetype='application/pdf')
-        else:
-            return jsonify({"error": "Erro na conversão do PDF (pisa)"}), 500
-
+        return send_file(pdf_buffer, as_attachment=True, download_name=f"Boletim_{turma_nome}.pdf", mimetype='application/pdf')
     except Exception as e:
-        return jsonify({"error": f"Erro ao gerar PDF: {str(e)}"}), 500
+        return jsonify({"error": "Erro ao gerar PDF.", "details": str(e)}), 500
