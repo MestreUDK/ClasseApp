@@ -7,13 +7,9 @@
     <title>{% block title %}Classe App{% endblock %}</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-
     <meta name="theme-color" content="#007bff">
-
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon/icon-192.png') }}">
-
 </head>
 <body>
 
@@ -23,12 +19,22 @@
             <a href="/alunos">Alunos</a>
             <a href="/diario">Diário</a>
             <a href="/relatorios">Relatórios</a>
-            <a href="/perfil">Perfil</a> </div>
-        <form action="/search" method="GET">
-            <input type="search" name="q" placeholder="Buscar..." 
-                   value="{{ query if query else '' }}" required>
-            <button type="submit">Buscar</button>
-        </form>
+        </div>
+
+        <div class="nav-right">
+            <form action="/search" method="GET">
+                <input type="search" name="q" placeholder="Buscar..." 
+                       value="{{ query if query else '' }}" required>
+                <button type="submit">🔍</button>
+            </form>
+
+            <a href="/perfil" class="btn-perfil-icon" title="Meu Perfil">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </a>
+        </div>
     </nav>
 
     <main>
@@ -38,17 +44,11 @@
     {% block scripts %}{% endblock %}
 
     <script>
-        // Verifica se o navegador suporta Service Workers
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Registra o nosso arquivo sw.js
                 navigator.serviceWorker.register('/sw.js')
-                    .then((registration) => {
-                        console.log('Service Worker registrado com sucesso:', registration);
-                    })
-                    .catch((error) => {
-                        console.error('Falha ao registrar Service Worker:', error);
-                    });
+                    .then((registration) => console.log('Service Worker registrado'))
+                    .catch((error) => console.error('Falha no SW:', error));
             });
         }
     </script>
