@@ -16,6 +16,7 @@ from routes.diario import diario_bp
 from routes.auth import auth_bp 
 from routes.dashboard import dashboard_bp 
 from routes.perfil import perfil_bp 
+from routes.notas import notas_bp
 from models import User 
 
 app = Flask(__name__)
@@ -45,7 +46,8 @@ app.register_blueprint(exportar_bp, url_prefix='/api')
 app.register_blueprint(diario_bp, url_prefix='/api')
 app.register_blueprint(dashboard_bp, url_prefix='/api')
 app.register_blueprint(auth_bp) 
-app.register_blueprint(perfil_bp) 
+app.register_blueprint(perfil_bp)
+app.register_blueprint(notas_bp, url_prefix='/api') 
 
 if __name__ == "__main__":
     app.run()
