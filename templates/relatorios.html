@@ -35,16 +35,34 @@
     </div>
 
     <style>
-        .card-form { background: #fff; padding: 1.5em; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        select, input[type="date"] { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        /* Estilos EXCLUSIVOS desta página (sem afetar o resto do site) */
+        
+        /* Ajustes finos para os inputs desta página */
+        select, input[type="date"] { 
+            width: 100%; 
+            padding: 10px; 
+            margin-bottom: 10px; 
+            box-sizing: border-box; 
+        }
         
         .box-opcao { margin: 20px 0; }
-        .box-opcao h3 { margin-bottom: 5px; color: #333; }
-        .box-opcao p { color: #666; font-size: 0.9em; margin-bottom: 10px; }
+        .box-opcao h3 { margin-bottom: 5px; }
+        .box-opcao p { font-size: 0.9em; margin-bottom: 10px; opacity: 0.8; }
         
         .botoes-export { display: flex; gap: 10px; flex-wrap: wrap; }
         
-        button { border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; flex: 1; min-width: 120px; }
+        /* CORREÇÃO: Aplicamos estilo apenas aos botões DESTA área, não globais */
+        .botoes-export button { 
+            border: none; 
+            padding: 10px 15px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            color: white; 
+            flex: 1; 
+            min-width: 120px; 
+        }
+
         .btn-excel { background-color: #217346; } /* Verde Excel */
         .btn-excel:hover { background-color: #1a5c38; }
         .btn-pdf { background-color: #b30b00; } /* Vermelho PDF */
