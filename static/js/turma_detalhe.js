@@ -17,12 +17,14 @@ document.addEventListener('DOMContentLoaded', () => {
         listaBusca: document.getElementById('lista-busca-alunos'),
         listaVinculados: document.getElementById('lista-alunos-vinculados'),
         linkFreq: document.getElementById('link-frequencia'),
-        linkStats: document.getElementById('link-stats')
+        linkStats: document.getElementById('link-stats'),
+        linkNotas: document.getElementById('link-notas') // <-- ADICIONADO
     };
 
     // Configura links
     els.linkFreq.href = `/turma/${TURMA_ID}/frequencia`;
     els.linkStats.href = `/turma/${TURMA_ID}/estatisticas`;
+    els.linkNotas.href = `/turma/${TURMA_ID}/avaliacoes`; // <-- ADICIONADO
 
     // Carrega dados
     Promise.all([
@@ -120,12 +122,12 @@ function renderizarBusca() {
     filtrados.forEach(aluno => {
         const div = document.createElement('div');
         div.className = 'aluno-busca-item';
-        
+
         let infoExtra = '';
         if (aluno.matricula) {
             infoExtra = `<br><small style="color: #666;">Mat: ${aluno.matricula}</small>`;
         }
-        
+
         div.innerHTML = `
             <span>
                 <strong>${aluno.nome_completo}</strong>
@@ -147,10 +149,10 @@ window.handleVincular = async function(alunoId) {
             body: JSON.stringify({ turma_id: TURMA_ID, aluno_id: alunoId })
         });
         if (!res.ok) throw new Error((await res.json()).error);
-        
+
         await carregarAlunosVinculados(); 
         renderizarBusca(); 
-        
+
     } catch (err) {
         alert(`Erro: ${err.message}`);
     }
@@ -166,7 +168,7 @@ window.handleRemover = async function(vinculoId, alunoId) {
         ALUNOS_VINCULADOS_MAP.delete(alunoId);
         await carregarAlunosVinculados(); 
         renderizarBusca(); 
-        
+
     } catch (err) {
         alert(`Erro: ${err.message}`);
     }
