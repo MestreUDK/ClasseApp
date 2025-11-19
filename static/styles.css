@@ -1,312 +1,232 @@
-/* --- ESTILOS GERAIS --- */
+/* --- VARIÁVEIS DE CORES (TEMA CLARO PADRÃO) --- */
+:root {
+    --bg-body: #f4f4f4;
+    --bg-card: #ffffff;
+    --text-main: #333333;
+    --text-sec: #666666;
+    --border-color: #dddddd;
+    --primary: #007bff;
+    --primary-hover: #0056b3;
+    --nav-bg: #ffffff;
+    --shadow: 0 2px 4px rgba(0,0,0,0.1);
+    --input-bg: #ffffff;
+    --bottom-nav-height: 70px; /* Altura da barra no celular */
+}
+
+/* --- TEMA ESCURO --- */
+[data-theme="dark"] {
+    --bg-body: #121212;
+    --bg-card: #1e1e1e;
+    --text-main: #e0e0e0;
+    --text-sec: #aaaaaa;
+    --border-color: #333333;
+    --primary: #4da3ff;
+    --primary-hover: #007bff;
+    --nav-bg: #1e1e1e;
+    --shadow: 0 2px 4px rgba(0,0,0,0.3);
+    --input-bg: #2c2c2c;
+}
+
+/* --- GERAL --- */
 body { 
-    font-family: sans-serif; 
-    margin: 2em; 
-    background-color: #f4f4f4; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    background-color: var(--bg-body); 
+    color: var(--text-main);
+    padding-bottom: 80px; /* Espaço para a barra no mobile */
 }
-h1, h2, h3 { 
-    color: #333; 
-}
-h3 { margin-top: 0; }
+
+h1, h2, h3 { color: var(--text-main); }
+a { text-decoration: none; }
 ul { list-style-type: none; padding: 0; }
 
-/* --- NAVEGAÇÃO E BUSCA GLOBAL (ATUALIZADO) --- */
+/* --- CONTAINER PRINCIPAL --- */
+main {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* --- NAVEGAÇÃO SUPERIOR (DESKTOP & CABEÇALHO) --- */
 nav { 
-    margin-bottom: 2em; 
     display: flex; 
     justify-content: space-between; 
     align-items: center;
-    flex-wrap: wrap; 
-    gap: 10px; 
-    background: #fff; /* Fundo branco na nav */
-    padding: 10px;    /* Respiro */
-    border-radius: 8px; /* Bordas arredondadas */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    background: var(--nav-bg); 
+    padding: 10px 20px; 
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
 }
 
-nav .links { 
-    display: flex; 
-    gap: 5px; 
-    flex-wrap: wrap;
-}
+/* Grupo Esquerdo (Links Desktop) */
+nav .links { display: flex; gap: 10px; }
 
-/* Links de texto normais */
 nav .links a { 
     padding: 8px 12px; 
-    background: #f0f0f0; 
-    text-decoration: none; 
-    color: #333; 
-    border-radius: 4px; 
-    font-size: 0.9em;
+    color: var(--text-main); 
+    border-radius: 8px; 
+    font-weight: 500;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
-nav .links a:hover { background: #e0e0e0; }
+nav .links a:hover { background: rgba(0,0,0,0.05); }
 
-/* Grupo da Direita (Busca + Perfil) */
+/* Ícones SVG nos links (escondidos no desktop se quiser, ou mostrados) */
+nav .links svg { width: 20px; height: 20px; }
+
+/* Grupo Direito (Busca + Perfil + DarkMode) */
 .nav-right {
     display: flex;
     align-items: center;
     gap: 10px;
-    flex-grow: 1;
-    justify-content: flex-end; /* Empurra para a direita */
 }
 
-/* Formulário de Busca */
-nav form { 
-    display: flex; 
-    margin: 0; 
-}
-nav form input[type="search"] { 
-    border: 1px solid #ccc; 
-    padding: 8px; 
-    border-radius: 4px 0 0 4px; 
-    width: auto; 
-    margin-bottom: 0; 
-    box-shadow: none;
-    max-width: 120px; /* Limita largura no celular */
-}
-nav form button { 
-    background-color: #007bff; 
-    color: white; 
-    padding: 8px 12px; 
-    border: none; 
-    border-radius: 0 4px 4px 0; 
-    cursor: pointer;
-}
-nav form button:hover { background-color: #0056b3; }
+/* --- BARRA DE NAVEGAÇÃO INFERIOR (MOBILE) --- */
+@media (max-width: 768px) {
+    /* Esconde os links do topo */
+    nav .links {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: var(--nav-bg);
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        justify-content: space-around;
+        padding: 10px 0;
+        gap: 0;
+        z-index: 1000;
+        border-top: 1px solid var(--border-color);
+    }
 
-/* --- ÍCONE DE PERFIL (NOVO) --- */
-.btn-perfil-icon {
+    nav .links a {
+        flex-direction: column;
+        font-size: 0.75em;
+        padding: 5px;
+        color: var(--text-sec);
+        background: none !important; /* Remove fundo cinza no mobile */
+    }
+    
+    /* Link ativo ou hover no mobile fica colorido */
+    nav .links a:hover, nav .links a.active {
+        color: var(--primary);
+    }
+    
+    nav .links svg {
+        margin-bottom: 2px;
+    }
+
+    /* Ajusta o topo para ficar só a busca e perfil */
+    nav {
+        justify-content: flex-end; /* Empurra busca pra direita */
+    }
+}
+
+/* --- BOTÕES DE ÍCONE (Perfil e Tema) --- */
+.btn-icon {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background-color: #e9ecef;
-    color: #333;
-    text-decoration: none;
-    transition: background 0.2s;
-    border: 1px solid #ccc;
-}
-.btn-perfil-icon:hover {
-    background-color: #dbe2e8;
-    color: #007bff;
-    border-color: #007bff;
-}
-
-/* Ajuste para mobile: se faltar espaço, quebra linha bonito */
-@media (max-width: 600px) {
-    .nav-right {
-        width: 100%;
-        justify-content: space-between;
-        margin-top: 10px; /* Espaço extra se quebrar linha */
-    }
-    nav form input[type="search"] {
-        width: 100%;
-        max-width: none;
-        flex: 1;
-    }
-    nav form {
-        flex: 1;
-    }
-}
-
-/* --- RESTANTE DOS ESTILOS (MANTIDOS) --- */
-
-/* --- FORMULÁRIOS E INPUTS --- */
-form { 
-    background: #fff; 
-    padding: 1em; 
-    border-radius: 8px; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
-}
-input[type="text"], input[type="date"] { 
-    width: 95%; 
-    padding: 8px; 
-    margin-bottom: 10px; 
-    border: 1px solid #ccc; 
-    border-radius: 4px; 
-    font-size: 1.1em;
-}
-button { 
-    background-color: #007bff; 
-    color: white; 
-    padding: 10px 15px; 
-    border: none; 
-    border-radius: 4px; 
-    cursor: pointer; 
-}
-button:hover { background-color: #0056b3; }
-
-/* --- MENSAGENS DE STATUS --- */
-#msg-erro { color: red; font-weight: bold; }
-#msg-sucesso { color: green; font-weight: bold; }
-
-/* --- LAYOUT COLUNAS --- */
-.container, .container-resultados { display: flex; flex-wrap: wrap; gap: 2em; }
-.coluna, .coluna-resultados { 
-    flex: 1; 
-    min-width: 300px; 
-    background: #fff; 
-    padding: 1em; 
-    border-radius: 8px; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-/* --- BOTÕES DE AÇÃO --- */
-.botoes-acao {
-    display: flex;
-    gap: 10px; 
-    margin-top: 15px;
-}
-.botoes-acao a, .botoes-acao button {
-    text-decoration: none;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 0.9em;
-    border: none;
+    background-color: rgba(0,0,0,0.05);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
     cursor: pointer;
+    transition: all 0.2s;
 }
-a.botao-gerenciar { background-color: #17a2b8; }
-a.botao-gerenciar:hover { background-color: #138496; }
-a.botao-edit { background-color: #ffc107; }
-a.botao-edit:hover { background-color: #e0a800; }
-button.botao-delete, button.remover { background-color: #dc3545; }
-button.botao-delete:hover, button.remover:hover { background-color: #c82333; }
-a.botao-acao { 
-    display: inline-block; 
-    background-color: #28a745; 
-    color: white; 
-    padding: 10px 15px; 
-    text-decoration: none; 
-    border-radius: 4px; 
-    margin-top: 10px; 
-    margin-bottom: 20px; 
-}
-a.botao-acao:hover { background-color: #218838; }
+.btn-icon:hover { background-color: rgba(0,0,0,0.1); }
 
-/* --- CARDS --- */
-div.turma, div.aluno { 
-    background: #fff; 
+/* --- FORMULÁRIOS --- */
+form, .card-form, .chamada-container { 
+    background: var(--bg-card); 
+    padding: 1.5em; 
+    border-radius: 12px; 
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5em;
+    border: 1px solid var(--border-color);
+}
+
+input[type="text"], input[type="date"], input[type="password"], input[type="email"], select, textarea, input[type="search"] { 
+    width: 100%; 
+    padding: 12px; 
+    margin-bottom: 10px; 
+    border: 1px solid var(--border-color); 
+    border-radius: 8px; 
+    font-size: 1em;
+    background-color: var(--input-bg);
+    color: var(--text-main);
+    box-sizing: border-box;
+}
+
+/* Busca no Header */
+nav form { 
+    background: none; 
+    padding: 0; 
+    box-shadow: none; 
+    margin: 0; 
+    border: none;
+    display: flex;
+}
+nav form input[type="search"] {
+    margin: 0;
+    border-radius: 20px 0 0 20px;
+    padding: 8px 15px;
+    border-right: none;
+    width: 150px;
+}
+nav form button {
+    border-radius: 0 20px 20px 0;
+    padding: 8px 15px;
+    margin: 0;
+}
+
+/* --- BOTÕES GERAIS --- */
+button, .botao-acao, .botao-gerenciar, .botao-edit, .botao-delete { 
+    padding: 10px 15px; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    border: none;
+    font-weight: 600;
+    display: inline-block;
+    text-align: center;
+}
+
+button { background-color: var(--primary); color: white; }
+button:hover { opacity: 0.9; }
+
+.botoes-acao { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.botao-gerenciar { background-color: #17a2b8; color: white; }
+.botao-edit { background-color: #ffc107; color: #000; }
+.botao-delete, .remover { background-color: #dc3545; color: white; }
+
+/* --- CARDS E LISTAS --- */
+.dash-card, .turma, .aluno, .item-resultado { 
+    background: var(--bg-card); 
     padding: 1em; 
     margin-top: 1em; 
-    border-radius: 8px; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-div.aluno {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.item-resultado {
-    background: #fff;
-    padding: 1em;
-    margin-bottom: 1em;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-.item-resultado a { text-decoration: none; color: #007bff; font-weight: bold; }
-.item-resultado a:hover { text-decoration: underline; }
-
-/* --- PÁGINA DE FREQUÊNCIA --- */
-.chamada-container { background: #fff; padding: 1em; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-li.aluno-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 8px; border-bottom: 1px solid #eee; }
-li.aluno-item:last-child { border-bottom: none; }
-.aluno-nome { font-size: 1.1em; }
-.botoes-frequencia button {
-    padding: 8px 12px; font-size: 0.9em; cursor: pointer;
-    border: 1px solid #ccc; background-color: #f0f0f0; color: #555;
-    min-width: 40px;
-}
-.botoes-frequencia button.presente { border-radius: 4px 0 0 4px; }
-.botoes-frequencia button.ausente { border-radius: 0 4px 4px 0; border-left: none; }
-.botoes-frequencia button.presente.active { background-color: #28a745; color: white; border-color: #28a745; }
-.botoes-frequencia button.ausente.active { background-color: #dc3545; color: white; border-color: #dc3545; }
-
-/* --- PÁGINA DETALHE TURMA --- */
-#lista-busca-alunos {
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid #eee;
-    border-radius: 4px;
-}
-.aluno-busca-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    border-bottom: 1px solid #f0f0f0;
-}
-.aluno-busca-item:last-child { border-bottom: none; }
-.aluno-busca-item button {
-    background-color: #28a745; 
-    font-size: 0.9em;
-    padding: 6px 10px;
-}
-.aluno-busca-item button:hover { background-color: #218838; }
-li.aluno-vinculado-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 8px; border-bottom: 1px solid #eee; }
-
-/* --- PÁGINA DE FREQUÊNCIA (HISTÓRICO) --- */
-.tag-data {
-    background-color: #e9ecef;
-    color: #333;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.9em;
-    cursor: pointer;
-    border: 1px solid #ddd;
-    transition: background 0.2s;
-}
-.tag-data:hover {
-    background-color: #dde2e6;
-    border-color: #ccc;
+    border-radius: 12px; 
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
 }
 
-/* --- DASHBOARD --- */
+/* Dashboard Grid */
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5em;
-    margin-bottom: 2em;
+    gap: 1em;
 }
+.card-icon { font-size: 2em; margin-right: 15px; }
 
-.dash-card {
-    background: #fff;
-    padding: 1.5em;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    display: flex;
-    align-items: center;
-    border-bottom: 4px solid transparent;
-    transition: transform 0.2s;
-}
-
-.dash-card:hover {
-    transform: translateY(-3px);
-}
-
-.card-alunos { border-bottom-color: #007bff; }
-.card-turmas { border-bottom-color: #28a745; }
-.card-freq { border-bottom-color: #ffc107; }
-
-.card-icon {
-    font-size: 2.5em;
-    margin-right: 15px;
-    opacity: 0.8;
-}
-
-.card-info h3 {
-    margin: 0;
-    font-size: 0.9em;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.card-info p {
-    margin: 5px 0 0;
-    font-size: 1.8em;
-    font-weight: bold;
-    color: #333;
+/* --- TABELAS E TAGS --- */
+table th { background-color: rgba(0,0,0,0.05); color: var(--text-main); }
+table td { border-color: var(--border-color); }
+.tag-data, .badge, .legenda-stats { 
+    background-color: rgba(0,0,0,0.05); 
+    color: var(--text-main); 
+    border: 1px solid var(--border-color); 
 }
