@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        @page { size: a4 landscape; margin: 1cm; } /* Paisagem para caber mais notas */
+        body { font-family: sans-serif; font-size: 10pt; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 16pt; color: #007bff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #000; padding: 6px; text-align: center; }
+        th { background-color: #e9ecef; font-weight: bold; }
+        .nome { text-align: left; width: 30%; }
+        .total { font-weight: bold; background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Boletim de Notas</h1>
+        <p>Turma: <strong>{{ turma_nome }}</strong></p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="nome">Aluno</th>
+                {% for col in colunas %}
+                    <th>{{ col }}</th>
+                {% endfor %}
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for linha in linhas %}
+            <tr>
+                <td class="nome">{{ linha.nome }}</td>
+                {% for nota in linha.notas %}
+                    <td>{{ nota }}</td>
+                {% endfor %}
+                <td class="total">{{ linha.total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
