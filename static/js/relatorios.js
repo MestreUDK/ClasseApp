@@ -8,9 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
         dataPicker: document.getElementById('data-relatorio')
     };
 
-    // Define hoje como padrão
-    els.dataPicker.valueAsDate = new Date();
-    
+    // Define hoje como padrão se o elemento existir
+    if (els.dataPicker) {
+        els.dataPicker.valueAsDate = new Date();
+    }
+
     carregarTurmas();
 });
 
@@ -18,9 +20,9 @@ async function carregarTurmas() {
     try {
         const res = await fetch('/api/turmas');
         const turmas = await res.json();
-        
+
         els.selectTurma.innerHTML = '';
-        
+
         if (turmas.length === 0) {
             const opt = document.createElement('option');
             opt.text = "Nenhuma turma cadastrada";
@@ -41,26 +43,26 @@ async function carregarTurmas() {
     }
 }
 
-// --- AÇÕES DE DOWNLOAD INTELIGENTES ---
-
-// Função genérica para baixar e tratar erros
+// --- FUNÇÃO GENÉRICA DE DOWNLOAD ---
 async function baixarArquivo(url) {
     try {
-        // Mostra um aviso que está processando
+        // Mostra um aviso no botão que foi clicado
         const btnAntigo = document.activeElement;
-        const textoOriginal = btnAntigo.innerText;
-        if(btnAntigo) btnAntigo.innerText = "Gerando...";
+        const textoOriginal = btnAntigo ? btnAntigo.innerText : '';
+        
+        if(btnAntigo && btnAntigo.tagName === 'BUTTON') {
+            btnAntigo.innerText = "Gerando...";
+            btnAntigo.disabled = true; // Evita múltiplos cliques
+        }
 
         const response = await fetch(url);
 
         if (response.ok) {
-            // Se deu certo, converte em Blob e força o download
             const blob = await response.blob();
             const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = downloadUrl;
             
-            // Tenta pegar o nome do arquivo do cabeçalho (opcional, senão usa padrão)
             const contentDisp = response.headers.get('Content-Disposition');
             let fileName = 'relatorio.pdf';
             if (contentDisp && contentDisp.indexOf('filename=') !== -1) {
@@ -73,18 +75,28 @@ async function baixarArquivo(url) {
             a.remove();
             window.URL.revokeObjectURL(downloadUrl);
         } else {
-            // SE DEU ERRO: Tenta ler o JSON de erro
             const erroJson = await response.json();
-            alert(`ERRO AO GERAR ARQUIVO:\n\n${erroJson.error}\n\nDetalhes: ${erroJson.details || ''}`);
-            console.error("Detalhes do erro:", erroJson);
+            alert(`ERRO: ${erroJson.error}\n${erroJson.details || ''}`);
         }
 
-        if(btnAntigo) btnAntigo.innerText = textoOriginal;
+        // Restaura o botão
+        if(btnAntigo && btnAntigo.tagName === 'BUTTON') {
+            btnAntigo.innerText = textoOriginal;
+            btnAntigo.disabled = false;
+        }
 
     } catch (error) {
-        alert("Erro de conexão ou rede: " + error.message);
+        alert("Erro de conexão: " + error.message);
+        // Restaura o botão em caso de erro de rede
+        const btnAntigo = document.activeElement;
+        if(btnAntigo && btnAntigo.tagName === 'BUTTON') {
+             btnAntigo.disabled = false;
+             btnAntigo.innerText = "Tentar Novamente";
+        }
     }
 }
+
+// --- AÇÕES DOS BOTÕES ---
 
 window.baixarGeral = function(formato) {
     const turmaId = els.selectTurma.value;
@@ -93,12 +105,8 @@ window.baixarGeral = function(formato) {
     let url = `/api/exportar/turma/${turmaId}/geral`;
     if (formato === 'pdf') url += '/pdf';
 
-    // Usa a nova função segura
-    if (formato === 'pdf') {
-        baixarArquivo(url);
-    } else {
-        window.location.href = url; // Excel raramente falha, mantemos o método simples
-    }
+    if (formato === 'pdf') baixarArquivo(url);
+    else window.location.href = url;
 };
 
 window.baixarDiario = function(formato) {
@@ -110,12 +118,24 @@ window.baixarDiario = function(formato) {
 
     let url = `/api/exportar/turma/${turmaId}/frequencia`;
     if (formato === 'pdf') url += '/pdf';
-    
     url += `?data=${data}`;
 
+    if (formato === 'pdf') baixarArquivo(url);
+    else window.location.href = url;
+};
+
+// --- AQUI ESTÁ A FUNÇÃO QUE FALTAVA PARA AS NOTAS ---
+window.baixarNotas = function(formato) {
+    const turmaId = els.selectTurma.value;
+    if (!turmaId) return alert("Selecione uma turma primeiro.");
+
+    let url = `/api/exportar/turma/${turmaId}/notas`;
+    if (formato === 'pdf') url += '/pdf';
+
+    // Usamos baixarArquivo para ambos para ter feedback visual de "Gerando..."
     if (formato === 'pdf') {
         baixarArquivo(url);
     } else {
-        window.location.href = url;
+        baixarArquivo(url); 
     }
 };
