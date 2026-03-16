@@ -13,6 +13,13 @@ document.addEventListener('DOMContentLoaded', () => {
         matricula: document.getElementById('matricula'),
         telefone: document.getElementById('telefone'),
         email: document.getElementById('email'),
+        
+        // ==========================================
+        // --- NOVO: REFERÊNCIAS DOS NOVOS CAMPOS ---
+        // ==========================================
+        dataNascimento: document.getElementById('data_nascimento'),
+        detalhes: document.getElementById('detalhes'),
+
         msgErro: document.getElementById('msg-erro'),
         msgSucesso: document.getElementById('msg-sucesso')
     };
@@ -34,6 +41,12 @@ async function carregarDadosAluno() {
         els.matricula.value = aluno.matricula || '';
         els.telefone.value = aluno.telefone || ''; 
         els.email.value = aluno.email || '';       
+        
+        // ==========================================
+        // --- NOVO: PREENCHE OS NOVOS CAMPOS ---
+        // ==========================================
+        els.dataNascimento.value = aluno.data_nascimento || '';
+        els.detalhes.value = aluno.detalhes || '';
 
     } catch (error) {
         console.error(error);
@@ -51,7 +64,13 @@ async function handleEditSubmit(event) {
         nome_completo: els.nome.value,
         matricula: els.matricula.value || null,
         telefone: els.telefone.value || null, 
-        email: els.email.value || null        
+        email: els.email.value || null,
+        
+        // ==========================================
+        // --- NOVO: ENVIA OS NOVOS CAMPOS ---
+        // ==========================================
+        data_nascimento: els.dataNascimento.value || null,
+        detalhes: els.detalhes.value || null
     };
 
     try {
