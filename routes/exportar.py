@@ -5,7 +5,7 @@ from flask import Blueprint, request, send_file, jsonify, render_template
 from utils import supabase
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
-// from xhtml2pdf import pisa
+# from xhtml2pdf import pisa # módulo apagado
 
 exportar_bp = Blueprint('exportar_bp', __name__)
 
