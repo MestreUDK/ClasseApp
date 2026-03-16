@@ -19,6 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
         matricula: document.getElementById('matricula'),
         telefone: document.getElementById('telefone'),
         email: document.getElementById('email'),
+        // ==========================================
+        // --- NOVO: REFERÊNCIAS DOS NOVOS CAMPOS ---
+        // ==========================================
+        dataNascimento: document.getElementById('data_nascimento'),
+        detalhes: document.getElementById('detalhes'),
+        
         msgErro: document.getElementById('msg-erro'),
         msgSucesso: document.getElementById('msg-sucesso'),
         filtro: document.getElementById('filtro-lista'),
@@ -62,15 +68,26 @@ function renderizarLista(alunos) {
             ? `<span style="margin-right: 10px; color: #666; font-size: 0.9em;">${label}: ${valor}</span>` 
             : '';
 
+        // Formata a data de nascimento para padrão BR se existir
+        const dataNascFormatada = aluno.data_nascimento 
+            ? aluno.data_nascimento.split('-').reverse().join('/') 
+            : null;
+
         const infoHTML = [
             criarInfo('Mat', aluno.matricula),
             criarInfo('Tel', aluno.telefone),
-            criarInfo('Email', aluno.email)
+            criarInfo('Email', aluno.email),
+            criarInfo('Nasc', dataNascFormatada) // <-- ADICIONADO NA LISTA
         ].join('') || '<span style="color: #999; font-style: italic; font-size: 0.8em;">Sem dados adicionais</span>';
+
+        // Mostra um pequeno aviso se houver detalhes extras
+        const badgeDetalhes = aluno.detalhes 
+            ? `<span style="background: #17a2b8; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em; margin-left: 5px;">Tem Detalhes</span>` 
+            : '';
 
         div.innerHTML = `
             <div style="flex: 1; overflow: hidden;">
-                <h3 style="margin-bottom: 5px;">${aluno.nome_completo}</h3>
+                <h3 style="margin-bottom: 5px;">${aluno.nome_completo} ${badgeDetalhes}</h3>
                 <div style="display: flex; flex-wrap: wrap;">
                     ${infoHTML}
                 </div>
@@ -102,6 +119,12 @@ window.prepararEdicao = function(aluno) {
     els.matricula.value = aluno.matricula || '';
     els.telefone.value = aluno.telefone || '';
     els.email.value = aluno.email || '';
+    
+    // ==========================================
+    // --- NOVO: PREENCHE OS NOVOS CAMPOS ---
+    // ==========================================
+    els.dataNascimento.value = aluno.data_nascimento || '';
+    els.detalhes.value = aluno.detalhes || '';
 
     els.tituloForm.textContent = `Editando: ${aluno.nome_completo}`;
     els.tituloForm.style.color = '#e0a800';
@@ -109,7 +132,7 @@ window.prepararEdicao = function(aluno) {
     els.btnSalvar.style.backgroundColor = '#ffc107';
     els.btnSalvar.style.color = '#000';
     els.btnCancelar.style.display = 'inline-block';
-    
+
     limparMensagens();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
@@ -118,14 +141,14 @@ function resetFormulario() {
     editMode = false;
     els.form.reset();
     els.id.value = '';
-    
+
     els.tituloForm.textContent = 'Cadastrar Novo Aluno';
     els.tituloForm.style.color = '#333';
     els.btnSalvar.textContent = 'Salvar Aluno';
     els.btnSalvar.style.backgroundColor = '#007bff';
     els.btnSalvar.style.color = '#fff';
     els.btnCancelar.style.display = 'none';
-    
+
     limparMensagens();
 }
 
@@ -138,7 +161,12 @@ async function handleFormSubmit(event) {
         nome_completo: els.nome.value,
         matricula: els.matricula.value || null,
         telefone: els.telefone.value || null,
-        email: els.email.value || null
+        email: els.email.value || null,
+        // ==========================================
+        // --- NOVO: ENVIA OS NOVOS CAMPOS ---
+        // ==========================================
+        data_nascimento: els.dataNascimento.value || null,
+        detalhes: els.detalhes.value || null
     };
 
     try {
