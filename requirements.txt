@@ -1,8 +1,10 @@
-Flask
+flask
+flask-login
 supabase
 gunicorn
 python-dotenv
 openpyxl
 xhtml2pdf
 reportlab
-flask-login
+pillow
+html5lib
