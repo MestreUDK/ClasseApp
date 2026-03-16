@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Configura indicador de conexão
     els.statusConexao.style.cssText = "padding: 5px; text-align: center; display: none; margin-bottom: 10px; border-radius: 4px;";
     document.querySelector('.chamada-container').prepend(els.statusConexao);
-    
+
     // Monitora conexão
     window.addEventListener('online', syncPendentes);
     window.addEventListener('offline', atualizarStatusConexao);
@@ -64,7 +64,7 @@ function atualizarLinkExportar() {
 // --- SINCRONIZAÇÃO ---
 async function syncPendentes() {
     if (!navigator.onLine) return;
-    
+
     // Precisa do db.js carregado
     if (typeof getPendentes !== 'function') return;
 
@@ -88,7 +88,7 @@ async function syncPendentes() {
             console.error("Erro ao sincronizar item", item, e);
         }
     }
-    
+
     atualizarStatusConexao();
     // Recarrega a lista para confirmar os dados vindos do servidor
     carregarChamada();
@@ -140,9 +140,15 @@ async function carregarChamada() {
         ]);
 
         const alunosVinculados = await respAlunos.json();
+        
+        // ==========================================
+        // --- NOVO: ORDENAÇÃO ALFABÉTICA AQUI ---
+        // ==========================================
+        alunosVinculados.sort((a, b) => a.alunos.nome_completo.localeCompare(b.alunos.nome_completo));
+
         // Se estiver offline, o respFreq pode falhar ou vir vazio, tratamos isso
         let frequenciaMap = new Map();
-        
+
         try {
             const registrosFrequencia = await respFreq.json();
             registrosFrequencia.forEach(reg => frequenciaMap.set(reg.aluno_id, reg.presente));
@@ -161,7 +167,7 @@ async function carregarChamada() {
 
             const li = document.createElement('li');
             li.className = 'aluno-item';
-            
+
             li.innerHTML = `
                 <span class="aluno-nome">${aluno.nome_completo}</span>
                 <div class="botoes-frequencia">
