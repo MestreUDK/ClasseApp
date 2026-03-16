@@ -12,7 +12,12 @@
                 <label for="titulo">Título:</label>
                 <input type="text" id="titulo" required placeholder="Ex: Reunião pedagógica, Ocorrência...">
             </div>
-            
+
+            <div>
+                <label for="data_referencia">Data da Ocorrência:</label>
+                <input type="date" id="data_referencia" required>
+            </div>
+
             <div>
                 <label for="conteudo">Conteúdo:</label>
                 <textarea id="conteudo" rows="4" placeholder="Escreva os detalhes aqui..."></textarea>
@@ -20,16 +25,16 @@
 
             <div class="row-selects">
                 <div style="flex: 1;">
-                    <label for="select-turma">Vincular Turma (Opcional):</label>
-                    <select id="select-turma">
-                        <option value="">-- Nenhuma --</option>
-                    </select>
+                    <label for="input-turma">Vincular Turma (Opcional):</label>
+                    <input list="turmas-list" id="input-turma" placeholder="Pesquise a turma...">
+                    <datalist id="turmas-list"></datalist>
+                    <input type="hidden" id="select-turma"> 
                 </div>
                 <div style="flex: 1;">
-                    <label for="select-aluno">Vincular Aluno (Opcional):</label>
-                    <select id="select-aluno">
-                        <option value="">-- Nenhum --</option>
-                    </select>
+                    <label for="input-aluno">Vincular Aluno (Opcional):</label>
+                    <input list="alunos-list" id="input-aluno" placeholder="Pesquise o aluno...">
+                    <datalist id="alunos-list"></datalist>
+                    <input type="hidden" id="select-aluno"> 
                 </div>
             </div>
 
@@ -48,7 +53,7 @@
         /* Estilos específicos de layout (não de cor) */
         textarea { resize: vertical; }
         .row-selects { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px; }
-        
+
         /* Estilo dos Cartões de Nota */
         .nota-card { 
             /* Usa variáveis do tema */
