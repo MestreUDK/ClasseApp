@@ -7,10 +7,10 @@
 
     <div class="card-form">
         <h2 id="titulo-form" style="margin-top: 0;">Cadastrar Novo Aluno</h2>
-        
+
         <form id="form-aluno" style="background: none; padding: 0; box-shadow: none; border: none; margin: 0;">
             <input type="hidden" id="aluno_id">
-            
+
             <div>
                 <label for="nome_completo">Nome Completo:</label>
                 <input type="text" id="nome_completo" name="nome_completo" required>
@@ -28,6 +28,15 @@
                 <input type="text" id="email" name="email" placeholder="aluno@email.com">
             </div>
             
+            <div>
+                <label for="data_nascimento">Data de Nascimento (opcional):</label>
+                <input type="date" id="data_nascimento" name="data_nascimento">
+            </div>
+            <div>
+                <label for="detalhes">Detalhes Extras (opcional):</label>
+                <textarea id="detalhes" name="detalhes" rows="3" placeholder="Observações médicas, necessidades especiais, etc..."></textarea>
+            </div>
+
             <div style="margin-top: 10px;">
                 <button type="submit" id="btn-salvar">Salvar Aluno</button>
                 <button type="button" id="btn-cancelar" style="background-color: #6c757d; display: none; margin-left: 10px;">
