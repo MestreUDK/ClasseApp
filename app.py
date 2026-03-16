@@ -21,6 +21,16 @@ from models import User
 
 app = Flask(__name__)
 
+# ==========================================
+# --- NOVO: CONFIGURAÇÃO DE VERSÃO ---
+# ==========================================
+app.config['VERSION'] = '2.0'
+
+# Context Processor para injetar a variável em todos os templates HTML
+@app.context_processor
+def inject_version():
+    return dict(app_version=app.config['VERSION'])
+
 # CONFIGURAÇÃO DE SEGURANÇA
 app.secret_key = os.environ.get("SECRET_KEY", "minha_chave_secreta_super_segura")
 
