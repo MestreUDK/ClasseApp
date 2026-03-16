@@ -28,7 +28,7 @@ def get_frequencia():
             .eq('turma_id', turma_id) \
             .eq('data', data) \
             .execute()
-        
+
         return jsonify(data[1])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -39,7 +39,7 @@ def set_frequencia():
     try:
         dados = request.get_json()
         turma_id = dados.get('turma_id')
-        
+
         # Verifica segurança antes de salvar
         if not verificar_dono_turma(turma_id): return jsonify({"error": "Acesso negado."}), 403
 
@@ -63,5 +63,30 @@ def get_datas_chamada(turma_id):
 
         data, count = supabase.rpc('get_datas_unicas', {'p_turma_id': str(turma_id)}).execute()
         return jsonify(data[1])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ==========================================
+# --- NOVO: APAGAR FREQUÊNCIA DO DIA ---
+# ==========================================
+@frequencia_bp.route('/frequencia/dia', methods=['DELETE'])
+@login_required
+def delete_frequencia_dia():
+    try:
+        dados = request.get_json()
+        turma_id = dados.get('turma_id')
+        data = dados.get('data')
+        
+        if not verificar_dono_turma(turma_id): 
+            return jsonify({"error": "Acesso negado."}), 403
+
+        # Apaga todos os registros daquela turma naquela data
+        res, count = supabase.table('frequencia') \
+            .delete() \
+            .eq('turma_id', turma_id) \
+            .eq('data', data) \
+            .execute()
+
+        return jsonify({"message": "Frequência apagada com sucesso."}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
