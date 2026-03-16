@@ -70,6 +70,11 @@ async function carregarAlunosVinculados() {
         if (!res.ok) throw new Error((await res.json()).error);
         const alunos = await res.json();
 
+        // ==========================================
+        // --- NOVO: ORDENAÇÃO ALFABÉTICA AQUI ---
+        // ==========================================
+        alunos.sort((a, b) => a.alunos.nome_completo.localeCompare(b.alunos.nome_completo));
+
         els.listaVinculados.innerHTML = ''; 
         ALUNOS_VINCULADOS_MAP.clear(); 
 
