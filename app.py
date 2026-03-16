@@ -60,4 +60,6 @@ app.register_blueprint(perfil_bp)
 app.register_blueprint(notas_bp, url_prefix='/api') 
 
 if __name__ == "__main__":
-    app.run()
+    # O Discloud fornece a porta correta através das variáveis de ambiente
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
