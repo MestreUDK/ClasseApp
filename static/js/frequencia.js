@@ -140,7 +140,7 @@ async function carregarChamada() {
         ]);
 
         const alunosVinculados = await respAlunos.json();
-        
+
         // ==========================================
         // --- NOVO: ORDENAÇÃO ALFABÉTICA AQUI ---
         // ==========================================
@@ -227,3 +227,37 @@ async function marcarPresenca(botaoClicado, alunoId, statusPresenca) {
         atualizarStatusConexao(); // Mostra aviso vermelho
     }
 }
+
+// ==========================================
+// --- NOVO: AÇÃO DE APAGAR FREQUÊNCIA ---
+// ==========================================
+document.getElementById('btn-apagar-dia').addEventListener('click', async () => {
+    const dataSelecionada = els.picker.value;
+    if (!dataSelecionada) return;
+    
+    // Formata a data para exibir no alerta de forma mais amigável (DD/MM/AAAA)
+    const dataFormatada = dataSelecionada.split('-').reverse().join('/');
+    
+    if (confirm(`Atenção! Deseja apagar toda a chamada do dia ${dataFormatada}?`)) {
+        try {
+            const res = await fetch('/api/frequencia/dia', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ turma_id: TURMA_ID, data: dataSelecionada })
+            });
+            
+            if (res.ok) {
+                alert('Frequência do dia apagada com sucesso.');
+                // Recarrega a chamada e o histórico de datas para atualizar a tela
+                carregarChamada(); 
+                carregarHistoricoDatas();
+            } else {
+                const erro = await res.json();
+                alert(`Erro ao apagar: ${erro.error || 'Desconhecido'}`);
+            }
+        } catch (e) {
+            alert('Erro de conexão ao tentar apagar a frequência.');
+            console.error(e);
+        }
+    }
+});
