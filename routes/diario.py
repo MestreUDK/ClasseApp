@@ -17,7 +17,7 @@ def get_notas():
             .eq('user_id', current_user.id) \
             .order('created_at', desc=True) \
             .execute()
-        
+
         return jsonify(data[1])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -34,15 +34,19 @@ def create_nota():
         turma_id = dados.get('turma_id') or None
         aluno_id = dados.get('aluno_id') or None
 
+        # ==========================================
+        # --- NOVO: DATA DE REFERÊNCIA INSERIDA ---
+        # ==========================================
         # Salva vinculando ao seu usuário
         data, count = supabase.table('diario').insert({
             'titulo': dados.get('titulo'),
             'conteudo': dados.get('conteudo'),
             'turma_id': turma_id,
             'aluno_id': aluno_id,
+            'data_referencia': dados.get('data_referencia'), # <-- ADICIONADO
             'user_id': current_user.id # <-- VÍNCULO DE PROPRIEDADE
         }).execute()
-        
+
         return jsonify(data[1][0]), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -58,10 +62,10 @@ def delete_nota(nota_id):
             .eq('id', nota_id)\
             .eq('user_id', current_user.id)\
             .execute()
-            
+
         if count and count[1] == 0:
              return jsonify({"error": "Nota não encontrada ou acesso negado."}), 404
-             
+
         return jsonify({"message": "Nota excluída."}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
