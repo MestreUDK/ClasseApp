@@ -36,11 +36,13 @@ def create_aluno():
             'matricula': dados.get('matricula'),
             'telefone': dados.get('telefone'),
             'email': dados.get('email'),
+            'data_nascimento': dados.get('data_nascimento'), # <-- ADICIONADO
+            'detalhes': dados.get('detalhes'),               # <-- ADICIONADO
             'user_id': current_user.id # <-- VÍNCULO DE PROPRIEDADE
         }).execute()
-        
+
         return jsonify(data[1][0]), 201
-        
+
     except Exception as e:
         # Esse erro de constraint pode acontecer se você tentar cadastrar
         # a mesma matrícula que OUTRO professor já usou (se a matrícula for única globalmente).
@@ -59,7 +61,7 @@ def get_aluno_by_id(aluno_id):
             .eq('id', aluno_id)\
             .eq('user_id', current_user.id)\
             .single().execute()
-        
+
         if not data[1]:
              return jsonify({"error": "Aluno não encontrado ou acesso negado."}), 404
 
@@ -80,14 +82,16 @@ def update_aluno(aluno_id):
             'nome_completo': dados.get('nome_completo'),
             'matricula': dados.get('matricula'),
             'telefone': dados.get('telefone'),
-            'email': dados.get('email')
+            'email': dados.get('email'),
+            'data_nascimento': dados.get('data_nascimento'), # <-- ADICIONADO
+            'detalhes': dados.get('detalhes')                # <-- ADICIONADO
         }).eq('id', aluno_id).eq('user_id', current_user.id).execute()
-        
+
         if not data[1]:
              return jsonify({"error": "Aluno não encontrado ou acesso negado."}), 404
 
         return jsonify(data[1][0]), 200
-        
+
     except Exception as e:
         if 'violates unique constraint' in str(e):
              return jsonify({"error": "Esta matrícula já está cadastrada."}), 409
@@ -103,11 +107,11 @@ def delete_aluno(aluno_id):
             .eq('id', aluno_id)\
             .eq('user_id', current_user.id)\
             .execute()
-        
+
         if count and count[1] == 0:
              return jsonify({"error": "Aluno não encontrado ou acesso negado."}), 404
 
         return jsonify({"message": "Aluno excluído com sucesso."}), 200
-        
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
