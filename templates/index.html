@@ -34,26 +34,62 @@
     <hr style="margin: 2em 0; border: 0; border-top: 1px solid #eee;">
 
     <h2>Gerenciar Turmas</h2>
-    
+
     <div class="card-form">
         <h3 style="margin-top:0;">Nova Turma</h3>
+
         <form id="form-turma" style="background: none; padding: 0; box-shadow: none; border: none; margin: 0;">
             <div>
                 <label for="nome">Nome da Turma:</label>
                 <input type="text" id="nome" name="nome" required>
             </div>
+
             <div>
                 <label for="descricao">Descrição (opcional):</label>
                 <input type="text" id="descricao" name="descricao">
             </div>
-            <button type="submit" style="margin-top: 10px;">+ Criar Turma</button>
+
+            <div>
+                <label for="disciplina_id">Disciplina (opcional):</label>
+                <select id="disciplina_id" name="disciplina_id">
+                    <option value="">Carregando disciplinas...</option>
+                </select>
+            </div>
+
+            <button type="submit" style="margin-top: 10px;">
+                + Criar Turma
+            </button>
         </form>
     </div>
 
     <h2>Turmas Ativas</h2>
+
     <div id="lista-turmas">
         <p>Carregando turmas...</p>
     </div>
+
+    <style>
+        .tag-disciplina {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--icon-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            margin-top: 6px;
+        }
+
+        .bolinha-disciplina {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+    </style>
 {% endblock %}
 
 {% block scripts %}
