@@ -4,16 +4,85 @@
 
 {% block content %}
     <h1 id="nome-turma">Carregando...</h1>
-    
-    <a href="" id="link-voltar" class="botao-acao" style="margin-bottom: 1em; background-color: #6c757d;">Voltar para Turma</a>
+
+    <a 
+        href="" 
+        id="link-voltar" 
+        class="botao-acao" 
+        style="margin-bottom: 1em; background-color: #6c757d;"
+    >
+        Voltar para Turma
+    </a>
 
     <div class="coluna">
         <h2>Estatísticas de Presença</h2>
-        
+
+        <div class="card-form filtros-stats">
+            <h3>Filtrar Período</h3>
+
+            <div class="grid-filtros">
+                <div>
+                    <label for="tipo-periodo">Tipo de período:</label>
+                    <select id="tipo-periodo">
+                        <option value="tudo">Tudo</option>
+                        <option value="mes">Mês</option>
+                        <option value="bimestre">Bimestre</option>
+                        <option value="trimestre">Trimestre</option>
+                        <option value="semestre">Semestre</option>
+                        <option value="ano">Ano inteiro</option>
+                        <option value="personalizado">Personalizado</option>
+                    </select>
+                </div>
+
+                <div id="box-mes" style="display: none;">
+                    <label for="mes">Mês:</label>
+                    <select id="mes">
+                        <option value="1">Janeiro</option>
+                        <option value="2">Fevereiro</option>
+                        <option value="3">Março</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Maio</option>
+                        <option value="6">Junho</option>
+                        <option value="7">Julho</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                </div>
+
+                <div id="box-periodo" style="display: none;">
+                    <label for="periodo-numero">Período:</label>
+                    <select id="periodo-numero"></select>
+                </div>
+
+                <div>
+                    <label for="ano">Ano:</label>
+                    <input type="number" id="ano" min="2020" max="2100">
+                </div>
+
+                <div id="box-inicio" style="display: none;">
+                    <label for="data-inicio">Data inicial:</label>
+                    <input type="date" id="data-inicio">
+                </div>
+
+                <div id="box-fim" style="display: none;">
+                    <label for="data-fim">Data final:</label>
+                    <input type="date" id="data-fim">
+                </div>
+            </div>
+
+            <button id="btn-aplicar-filtro" type="button">
+                Aplicar Filtro
+            </button>
+        </div>
+
         <p id="status-stats">Carregando dados...</p>
 
         <div class="legenda-stats">
             <span class="badge">P</span> = Presenças
+            <span class="badge">F</span> = Faltas
             <span class="badge">T</span> = Total de Aulas
             <span class="badge">%</span> = Frequência
         </div>
@@ -23,53 +92,67 @@
                 <tr>
                     <th>Aluno</th>
                     <th class="center" title="Presenças">P</th>
+                    <th class="center" title="Faltas">F</th>
                     <th class="center" title="Total de Aulas">T</th>
                     <th class="center" title="Frequência">%</th>
                 </tr>
             </thead>
-            <tbody id="stats-tbody">
-                </tbody>
+
+            <tbody id="stats-tbody"></tbody>
         </table>
-        
-        <p class="dica-mobile">* Toque no nome do aluno para editar seus dados.</p>
+
+        <p class="dica-mobile">
+            * Toque no nome do aluno para editar seus dados.
+        </p>
     </div>
 
     <style>
-        /* Estilos da Tabela */
+        .grid-filtros {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .filtros-stats select,
+        .filtros-stats input {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 0.5em;
             font-size: 0.95em;
         }
-        th, td {
-            border: 1px solid var(--border-color); /* Borda dinâmica */
+
+        th,
+        td {
+            border: 1px solid var(--border-color);
             padding: 8px 4px;
             text-align: left;
         }
-        
-        /* Cabeçalho da tabela (Usa fundo de ícone para contraste suave) */
+
         th {
             background-color: var(--icon-bg);
             color: var(--text-main);
             font-weight: bold;
         }
-        
+
         .center {
             text-align: center;
-            width: 40px;
+            width: 45px;
         }
 
-        /* Linhas pares (Zebra): Usa a cor de fundo do corpo para contraste sutil */
         tr:nth-child(even) {
             background-color: var(--bg-body);
         }
-        
+
         td.porcentagem {
             font-weight: bold;
         }
-        
-        /* Estilo da Legenda (Adaptado ao tema) */
+
         .legenda-stats {
             background-color: var(--icon-bg);
             padding: 8px;
@@ -82,10 +165,10 @@
             flex-wrap: wrap;
             border: 1px solid var(--border-color);
         }
-        
+
         .badge {
-            background: var(--text-main); /* Inverte cor (texto vira fundo) */
-            color: var(--bg-card);        /* Fundo vira texto */
+            background: var(--text-main);
+            color: var(--bg-card);
             padding: 1px 5px;
             border-radius: 3px;
             font-weight: bold;
@@ -99,7 +182,6 @@
             font-style: italic;
         }
 
-        /* Link no nome do aluno */
         td a.link-aluno {
             text-decoration: none;
             color: var(--primary);
@@ -110,74 +192,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-    const TURMA_ID = window.location.pathname.split('/')[2];
-    
-    const h1Titulo = document.getElementById('nome-turma');
-    const statusEl = document.getElementById('status-stats');
-    const tableBody = document.getElementById('stats-tbody');
-
-    document.getElementById('link-voltar').href = `/turma/${TURMA_ID}`;
-
-    document.addEventListener('DOMContentLoaded', () => {
-        carregarDetalhesTurma();
-        carregarEstatisticas();
-    });
-
-    async function carregarDetalhesTurma() {
-        try {
-            const response = await fetch(`/api/turmas/${TURMA_ID}`);
-            const turma = await response.json();
-            if (!response.ok) throw new Error(turma.error);
-            h1Titulo.textContent = `Estatísticas: ${turma.nome}`;
-        } catch (error) {
-            console.error(error);
-            h1Titulo.textContent = 'Erro ao carregar turma';
-        }
-    }
-
-    async function carregarEstatisticas() {
-        try {
-            const response = await fetch(`/api/turma/${TURMA_ID}/stats`);
-            const stats = await response.json();
-
-            if (!response.ok) throw new Error(stats.error);
-
-            if (stats.length === 0) {
-                statusEl.textContent = 'Sem dados de frequência.';
-                return;
-            }
-
-            statusEl.style.display = 'none';
-            tableBody.innerHTML = '';
-
-            stats.forEach(aluno => {
-                const tr = document.createElement('tr');
-                
-                let corPorcentagem = '';
-                if (aluno.porcentagem_presenca < 50) corPorcentagem = 'color: #dc3545;';
-                else if (aluno.porcentagem_presenca >= 75) corPorcentagem = 'color: #28a745;';
-
-                tr.innerHTML = `
-                    <td>
-                        <a href="/aluno/editar/${aluno.aluno_id}" class="link-aluno">
-                            ${aluno.nome_completo}
-                        </a>
-                    </td>
-                    <td class="center">${aluno.total_presencas}</td>
-                    <td class="center">${aluno.total_registros}</td>
-                    <td class="center porcentagem" style="${corPorcentagem}">
-                        ${aluno.porcentagem_presenca || 0}%
-                    </td>
-                `;
-                tableBody.appendChild(tr);
-            });
-
-        } catch (error) {
-            console.error(error);
-            statusEl.textContent = `Erro: ${error.message}`;
-            statusEl.style.color = 'red';
-        }
-    }
-</script>
+    <script src="{{ url_for('static', filename='js/estatisticas.js') }}"></script>
 {% endblock %}
