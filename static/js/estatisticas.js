@@ -72,7 +72,7 @@ function atualizarCamposFiltro() {
 
     if (tipo === 'bimestre') {
         els.boxPeriodo.style.display = 'block';
-        preencherPeriodo(4, 'Bimestre');
+        preencherPeriodo(6, 'Bimestre');
     }
 
     if (tipo === 'trimestre') {
