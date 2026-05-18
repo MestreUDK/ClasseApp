@@ -7,10 +7,16 @@
 
     <div class="card-form">
         <h2>Nova Anotação</h2>
+
         <form id="form-diario">
             <div>
                 <label for="titulo">Título:</label>
-                <input type="text" id="titulo" required placeholder="Ex: Reunião pedagógica, Ocorrência...">
+                <input 
+                    type="text" 
+                    id="titulo" 
+                    required 
+                    placeholder="Ex: Reunião pedagógica, Ocorrência..."
+                >
             </div>
 
             <div>
@@ -20,68 +26,132 @@
 
             <div>
                 <label for="conteudo">Conteúdo:</label>
-                <textarea id="conteudo" rows="4" placeholder="Escreva os detalhes aqui..."></textarea>
+                <textarea 
+                    id="conteudo" 
+                    rows="4" 
+                    placeholder="Escreva os detalhes aqui..."
+                ></textarea>
             </div>
 
             <div class="row-selects">
+
                 <div style="flex: 1;">
-                    <label for="input-turma">Vincular Turma (Opcional):</label>
-                    <input list="turmas-list" id="input-turma" placeholder="Pesquise a turma...">
-                    <datalist id="turmas-list"></datalist>
-                    <input type="hidden" id="select-turma"> 
+                    <label for="select-turma">
+                        Vincular Turma (Opcional):
+                    </label>
+
+                    <select id="select-turma">
+                        <option value="">
+                            Nenhuma turma vinculada
+                        </option>
+                    </select>
                 </div>
+
                 <div style="flex: 1;">
-                    <label for="input-aluno">Vincular Aluno (Opcional):</label>
-                    <input list="alunos-list" id="input-aluno" placeholder="Pesquise o aluno...">
-                    <datalist id="alunos-list"></datalist>
-                    <input type="hidden" id="select-aluno"> 
+                    <label for="select-aluno">
+                        Vincular Aluno (Opcional):
+                    </label>
+
+                    <select id="select-aluno">
+                        <option value="">
+                            Nenhum aluno vinculado
+                        </option>
+                    </select>
                 </div>
+
             </div>
 
-            <button type="submit" style="margin-top: 15px;">Salvar Nota</button>
+            <button type="submit" style="margin-top: 15px;">
+                Salvar Nota
+            </button>
         </form>
     </div>
 
     <hr style="margin: 2em 0; border: 0; border-top: 1px solid #eee;">
 
     <h2>Suas Anotações</h2>
+
     <div id="lista-notas">
         <p>Carregando...</p>
     </div>
 
     <style>
         /* Estilos específicos de layout (não de cor) */
-        textarea { resize: vertical; }
-        .row-selects { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px; }
+        textarea {
+            resize: vertical;
+        }
+
+        .row-selects {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
 
         /* Estilo dos Cartões de Nota */
-        .nota-card { 
-            /* Usa variáveis do tema */
-            background: var(--bg-card); 
+        .nota-card {
+            background: var(--bg-card);
             color: var(--text-main);
             border: 1px solid var(--border-color);
-            border-left: 5px solid var(--primary); 
-            padding: 1em; 
-            margin-bottom: 1em; 
-            border-radius: 4px; 
-            box-shadow: var(--shadow); 
-            position: relative; 
+            border-left: 5px solid var(--primary);
+            padding: 1em;
+            margin-bottom: 1em;
+            border-radius: 4px;
+            box-shadow: var(--shadow);
+            position: relative;
         }
-        .nota-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-        .nota-titulo { font-weight: bold; font-size: 1.1em; margin: 0; }
-        .nota-data { font-size: 0.8em; color: var(--text-sec); }
-        .nota-tags { display: flex; gap: 10px; margin-bottom: 10px; font-size: 0.85em; }
-        .tag { 
-            background: var(--icon-bg); 
-            padding: 2px 8px; 
-            border-radius: 12px; 
-            color: var(--text-main); 
-            font-weight: 600; 
+
+        .nota-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .nota-titulo {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin: 0;
+        }
+
+        .nota-data {
+            font-size: 0.8em;
+            color: var(--text-sec);
+        }
+
+        .nota-tags {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 0.85em;
+        }
+
+        .tag {
+            background: var(--icon-bg);
+            padding: 2px 8px;
+            border-radius: 12px;
+            color: var(--text-main);
+            font-weight: 600;
             border: 1px solid var(--border-color);
         }
-        .nota-conteudo { white-space: pre-wrap; line-height: 1.5; }
-        .btn-delete-nota { background: none; border: none; color: #dc3545; cursor: pointer; padding: 0; font-size: 0.9em; }
-        .btn-delete-nota:hover { text-decoration: underline; }
+
+        .nota-conteudo {
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .btn-delete-nota {
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            padding: 0;
+            font-size: 0.9em;
+        }
+
+        .btn-delete-nota:hover {
+            text-decoration: underline;
+        }
     </style>
 {% endblock %}
 
