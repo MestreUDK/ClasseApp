@@ -15,8 +15,11 @@
         <div class="box-opcao">
             <h3>📊 Relatório Geral (Desempenho)</h3>
             <p>Resumo de faltas e presenças de todo o período.</p>
+
             <div class="botoes-export">
-                <button onclick="baixarGeral('xlsx')" class="btn-excel">Baixar Excel (.xlsx)</button>
+                <button onclick="baixarGeral('xlsx')" class="btn-excel">
+                    Baixar Excel (.xlsx)
+                </button>
             </div>
         </div>
 
@@ -25,9 +28,14 @@
         <div class="box-opcao">
             <h3>📅 Relatório Diário (Chamada)</h3>
             <p>Lista de presença de um dia específico.</p>
+
+            <label for="data-relatorio">Data da chamada:</label>
             <input type="date" id="data-relatorio">
+
             <div class="botoes-export">
-                <button onclick="baixarDiario('xlsx')" class="btn-excel">Baixar Excel (.xlsx)</button>
+                <button onclick="baixarDiario('xlsx')" class="btn-excel">
+                    Baixar Excel (.xlsx)
+                </button>
             </div>
         </div>
 
@@ -36,42 +44,94 @@
         <div class="box-opcao">
             <h3>📝 Boletim de Notas</h3>
             <p>Planilha com todas as avaliações e notas da turma.</p>
+
             <div class="botoes-export">
-                <button onclick="baixarNotas('xlsx')" class="btn-excel" style="background-color: #6f42c1;">Baixar Excel</button>
+                <button 
+                    onclick="baixarNotas('xlsx')" 
+                    class="btn-excel" 
+                    style="background-color: #6f42c1;"
+                >
+                    Baixar Excel
+                </button>
             </div>
         </div>
 
-    </div> <style>
+        <hr>
+
+        <div class="box-opcao">
+            <h3>📘 Diário de Bordo</h3>
+            <p>
+                Exporta as anotações registradas no Diário de Bordo.
+                Você pode exportar tudo, por turma selecionada ou por período.
+            </p>
+
+            <label for="diario-data-inicio">Data inicial (opcional):</label>
+            <input type="date" id="diario-data-inicio">
+
+            <label for="diario-data-fim">Data final (opcional):</label>
+            <input type="date" id="diario-data-fim">
+
+            <div class="botoes-export">
+                <button 
+                    onclick="baixarDiarioBordo()" 
+                    class="btn-excel" 
+                    style="background-color: #17a2b8;"
+                >
+                    Baixar Diário de Bordo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
         /* Estilos EXCLUSIVOS desta página (sem afetar o resto do site) */
 
-        /* Ajustes finos para os inputs desta página */
-        select, input[type="date"] { 
-            width: 100%; 
-            padding: 10px; 
-            margin-bottom: 10px; 
-            box-sizing: border-box; 
+        select,
+        input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
         }
 
-        .box-opcao { margin: 20px 0; }
-        .box-opcao h3 { margin-bottom: 5px; }
-        .box-opcao p { font-size: 0.9em; margin-bottom: 10px; opacity: 0.8; }
-
-        .botoes-export { display: flex; gap: 10px; flex-wrap: wrap; }
-
-        /* Estilo dos botões DESTA área */
-        .botoes-export button { 
-            border: none; 
-            padding: 10px 15px; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            color: white; 
-            flex: 1; 
-            min-width: 120px; 
+        .box-opcao {
+            margin: 20px 0;
         }
 
-        .btn-excel { background-color: #217346; } /* Verde Excel */
-        .btn-excel:hover { background-color: #1a5c38; }
+        .box-opcao h3 {
+            margin-bottom: 5px;
+        }
+
+        .box-opcao p {
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            opacity: 0.8;
+        }
+
+        .botoes-export {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .botoes-export button {
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .btn-excel {
+            background-color: #217346;
+        }
+
+        .btn-excel:hover {
+            filter: brightness(0.9);
+        }
     </style>
 {% endblock %}
 
