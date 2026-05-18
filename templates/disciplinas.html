@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Disciplinas{% endblock %}
+
+{% block content %}
+    <h1>Disciplinas</h1>
+    <p>Cadastre e organize as disciplinas usadas nas suas turmas.</p>
+
+    <div class="card-form">
+        <h2 id="titulo-form">Cadastrar Nova Disciplina</h2>
+
+        <form id="form-disciplina">
+            <input type="hidden" id="disciplina_id">
+
+            <div>
+                <label for="nome">Nome da Disciplina:</label>
+                <input 
+                    type="text" 
+                    id="nome" 
+                    required 
+                    placeholder="Ex: Matemática, Português, Geral..."
+                >
+            </div>
+
+            <div>
+                <label for="descricao">Descrição (opcional):</label>
+                <textarea 
+                    id="descricao" 
+                    rows="3" 
+                    placeholder="Ex: Disciplina geral para turma polivalente..."
+                ></textarea>
+            </div>
+
+            <div>
+                <label for="cor">Cor da Disciplina:</label>
+                <input type="color" id="cor" value="#007bff">
+            </div>
+
+            <button type="submit" id="btn-salvar">
+                Salvar Disciplina
+            </button>
+
+            <button type="button" id="btn-cancelar" style="display: none;">
+                Cancelar Edição
+            </button>
+        </form>
+
+        <p id="msg-sucesso" style="display: none; color: green;"></p>
+        <p id="msg-erro" style="display: none; color: red;"></p>
+    </div>
+
+    <hr style="margin: 2em 0; border: 0; border-top: 1px solid #eee;">
+
+    <h2>Minhas Disciplinas</h2>
+
+    <div id="lista-disciplinas">
+        <p>Carregando...</p>
+    </div>
+
+    <style>
+        textarea {
+            resize: vertical;
+        }
+
+        input[type="color"] {
+            width: 100%;
+            height: 45px;
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        .disciplina-card {
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-left: 6px solid var(--primary);
+            padding: 1em;
+            margin-bottom: 1em;
+            border-radius: 6px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            align-items: flex-start;
+        }
+
+        .disciplina-info {
+            flex: 1;
+        }
+
+        .disciplina-info h3 {
+            margin: 0 0 5px;
+        }
+
+        .disciplina-info p {
+            margin: 0;
+            font-size: 0.9em;
+            color: var(--text-sec);
+            white-space: pre-wrap;
+        }
+
+        .disciplina-cor {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+            border: 1px solid var(--border-color);
+        }
+
+        .disciplina-acoes {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .disciplina-acoes button {
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+        }
+
+        .btn-editar-disciplina {
+            background-color: #ffc107;
+            color: #000 !important;
+        }
+
+        .btn-excluir-disciplina {
+            background-color: #dc3545;
+        }
+
+        @media (max-width: 600px) {
+            .disciplina-card {
+                flex-direction: column;
+            }
+
+            .disciplina-acoes {
+                width: 100%;
+                flex-direction: row;
+            }
+
+            .disciplina-acoes button {
+                flex: 1;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/disciplinas.js') }}"></script>
+{% endblock %}
