@@ -42,6 +42,11 @@ def page_search_results():
     query = request.args.get('q', '')
     return render_template('search.html', query=query)
 
+@pages_bp.route('/disciplinas')
+@login_required
+def page_disciplinas():
+    return render_template('disciplinas.html')
+
 # --- ROTAS PÚBLICAS ---
 
 @pages_bp.route('/offline')
