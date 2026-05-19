@@ -1,45 +1,142 @@
 {% extends 'base.html' %}
 
-{% block title %}Avaliações da Turma{% endblock %}
+{% block title %}Avaliações{% endblock %}
 
 {% block content %}
     <h1 id="titulo-pagina">Avaliações</h1>
-    
-    <a href="" id="link-voltar" class="botao-acao" style="margin-bottom: 1em; background-color: #6c757d;">Voltar para Turma</a>
+
+    <a 
+        href="" 
+        id="link-voltar" 
+        class="botao-acao" 
+        style="margin-bottom: 1em; background-color: #6c757d;"
+    >
+        Voltar para Turma
+    </a>
 
     <div class="card-form">
-        <h3 style="margin-top: 0;">Nova Avaliação</h3>
-        <form id="form-avaliacao" style="background: none; padding: 0; box-shadow: none; border: none; margin: 0;">
+        <h2>Nova Atividade Avaliativa</h2>
+
+        <form id="form-avaliacao">
             <div>
-                <label for="nome">Nome (Ex: Prova 1):</label>
-                <input type="text" id="nome" required>
+                <label for="nome">Nome:</label>
+                <input 
+                    type="text" 
+                    id="nome" 
+                    required 
+                    placeholder="Ex: Atividade 1, Trabalho, Prova..."
+                >
             </div>
-            <div style="display: flex; gap: 10px;">
-                <div style="flex: 1;">
-                    <label for="data">Data:</label>
-                    <input type="date" id="data" required>
+
+            <div class="grid-form">
+                <div>
+                    <label for="periodo_tipo">Tipo de período:</label>
+                    <select id="periodo_tipo">
+                        <option value="avaliacao">Avaliação</option>
+                        <option value="bimestre">Bimestre</option>
+                        <option value="trimestre">Trimestre</option>
+                        <option value="semestre">Semestre</option>
+                    </select>
                 </div>
-                <div style="flex: 1;">
-                    <label for="nota_maxima">Valor (Nota Máx):</label>
-                    <input type="number" id="nota_maxima" step="0.1" value="10.0" required>
+
+                <div>
+                    <label for="periodo_numero">Número do período:</label>
+                    <input type="number" id="periodo_numero" min="1" max="12" value="1">
                 </div>
             </div>
-            <button type="submit" style="margin-top: 10px;">Criar Avaliação</button>
+
+            <div class="grid-form">
+                <div>
+                    <label for="categoria">Categoria:</label>
+                    <select id="categoria">
+                        <option value="atividade">Atividade</option>
+                        <option value="trabalho">Trabalho</option>
+                        <option value="prova">Prova</option>
+                        <option value="participacao">Participação</option>
+                        <option value="recuperacao">Recuperação</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="peso">Peso:</label>
+                    <input type="number" id="peso" min="0.1" step="0.1" value="1">
+                </div>
+            </div>
+
+            <div class="grid-form">
+                <div>
+                    <label for="data">Data (opcional):</label>
+                    <input type="date" id="data">
+                </div>
+
+                <div>
+                    <label for="nota_maxima">Nota máxima:</label>
+                    <input type="number" id="nota_maxima" min="0" step="0.1" value="10">
+                </div>
+            </div>
+
+            <button type="submit">
+                Cadastrar Avaliação
+            </button>
         </form>
     </div>
 
-    <h2>Avaliações Agendadas</h2>
+    <hr style="margin: 2em 0; border: 0; border-top: 1px solid #eee;">
+
+    <h2>Atividades Avaliativas</h2>
+
     <div id="lista-avaliacoes">
         <p>Carregando...</p>
     </div>
 
     <style>
-        /* Ajuste para input number ficar bonito */
-        input[type="number"] { 
-            width: 100%; padding: 12px; margin-bottom: 10px; 
-            border: 1px solid var(--border-color); border-radius: 8px; 
-            font-size: 1em; background-color: var(--input-bg); color: var(--text-main);
-            box-sizing: border-box;
+        .grid-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .periodo-grupo {
+            margin-bottom: 1.5em;
+        }
+
+        .periodo-titulo {
+            margin-bottom: 10px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: var(--icon-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        .avaliacao-card {
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .avaliacao-meta {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .tag-av {
+            background: var(--icon-bg);
+            border: 1px solid var(--border-color);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .acoes-av {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 12px;
         }
     </style>
 {% endblock %}
