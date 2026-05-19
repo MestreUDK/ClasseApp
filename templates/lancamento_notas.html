@@ -5,8 +5,15 @@
 {% block content %}
     <h1 id="titulo-pagina">Notas</h1>
     <p id="subtitulo" style="color: var(--text-sec);">Carregando...</p>
-    
-    <a href="" id="link-voltar" class="botao-acao" style="margin-bottom: 1em; background-color: #6c757d;">Voltar</a>
+
+    <a 
+        href="" 
+        id="link-voltar" 
+        class="botao-acao" 
+        style="margin-bottom: 1em; background-color: #6c757d;"
+    >
+        Voltar
+    </a>
 
     <div class="card-form" style="padding: 10px;">
         <table id="tabela-notas">
@@ -16,21 +23,34 @@
                     <th style="width: 40%; text-align: center;">Nota</th>
                 </tr>
             </thead>
-            <tbody id="tbody-notas">
-                </tbody>
+
+            <tbody id="tbody-notas"></tbody>
         </table>
     </div>
-    
+
     <p style="font-size: 0.8em; color: var(--text-sec); text-align: center; margin-top: 10px;">
         * As notas são salvas automaticamente ao sair do campo.
     </p>
 
     <style>
-        table { width: 100%; border-collapse: collapse; }
-        th { padding: 10px; background: rgba(0,0,0,0.05); text-align: left; color: var(--text-main); }
-        td { padding: 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-        
-        /* Input de nota estilizado */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            padding: 10px;
+            background: rgba(0,0,0,0.05);
+            text-align: left;
+            color: var(--text-main);
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
         .input-nota {
             width: 80px;
             padding: 8px;
@@ -39,15 +59,39 @@
             margin: 0 auto;
             display: block;
             border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-card);
+            color: var(--text-main);
         }
-        .input-nota:focus {
-            border-color: var(--primary);
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
+
+        .salvando {
+            opacity: 0.6;
         }
-        /* Feedback visual de salvo */
-        .salvo { border-color: #28a745 !important; background-color: rgba(40, 167, 69, 0.1) !important; }
-        .erro { border-color: #dc3545 !important; }
+
+        .salvo {
+            border-color: #28a745 !important;
+        }
+
+        .erro {
+            border-color: #dc3545 !important;
+        }
+
+        .meta-avaliacao {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .tag-av {
+            background: var(--icon-bg);
+            border: 1px solid var(--border-color);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            color: var(--text-main);
+            font-weight: 600;
+        }
     </style>
 {% endblock %}
 
