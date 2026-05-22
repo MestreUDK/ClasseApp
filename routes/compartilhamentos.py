@@ -359,6 +359,25 @@ def copiar_compartilhamento_para_minha_conta(codigo):
 
         turma_original_id = compartilhamento["recurso_id"]
 
+        # ==========================================
+        # EVITAR CÓPIA DUPLICADA
+        # ==========================================
+        copia_existente_res, _ = supabase.table("compartilhamento_copias") \
+            .select("nova_turma_id") \
+            .eq("compartilhamento_id", compartilhamento["id"]) \
+            .eq("copiado_por", current_user.id) \
+            .limit(1) \
+            .execute()
+
+        copia_existente = copia_existente_res[1] or []
+
+        if copia_existente:
+            return jsonify({
+                "message": "Você já copiou esta turma anteriormente.",
+                "turma_id": copia_existente[0]["nova_turma_id"],
+                "ja_existia": True
+            }), 200
+
         turma_res, _ = supabase.table("turmas") \
             .select("*") \
             .eq("id", turma_original_id) \
