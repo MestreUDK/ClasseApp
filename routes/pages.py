@@ -52,6 +52,16 @@ def page_disciplinas():
 def page_compartilhar_turma(turma_id):
     return render_template('compartilhar.html')
 
+@pages_bp.route('/compartilhado')
+@login_required
+def page_compartilhado():
+    return render_template('compartilhado.html')
+
+@pages_bp.route('/compartilhado/<codigo>')
+@login_required
+def page_visualizar_compartilhado(codigo):
+    return render_template('visualizar_compartilhado.html', codigo=codigo)
+
 # --- ROTAS PÚBLICAS ---
 
 @pages_bp.route('/offline')
