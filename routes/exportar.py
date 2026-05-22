@@ -16,26 +16,19 @@ exportar_bp = Blueprint('exportar_bp', __name__)
 # ==============================
 
 def estilizar_cabecalho_excel(ws, cor="007BFF"):
-    """Aplica estilo visual ao cabeçalho da planilha."""
     for cell in ws[1]:
         cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = PatternFill(
-            start_color=cor,
-            end_color=cor,
-            fill_type="solid"
-        )
+        cell.fill = PatternFill(start_color=cor, end_color=cor, fill_type="solid")
         cell.alignment = Alignment(horizontal="center", vertical="center")
 
 
 def ajustar_texto_planilha(ws):
-    """Aplica quebra de texto e alinhamento vertical nas células."""
     for row in ws.iter_rows(min_row=2):
         for cell in row:
             cell.alignment = Alignment(vertical="top", wrap_text=True)
 
 
 def gerar_resposta_excel(wb, nome_arquivo):
-    """Gera o arquivo Excel em memória e retorna como download."""
     file_buffer = io.BytesIO()
     wb.save(file_buffer)
     file_buffer.seek(0)
@@ -49,7 +42,6 @@ def gerar_resposta_excel(wb, nome_arquivo):
 
 
 def verificar_dono_turma(turma_id):
-    """Verifica se a turma pertence ao usuário logado."""
     res, _ = supabase.table("turmas") \
         .select("id") \
         .eq("id", str(turma_id)) \
@@ -60,7 +52,6 @@ def verificar_dono_turma(turma_id):
 
 
 def buscar_nome_turma(turma_id):
-    """Busca o nome da turma com segurança."""
     res, _ = supabase.table("turmas") \
         .select("nome") \
         .eq("id", str(turma_id)) \
@@ -71,8 +62,36 @@ def buscar_nome_turma(turma_id):
     return res[1]["nome"] if res[1] else "Turma"
 
 
+def buscar_alunos_da_turma(turma_id):
+    res, _ = supabase.table("turmas_alunos") \
+        .select("alunos(id, nome_completo, matricula)") \
+        .eq("turma_id", str(turma_id)) \
+        .execute()
+
+    alunos = []
+
+    for item in res[1] or []:
+        aluno = item.get("alunos")
+        if aluno:
+            alunos.append(aluno)
+
+    alunos.sort(key=lambda a: a.get("nome_completo") or "")
+    return alunos
+
+
+def nome_periodo(periodo_tipo, periodo_numero):
+    mapa = {
+        "avaliacao": "Avaliação",
+        "bimestre": "Bimestre",
+        "trimestre": "Trimestre",
+        "semestre": "Semestre"
+    }
+
+    return f"{periodo_numero}ª {mapa.get(periodo_tipo, 'Avaliação')}"
+
+
 # ==============================
-# EXPORTAR FREQUÊNCIA DO DIA
+# FREQUÊNCIA DO DIA
 # ==============================
 
 @exportar_bp.route("/exportar/turma/<uuid:turma_id>/frequencia", methods=["GET"])
@@ -105,10 +124,7 @@ def exportar_frequencia_dia_excel(turma_id):
 
         for row in dados[1]:
             status = "Presente" if row["presente"] is True else "Falta"
-            ws.append([
-                row["nome_completo"],
-                status
-            ])
+            ws.append([row["nome_completo"], status])
 
         estilizar_cabecalho_excel(ws, "007BFF")
 
@@ -130,7 +146,7 @@ def exportar_frequencia_dia_excel(turma_id):
 
 
 # ==============================
-# EXPORTAR FREQUÊNCIA GERAL
+# FREQUÊNCIA GERAL COM FILTRO
 # ==============================
 
 @exportar_bp.route("/exportar/turma/<uuid:turma_id>/geral", methods=["GET"])
@@ -141,80 +157,89 @@ def exportar_frequencia_geral_excel(turma_id):
             return jsonify({"error": "Acesso negado."}), 403
 
         turma_nome = buscar_nome_turma(turma_id)
+        data_inicio = request.args.get("inicio")
+        data_fim = request.args.get("fim")
 
-        res_dados, _ = supabase.rpc(
-            "get_frequencia_geral",
-            {
-                "p_turma_id": str(turma_id)
-            }
-        ).execute()
+        alunos = buscar_alunos_da_turma(turma_id)
 
-        dados = res_dados[1]
+        freq_query = supabase.table("frequencia") \
+            .select("aluno_id, presente, data") \
+            .eq("turma_id", str(turma_id))
 
-        alunos_dict = {}
-        datas_set = set()
+        if data_inicio:
+            freq_query = freq_query.gte("data", data_inicio)
 
-        if dados:
-            for row in dados:
-                datas_set.add(row["data_chamada"])
+        if data_fim:
+            freq_query = freq_query.lte("data", data_fim)
 
-                if row["aluno_nome"] not in alunos_dict:
-                    alunos_dict[row["aluno_nome"]] = {
-                        "frequencias": {}
-                    }
+        freq_res, _ = freq_query.order("data", desc=False).execute()
+        frequencias = freq_res[1] or []
 
-                alunos_dict[row["aluno_nome"]]["frequencias"][row["data_chamada"]] = row["presente"]
+        datas_ordenadas = sorted(list({f["data"] for f in frequencias}))
 
-        datas_ordenadas = sorted(list(datas_set))
+        mapa_freq = {}
+
+        for item in frequencias:
+            aluno_id = item.get("aluno_id")
+
+            if aluno_id not in mapa_freq:
+                mapa_freq[aluno_id] = {}
+
+            mapa_freq[aluno_id][item["data"]] = item.get("presente")
 
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = "Visão Geral"
+        ws.title = "Frequência Geral"
 
-        ws.append(["Aluno"] + datas_ordenadas + ["% Presença"])
+        ws.append(["Aluno"] + datas_ordenadas + ["Presenças", "Faltas", "Total", "% Presença"])
 
-        for nome, info in alunos_dict.items():
+        for aluno in alunos:
+            aluno_id = aluno["id"]
+            nome = aluno.get("nome_completo") or ""
+
             row = [nome]
-
-            total_aulas = 0
             total_presencas = 0
+            total_faltas = 0
 
             for data in datas_ordenadas:
-                status = info["frequencias"].get(data)
+                status = mapa_freq.get(aluno_id, {}).get(data)
 
                 if status is True:
                     row.append("P")
                     total_presencas += 1
-                    total_aulas += 1
-
                 elif status is False:
                     row.append("F")
-                    total_aulas += 1
-
+                    total_faltas += 1
                 else:
                     row.append("-")
 
-            porcentagem = 0
+            total = total_presencas + total_faltas
+            porcentagem = round((total_presencas / total) * 100, 1) if total > 0 else 0
 
-            if total_aulas > 0:
-                porcentagem = round((total_presencas / total_aulas) * 100, 1)
+            row.extend([
+                total_presencas,
+                total_faltas,
+                total,
+                f"{porcentagem}%"
+            ])
 
-            row.append(f"{porcentagem}%")
             ws.append(row)
 
         estilizar_cabecalho_excel(ws, "007BFF")
 
         ws.column_dimensions["A"].width = 35
 
-        for col in range(2, len(datas_ordenadas) + 3):
-            ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 15
+        for col in range(2, len(datas_ordenadas) + 6):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 14
 
         ajustar_texto_planilha(ws)
 
-        return gerar_resposta_excel(
-            wb,
-            f"Relatorio_Geral_{turma_nome}.xlsx"
-        )
+        nome_arquivo = f"Frequencia_Geral_{turma_nome}.xlsx"
+
+        if data_inicio and data_fim:
+            nome_arquivo = f"Frequencia_{turma_nome}_{data_inicio}_a_{data_fim}.xlsx"
+
+        return gerar_resposta_excel(wb, nome_arquivo)
 
     except Exception as e:
         return jsonify({
@@ -224,56 +249,97 @@ def exportar_frequencia_geral_excel(turma_id):
 
 
 # ==============================
-# EXPORTAR BOLETIM DE NOTAS
+# NOTAS MODULARES
 # ==============================
 
-def buscar_dados_notas(turma_id):
-    """Busca avaliações, alunos e notas da turma."""
-    res_av, _ = supabase.table("avaliacoes") \
-        .select("id, nome") \
+def buscar_dados_notas_modulares(turma_id):
+    alunos = buscar_alunos_da_turma(turma_id)
+
+    av_res, _ = supabase.table("avaliacoes") \
+        .select("id, nome, data, nota_maxima, periodo_tipo, periodo_numero, categoria, peso") \
         .eq("turma_id", str(turma_id)) \
+        .eq("user_id", current_user.id) \
+        .order("periodo_numero", desc=False) \
+        .order("created_at", desc=False) \
+        .execute()
+
+    avaliacoes = av_res[1] or []
+
+    if not avaliacoes:
+        return alunos, [], {}
+
+    av_ids = [av["id"] for av in avaliacoes]
+
+    notas_res, _ = supabase.table("notas") \
+        .select("aluno_id, avaliacao_id, valor") \
+        .in_("avaliacao_id", av_ids) \
         .eq("user_id", current_user.id) \
         .execute()
 
-    avaliacoes = res_av[1]
+    notas = notas_res[1] or []
 
-    if not avaliacoes:
-        return {}, []
+    notas_map = {}
 
-    av_ids = [av["id"] for av in avaliacoes]
-    map_av_nome = {av["id"]: av["nome"] for av in avaliacoes}
-    colunas_avaliacoes = sorted([av["nome"] for av in avaliacoes])
+    for nota in notas:
+        aluno_id = nota.get("aluno_id")
+        avaliacao_id = nota.get("avaliacao_id")
 
-    res_alunos, _ = supabase.table("turmas_alunos") \
-        .select("alunos(id, nome_completo)") \
-        .eq("turma_id", str(turma_id)) \
-        .execute()
+        if aluno_id not in notas_map:
+            notas_map[aluno_id] = {}
 
-    alunos_notas = {}
-    map_aluno_id_nome = {}
+        notas_map[aluno_id][avaliacao_id] = nota.get("valor")
 
-    for item in res_alunos[1]:
-        aluno = item["alunos"]
+    grupos = {}
 
-        if aluno:
-            alunos_notas[aluno["nome_completo"]] = {}
-            map_aluno_id_nome[aluno["id"]] = aluno["nome_completo"]
+    for av in avaliacoes:
+        periodo_tipo = av.get("periodo_tipo") or "avaliacao"
+        periodo_numero = av.get("periodo_numero") or 1
+        chave = f"{periodo_tipo}_{periodo_numero}"
 
-    if av_ids:
-        res_notas, _ = supabase.table("notas") \
-            .select("aluno_id, avaliacao_id, valor") \
-            .in_("avaliacao_id", av_ids) \
-            .eq("user_id", current_user.id) \
-            .execute()
+        if chave not in grupos:
+            grupos[chave] = {
+                "chave": chave,
+                "periodo_tipo": periodo_tipo,
+                "periodo_numero": periodo_numero,
+                "nome_periodo": nome_periodo(periodo_tipo, periodo_numero),
+                "avaliacoes": []
+            }
 
-        for nota in res_notas[1]:
-            aluno_nome = map_aluno_id_nome.get(nota["aluno_id"])
-            av_nome = map_av_nome.get(nota["avaliacao_id"])
+        grupos[chave]["avaliacoes"].append(av)
 
-            if aluno_nome and av_nome:
-                alunos_notas[aluno_nome][av_nome] = nota["valor"]
+    periodos = list(grupos.values())
+    periodos.sort(key=lambda p: (p["periodo_tipo"], p["periodo_numero"]))
 
-    return alunos_notas, colunas_avaliacoes
+    return alunos, periodos, notas_map
+
+
+def calcular_media_ponderada(aluno_id, avaliacoes, notas_map):
+    soma_pesos = 0
+    soma_ponderada = 0
+    total_lancadas = 0
+
+    for av in avaliacoes:
+        nota = notas_map.get(aluno_id, {}).get(av["id"])
+
+        if nota is None:
+            continue
+
+        nota_maxima = float(av.get("nota_maxima") or 10)
+        peso = float(av.get("peso") or 1)
+
+        if nota_maxima <= 0:
+            continue
+
+        nota_normalizada = (float(nota) / nota_maxima) * 10
+
+        soma_ponderada += nota_normalizada * peso
+        soma_pesos += peso
+        total_lancadas += 1
+
+    if soma_pesos == 0:
+        return None, total_lancadas
+
+    return round(soma_ponderada / soma_pesos, 2), total_lancadas
 
 
 @exportar_bp.route("/exportar/turma/<uuid:turma_id>/notas", methods=["GET"])
@@ -285,34 +351,104 @@ def exportar_notas_excel(turma_id):
 
         turma_nome = buscar_nome_turma(turma_id)
 
-        alunos_notas, colunas_avaliacoes = buscar_dados_notas(turma_id)
+        alunos, periodos, notas_map = buscar_dados_notas_modulares(turma_id)
 
         wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Notas"
+        ws_resumo = wb.active
+        ws_resumo.title = "Resumo de Notas"
 
-        ws.append(["Aluno"] + colunas_avaliacoes)
+        ws_resumo.append(["Aluno"] + [p["nome_periodo"] for p in periodos] + ["Média Geral"])
 
-        for nome_aluno, notas_dict in alunos_notas.items():
-            row = [nome_aluno]
+        for aluno in alunos:
+            aluno_id = aluno["id"]
+            row = [aluno.get("nome_completo") or ""]
 
-            for avaliacao in colunas_avaliacoes:
-                row.append(notas_dict.get(avaliacao, "-"))
+            medias_periodo = []
 
-            ws.append(row)
+            for periodo in periodos:
+                media, _ = calcular_media_ponderada(
+                    aluno_id,
+                    periodo["avaliacoes"],
+                    notas_map
+                )
 
-        estilizar_cabecalho_excel(ws, "6610f2")
+                row.append(media if media is not None else "-")
 
-        ws.column_dimensions["A"].width = 35
+                if media is not None:
+                    medias_periodo.append(media)
 
-        for col in range(2, len(colunas_avaliacoes) + 2):
-            ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
+            media_geral = round(sum(medias_periodo) / len(medias_periodo), 2) if medias_periodo else "-"
+            row.append(media_geral)
 
-        ajustar_texto_planilha(ws)
+            ws_resumo.append(row)
+
+        estilizar_cabecalho_excel(ws_resumo, "6610f2")
+        ws_resumo.column_dimensions["A"].width = 35
+
+        for col in range(2, len(periodos) + 3):
+            ws_resumo.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 18
+
+        ajustar_texto_planilha(ws_resumo)
+
+        for periodo in periodos:
+            nome_aba = periodo["nome_periodo"][:31]
+            ws = wb.create_sheet(title=nome_aba)
+
+            avaliacoes = periodo["avaliacoes"]
+
+            cabecalho = ["Aluno"]
+
+            for av in avaliacoes:
+                cabecalho.append(f"{av['nome']} / {av.get('nota_maxima') or 10}")
+
+            cabecalho.extend(["Notas Lançadas", "Média Ponderada"])
+
+            ws.append(cabecalho)
+
+            for aluno in alunos:
+                aluno_id = aluno["id"]
+                row = [aluno.get("nome_completo") or ""]
+
+                for av in avaliacoes:
+                    nota = notas_map.get(aluno_id, {}).get(av["id"])
+                    row.append(nota if nota is not None else "-")
+
+                media, total_lancadas = calcular_media_ponderada(
+                    aluno_id,
+                    avaliacoes,
+                    notas_map
+                )
+
+                row.append(f"{total_lancadas}/{len(avaliacoes)}")
+                row.append(media if media is not None else "-")
+
+                ws.append(row)
+
+            ws.append([])
+            ws.append(["Detalhes das Avaliações"])
+            ws.append(["Nome", "Categoria", "Data", "Nota Máxima", "Peso"])
+
+            for av in avaliacoes:
+                ws.append([
+                    av.get("nome") or "",
+                    av.get("categoria") or "",
+                    av.get("data") or "",
+                    av.get("nota_maxima") or "",
+                    av.get("peso") or ""
+                ])
+
+            estilizar_cabecalho_excel(ws, "6610f2")
+
+            ws.column_dimensions["A"].width = 35
+
+            for col in range(2, len(cabecalho) + 1):
+                ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 22
+
+            ajustar_texto_planilha(ws)
 
         return gerar_resposta_excel(
             wb,
-            f"Boletim_{turma_nome}.xlsx"
+            f"Notas_Modulares_{turma_nome}.xlsx"
         )
 
     except Exception as e:
@@ -323,7 +459,7 @@ def exportar_notas_excel(turma_id):
 
 
 # ==============================
-# EXPORTAR DIÁRIO DE BORDO
+# DIÁRIO DE BORDO
 # ==============================
 
 @exportar_bp.route("/exportar/diario", methods=["GET"])
