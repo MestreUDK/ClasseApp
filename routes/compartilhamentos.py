@@ -322,20 +322,16 @@ def visualizar_compartilhamento(codigo):
         }
 
         if compartilhamento.get("compartilhar_alunos"):
-            alunos_res, _ = supabase.table("turmas_alunos") \
-                .select("alunos(*)") \
-                .eq("turma_id", turma_id) \
-                .execute()
+            resposta["alunos"] = buscar_alunos_compartilhados(turma_id)
 
-            alunos = []
+        if compartilhamento.get("compartilhar_frequencia"):
+            resposta["frequencia_resumo"] = buscar_frequencia_resumo_compartilhada(turma_id)
 
-            for item in alunos_res[1] or []:
-                aluno = item.get("alunos")
+        if compartilhamento.get("compartilhar_notas"):
+            resposta["notas_resumo"] = buscar_notas_resumo_compartilhadas(turma_id)
 
-                if aluno:
-                    alunos.append(aluno)
-
-            resposta["alunos"] = alunos
+        if compartilhamento.get("compartilhar_diario"):
+            resposta["diario"] = buscar_diario_compartilhado(turma_id)
 
         return jsonify(resposta)
 
