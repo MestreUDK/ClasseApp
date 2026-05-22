@@ -3,6 +3,8 @@
 const TURMA_ID = window.location.pathname.split('/')[2];
 
 let els = {};
+let ultimoCodigoGerado = '';
+let ultimoLinkGerado = '';
 
 document.addEventListener('DOMContentLoaded', () => {
     els = {
@@ -17,8 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         resultado: document.getElementById('resultado-compartilhamento'),
         codigoGerado: document.getElementById('codigo-gerado'),
+        linkGerado: document.getElementById('link-gerado'),
 
         btnCopiar: document.getElementById('btn-copiar'),
+        btnCopiarLink: document.getElementById('btn-copiar-link'),
         btnWhatsapp: document.getElementById('btn-whatsapp'),
 
         lista: document.getElementById('lista-compartilhamentos')
@@ -26,10 +30,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     els.form.addEventListener('submit', criarCompartilhamento);
     els.btnCopiar.addEventListener('click', copiarCodigo);
+    els.btnCopiarLink.addEventListener('click', copiarLinkGerado);
     els.btnWhatsapp.addEventListener('click', compartilharWhatsapp);
 
     carregarCompartilhamentos();
 });
+
+function montarLinkCompartilhamento(codigo) {
+    return `${window.location.origin}/compartilhado/${codigo}`;
+}
 
 async function criarCompartilhamento(e) {
     e.preventDefault();
@@ -61,8 +70,12 @@ async function criarCompartilhamento(e) {
             );
         }
 
+        ultimoCodigoGerado = dados.codigo;
+        ultimoLinkGerado = montarLinkCompartilhamento(dados.codigo);
+
         els.resultado.style.display = 'block';
-        els.codigoGerado.textContent = dados.codigo;
+        els.codigoGerado.textContent = ultimoCodigoGerado;
+        els.linkGerado.value = ultimoLinkGerado;
 
         await carregarCompartilhamentos();
 
@@ -115,12 +128,21 @@ function renderizarCompartilhamentos(lista) {
 
     lista.forEach(comp => {
         const card = document.createElement('div');
+        const link = montarLinkCompartilhamento(comp.codigo);
 
         card.className = 'dash-card comp-card';
 
         card.innerHTML = `
-            <div class="comp-codigo">
-                ${escapeHTML(comp.codigo)}
+            <div class="comp-top">
+                <div>
+                    <div class="comp-codigo">
+                        ${escapeHTML(comp.codigo)}
+                    </div>
+
+                    <div class="comp-link">
+                        ${escapeHTML(link)}
+                    </div>
+                </div>
             </div>
 
             <div class="comp-tags">
@@ -145,13 +167,36 @@ function renderizarCompartilhamentos(lista) {
                     : ''}
             </div>
 
-            <button
-                type="button"
-                class="btn-danger"
-                onclick="desativarCompartilhamento('${comp.id}', this)"
-            >
-                Desativar
-            </button>
+            <div class="comp-acoes">
+                <button
+                    type="button"
+                    onclick="copiarTexto('${escapeHTML(comp.codigo)}', 'Código copiado!')"
+                >
+                    Copiar Código
+                </button>
+
+                <button
+                    type="button"
+                    onclick="copiarTexto('${escapeHTML(link)}', 'Link copiado!')"
+                >
+                    Copiar Link
+                </button>
+
+                <button
+                    type="button"
+                    onclick="compartilharLinkWhatsapp('${escapeHTML(comp.codigo)}')"
+                >
+                    Compartilhar
+                </button>
+
+                <button
+                    type="button"
+                    class="btn-danger"
+                    onclick="desativarCompartilhamento('${comp.id}', this)"
+                >
+                    Desativar
+                </button>
+            </div>
         `;
 
         els.lista.appendChild(card);
@@ -201,30 +246,54 @@ window.desativarCompartilhamento = async function(id, botao = null) {
 };
 
 async function copiarCodigo() {
-    try {
-        await navigator.clipboard.writeText(
-            els.codigoGerado.textContent
-        );
+    if (!ultimoCodigoGerado) {
+        alert('Nenhum código gerado ainda.');
+        return;
+    }
 
-        alert('Código copiado!');
+    await copiarTexto(ultimoCodigoGerado, 'Código copiado!');
+}
+
+async function copiarLinkGerado() {
+    if (!ultimoLinkGerado) {
+        alert('Nenhum link gerado ainda.');
+        return;
+    }
+
+    await copiarTexto(ultimoLinkGerado, 'Link copiado!');
+}
+
+window.copiarTexto = async function(texto, mensagem = 'Copiado!') {
+    try {
+        await navigator.clipboard.writeText(texto);
+        alert(mensagem);
 
     } catch {
         alert('Não foi possível copiar.');
     }
-}
+};
 
 function compartilharWhatsapp() {
-    const codigo = els.codigoGerado.textContent;
+    if (!ultimoCodigoGerado) {
+        alert('Nenhum código gerado ainda.');
+        return;
+    }
+
+    compartilharLinkWhatsapp(ultimoCodigoGerado);
+}
+
+window.compartilharLinkWhatsapp = function(codigo) {
+    const link = montarLinkCompartilhamento(codigo);
 
     const texto = encodeURIComponent(
-        `Código de compartilhamento da turma:\n\n${codigo}`
+        `Código de compartilhamento da turma:\n\n${codigo}\n\nLink direto:\n${link}`
     );
 
     window.open(
         `https://wa.me/?text=${texto}`,
         '_blank'
     );
-}
+};
 
 function escapeHTML(valor) {
     if (valor === null || valor === undefined) {
