@@ -119,6 +119,7 @@ def desativar_compartilhamento(comp_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 def buscar_alunos_compartilhados(turma_id):
     alunos_res, _ = supabase.table("turmas_alunos") \
         .select("alunos(*)") \
@@ -290,6 +291,7 @@ def buscar_diario_compartilhado(turma_id):
         .execute()
 
     return res[1] or []
+
 
 @compartilhamentos_bp.route("/compartilhamentos/codigo/<codigo>", methods=["GET"])
 @login_required
