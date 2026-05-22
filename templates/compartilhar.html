@@ -6,7 +6,7 @@
     <h1>Compartilhar Turma</h1>
 
     <p>
-        Gere um código para compartilhar esta turma com outros professores
+        Gere um código ou link direto para compartilhar esta turma com outros professores
         ou coordenação.
     </p>
 
@@ -14,7 +14,6 @@
         <h2>Configurações do Compartilhamento</h2>
 
         <form id="form-compartilhar">
-
             <div class="checkbox-group">
                 <label>
                     <input type="checkbox" id="compartilhar-alunos" checked>
@@ -63,12 +62,21 @@
             </div>
 
             <p>
-                Compartilhe este código com outro professor.
+                Compartilhe o código ou o link direto com outro professor.
             </p>
+
+            <div class="link-box">
+                <label for="link-gerado">Link direto:</label>
+                <input type="text" id="link-gerado" readonly>
+            </div>
 
             <div class="acoes-codigo">
                 <button id="btn-copiar">
                     Copiar Código
+                </button>
+
+                <button id="btn-copiar-link">
+                    Copiar Link
                 </button>
 
                 <button id="btn-whatsapp">
@@ -116,6 +124,18 @@
             color: var(--primary);
         }
 
+        .link-box {
+            margin-bottom: 15px;
+        }
+
+        .link-box input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+
         .acoes-codigo {
             display: flex;
             gap: 10px;
@@ -124,10 +144,19 @@
 
         .acoes-codigo button {
             flex: 1;
+            min-width: 130px;
         }
 
         .comp-card {
             margin-bottom: 1em;
+        }
+
+        .comp-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
         }
 
         .comp-tags {
@@ -150,6 +179,19 @@
             font-size: 1.3em;
             font-weight: bold;
             color: var(--primary);
+        }
+
+        .comp-link {
+            font-size: 0.85em;
+            color: var(--text-sec);
+            word-break: break-all;
+        }
+
+        .comp-acoes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
         }
 
         .btn-danger {
