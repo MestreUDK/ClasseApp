@@ -13,12 +13,65 @@
         </select>
 
         <div class="box-opcao">
-            <h3>📊 Relatório Geral (Desempenho)</h3>
-            <p>Resumo de faltas e presenças de todo o período.</p>
+            <h3>📊 Frequência Geral</h3>
+            <p>Resumo de faltas e presenças por período selecionado.</p>
+
+            <div class="grid-filtros">
+                <div>
+                    <label for="freq-tipo-periodo">Tipo de período:</label>
+                    <select id="freq-tipo-periodo">
+                        <option value="tudo">Tudo</option>
+                        <option value="mes">Mês</option>
+                        <option value="bimestre">Bimestre</option>
+                        <option value="trimestre">Trimestre</option>
+                        <option value="semestre">Semestre</option>
+                        <option value="ano">Ano inteiro</option>
+                        <option value="personalizado">Personalizado</option>
+                    </select>
+                </div>
+
+                <div id="freq-box-mes" style="display: none;">
+                    <label for="freq-mes">Mês:</label>
+                    <select id="freq-mes">
+                        <option value="1">Janeiro</option>
+                        <option value="2">Fevereiro</option>
+                        <option value="3">Março</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Maio</option>
+                        <option value="6">Junho</option>
+                        <option value="7">Julho</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                </div>
+
+                <div id="freq-box-periodo" style="display: none;">
+                    <label for="freq-periodo-numero">Período:</label>
+                    <select id="freq-periodo-numero"></select>
+                </div>
+
+                <div>
+                    <label for="freq-ano">Ano:</label>
+                    <input type="number" id="freq-ano" min="2020" max="2100">
+                </div>
+
+                <div id="freq-box-inicio" style="display: none;">
+                    <label for="freq-data-inicio">Data inicial:</label>
+                    <input type="date" id="freq-data-inicio">
+                </div>
+
+                <div id="freq-box-fim" style="display: none;">
+                    <label for="freq-data-fim">Data final:</label>
+                    <input type="date" id="freq-data-fim">
+                </div>
+            </div>
 
             <div class="botoes-export">
                 <button onclick="baixarGeral('xlsx')" class="btn-excel">
-                    Baixar Excel (.xlsx)
+                    Baixar Frequência Geral
                 </button>
             </div>
         </div>
@@ -34,7 +87,7 @@
 
             <div class="botoes-export">
                 <button onclick="baixarDiario('xlsx')" class="btn-excel">
-                    Baixar Excel (.xlsx)
+                    Baixar Chamada do Dia
                 </button>
             </div>
         </div>
@@ -42,8 +95,11 @@
         <hr>
 
         <div class="box-opcao">
-            <h3>📝 Boletim de Notas</h3>
-            <p>Planilha com todas as avaliações e notas da turma.</p>
+            <h3>📝 Notas Modulares</h3>
+            <p>
+                Exporta as notas agrupadas por avaliação, bimestre, trimestre ou semestre,
+                incluindo pesos e médias ponderadas.
+            </p>
 
             <div class="botoes-export">
                 <button 
@@ -51,7 +107,7 @@
                     class="btn-excel" 
                     style="background-color: #6f42c1;"
                 >
-                    Baixar Excel
+                    Baixar Notas Modulares
                 </button>
             </div>
         </div>
@@ -84,14 +140,19 @@
     </div>
 
     <style>
-        /* Estilos EXCLUSIVOS desta página (sem afetar o resto do site) */
-
         select,
-        input[type="date"] {
+        input[type="date"],
+        input[type="number"] {
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
             box-sizing: border-box;
+        }
+
+        .grid-filtros {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
         }
 
         .box-opcao {
@@ -112,6 +173,7 @@
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+            margin-top: 10px;
         }
 
         .botoes-export button {
