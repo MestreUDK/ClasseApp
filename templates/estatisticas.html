@@ -18,7 +18,7 @@
         <h2>Estatísticas de Presença</h2>
 
         <div class="card-form filtros-stats">
-            <h3>Filtrar Período</h3>
+            <h3>Filtrar Período da Frequência</h3>
 
             <div class="grid-filtros">
                 <div>
@@ -106,6 +106,16 @@
         </p>
     </div>
 
+    <hr style="margin: 2em 0; border: 0; border-top: 1px solid #eee;">
+
+    <div class="coluna">
+        <h2>Estatísticas de Notas</h2>
+
+        <p id="status-notas">Carregando notas...</p>
+
+        <div id="notas-container"></div>
+    </div>
+
     <style>
         .grid-filtros {
             display: grid;
@@ -149,7 +159,8 @@
             background-color: var(--bg-body);
         }
 
-        td.porcentagem {
+        td.porcentagem,
+        td.media-nota {
             font-weight: bold;
         }
 
@@ -187,6 +198,43 @@
             color: var(--primary);
             font-weight: 600;
             display: block;
+        }
+
+        .periodo-notas {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 1em;
+            margin-bottom: 1.5em;
+        }
+
+        .periodo-notas h3 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+
+        .periodo-resumo {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .tag-nota {
+            background: var(--icon-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 3px 8px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .avaliacoes-lista {
+            font-size: 0.85em;
+            color: var(--text-sec);
+            margin-bottom: 10px;
         }
     </style>
 {% endblock %}
