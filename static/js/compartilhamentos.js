@@ -44,20 +44,11 @@ async function criarCompartilhamento(e) {
                 },
                 body: JSON.stringify({
                     permissao: 'visualizar',
-
                     permite_copia: els.permiteCopia.checked,
-
-                    compartilhar_alunos:
-                        els.compartilharAlunos.checked,
-
-                    compartilhar_frequencia:
-                        els.compartilharFrequencia.checked,
-
-                    compartilhar_notas:
-                        els.compartilharNotas.checked,
-
-                    compartilhar_diario:
-                        els.compartilharDiario.checked
+                    compartilhar_alunos: els.compartilharAlunos.checked,
+                    compartilhar_frequencia: els.compartilharFrequencia.checked,
+                    compartilhar_notas: els.compartilharNotas.checked,
+                    compartilhar_diario: els.compartilharDiario.checked
                 })
             }
         );
@@ -73,7 +64,7 @@ async function criarCompartilhamento(e) {
         els.resultado.style.display = 'block';
         els.codigoGerado.textContent = dados.codigo;
 
-        carregarCompartilhamentos();
+        await carregarCompartilhamentos();
 
         window.scrollTo({
             top: 0,
@@ -89,7 +80,6 @@ async function criarCompartilhamento(e) {
 async function carregarCompartilhamentos() {
     try {
         const response = await fetch('/api/compartilhamentos');
-
         const lista = await response.json();
 
         if (!response.ok) {
@@ -117,7 +107,7 @@ function renderizarCompartilhamentos(lista) {
     if (!Array.isArray(lista) || lista.length === 0) {
         els.lista.innerHTML = `
             <p style="color:#777;">
-                Nenhum compartilhamento criado.
+                Nenhum compartilhamento ativo.
             </p>
         `;
         return;
@@ -156,8 +146,9 @@ function renderizarCompartilhamentos(lista) {
             </div>
 
             <button
+                type="button"
                 class="btn-danger"
-                onclick="desativarCompartilhamento('${comp.id}')"
+                onclick="desativarCompartilhamento('${comp.id}', this)"
             >
                 Desativar
             </button>
@@ -167,12 +158,19 @@ function renderizarCompartilhamentos(lista) {
     });
 }
 
-window.desativarCompartilhamento = async function(id) {
+window.desativarCompartilhamento = async function(id, botao = null) {
     if (!confirm('Deseja desativar este compartilhamento?')) {
         return;
     }
 
+    const textoOriginal = botao ? botao.textContent : '';
+
     try {
+        if (botao) {
+            botao.disabled = true;
+            botao.textContent = 'Desativando...';
+        }
+
         const response = await fetch(
             `/api/compartilhamentos/${id}/desativar`,
             {
@@ -188,11 +186,17 @@ window.desativarCompartilhamento = async function(id) {
             );
         }
 
-        carregarCompartilhamentos();
+        alert('Compartilhamento desativado com sucesso!');
+        await carregarCompartilhamentos();
 
     } catch (error) {
         console.error(error);
         alert(error.message);
+
+        if (botao) {
+            botao.disabled = false;
+            botao.textContent = textoOriginal || 'Desativar';
+        }
     }
 };
 
