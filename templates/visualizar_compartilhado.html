@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}Turma Compartilhada{% endblock %}
+
+{% block content %}
+    <h1>Turma Compartilhada</h1>
+
+    <p id="status-compartilhado">
+        Carregando compartilhamento...
+    </p>
+
+    <div id="conteudo-compartilhado" style="display: none;">
+        <div class="dash-card">
+            <h2 id="nome-turma">Turma</h2>
+            <p id="descricao-turma"></p>
+
+            <div class="comp-tags" id="tags-compartilhamento"></div>
+
+            <button 
+                id="btn-copiar-turma" 
+                style="display: none; background-color: #28a745;"
+            >
+                Copiar para meu espaço
+            </button>
+        </div>
+
+        <hr style="margin: 2em 0;">
+
+        <h2>Alunos Compartilhados</h2>
+
+        <div id="lista-alunos">
+            <p>Nenhum aluno compartilhado.</p>
+        </div>
+    </div>
+
+    <style>
+        .comp-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 15px 0;
+        }
+
+        .tag-comp {
+            background: var(--icon-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 4px 10px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .aluno-comp-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-shadow: var(--shadow);
+            padding: 1em;
+            margin-bottom: 1em;
+        }
+
+        .aluno-comp-card h3 {
+            margin: 0 0 5px;
+        }
+
+        .aluno-comp-card p {
+            margin: 0;
+            color: var(--text-sec);
+            font-size: 0.9em;
+        }
+    </style>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        window.CODIGO_COMPARTILHAMENTO = "{{ codigo }}";
+    </script>
+
+    <script src="{{ url_for('static', filename='js/visualizar_compartilhado.js') }}"></script>
+{% endblock %}
