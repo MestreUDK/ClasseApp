@@ -495,6 +495,17 @@ def copiar_compartilhamento_para_minha_conta(codigo):
                     "user_id": current_user.id
                 }).execute()
 
+# ==========================================
+        # REGISTRAR HISTÓRICO DE CÓPIA
+        # ==========================================
+        supabase.table("compartilhamento_copias").insert({
+            "compartilhamento_id": compartilhamento["id"],
+            "dono_id": compartilhamento["dono_id"],
+            "copiado_por": current_user.id,
+            "turma_original_id": turma_original_id,
+            "nova_turma_id": nova_turma_id
+        }).execute()
+
         return jsonify({
             "message": "Turma copiada com sucesso.",
             "turma_id": nova_turma_id
