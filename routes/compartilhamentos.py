@@ -513,3 +513,19 @@ def copiar_compartilhamento_para_minha_conta(codigo):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@compartilhamentos_bp.route("/compartilhamentos/<uuid:comp_id>/copias", methods=["GET"])
+@login_required
+def listar_copias_compartilhamento(comp_id):
+    try:
+        res, _ = supabase.table("compartilhamento_copias") \
+            .select("*") \
+            .eq("compartilhamento_id", str(comp_id)) \
+            .eq("dono_id", current_user.id) \
+            .order("created_at", desc=True) \
+            .execute()
+
+        return jsonify(res[1] or [])
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
