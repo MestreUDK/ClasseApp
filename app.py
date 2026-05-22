@@ -16,6 +16,7 @@ from routes.diario import diario_bp
 from routes.auth import auth_bp 
 from routes.dashboard import dashboard_bp 
 from routes.disciplinas import disciplinas_bp
+from routes.compartilhamentos import compartilhamentos_bp
 from routes.perfil import perfil_bp 
 from routes.notas import notas_bp
 from models import User 
@@ -57,6 +58,7 @@ app.register_blueprint(exportar_bp, url_prefix='/api')
 app.register_blueprint(diario_bp, url_prefix='/api')
 app.register_blueprint(dashboard_bp, url_prefix='/api')
 app.register_blueprint(disciplinas_bp, url_prefix='/api')
+app.register_blueprint(compartilhamentos_bp, url_prefix='/api')
 app.register_blueprint(auth_bp) 
 app.register_blueprint(perfil_bp)
 app.register_blueprint(notas_bp, url_prefix='/api') 
