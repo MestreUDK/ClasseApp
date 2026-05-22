@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Abrir Compartilhamento{% endblock %}
+
+{% block content %}
+    <h1>Abrir Compartilhamento</h1>
+
+    <p>
+        Digite o código recebido para visualizar uma turma compartilhada.
+    </p>
+
+    <div class="card-form">
+        <form id="form-abrir-codigo">
+            <label for="codigo">Código:</label>
+
+            <input
+                type="text"
+                id="codigo"
+                placeholder="Ex: A1B2C3D4"
+                required
+                style="text-transform: uppercase;"
+            >
+
+            <button type="submit">
+                Abrir Compartilhamento
+            </button>
+        </form>
+    </div>
+
+    <style>
+        #codigo {
+            letter-spacing: 3px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/compartilhado.js') }}"></script>
+{% endblock %}
