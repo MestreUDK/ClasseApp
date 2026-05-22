@@ -26,11 +26,30 @@
 
         <hr style="margin: 2em 0;">
 
-        <h2>Alunos Compartilhados</h2>
+        <section id="secao-alunos">
+            <h2>Alunos Compartilhados</h2>
+            <div id="lista-alunos">
+                <p>Nenhum aluno compartilhado.</p>
+            </div>
+        </section>
 
-        <div id="lista-alunos">
-            <p>Nenhum aluno compartilhado.</p>
-        </div>
+        <section id="secao-frequencia" style="display: none;">
+            <hr style="margin: 2em 0;">
+            <h2>Resumo de Frequência</h2>
+            <div id="lista-frequencia"></div>
+        </section>
+
+        <section id="secao-notas" style="display: none;">
+            <hr style="margin: 2em 0;">
+            <h2>Resumo de Notas</h2>
+            <div id="lista-notas"></div>
+        </section>
+
+        <section id="secao-diario" style="display: none;">
+            <hr style="margin: 2em 0;">
+            <h2>Diário de Bordo Compartilhado</h2>
+            <div id="lista-diario"></div>
+        </section>
     </div>
 
     <style>
@@ -50,7 +69,9 @@
             font-weight: 600;
         }
 
-        .aluno-comp-card {
+        .aluno-comp-card,
+        .resumo-card,
+        .diario-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 6px;
@@ -59,14 +80,39 @@
             margin-bottom: 1em;
         }
 
-        .aluno-comp-card h3 {
+        .aluno-comp-card h3,
+        .resumo-card h3,
+        .diario-card h3 {
             margin: 0 0 5px;
         }
 
-        .aluno-comp-card p {
-            margin: 0;
+        .aluno-comp-card p,
+        .resumo-card p,
+        .diario-card p {
+            margin: 4px 0;
             color: var(--text-sec);
             font-size: 0.9em;
+        }
+
+        .tabela-comp {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .tabela-comp th,
+        .tabela-comp td {
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            text-align: left;
+        }
+
+        .tabela-comp th {
+            background: var(--icon-bg);
+        }
+
+        .center {
+            text-align: center !important;
         }
     </style>
 {% endblock %}
