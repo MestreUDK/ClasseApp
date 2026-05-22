@@ -3,17 +3,28 @@
 const CODIGO = window.CODIGO_COMPARTILHAMENTO;
 
 let dadosCompartilhados = null;
-
 let els = {};
 
 document.addEventListener('DOMContentLoaded', () => {
     els = {
         status: document.getElementById('status-compartilhado'),
         conteudo: document.getElementById('conteudo-compartilhado'),
+
         nomeTurma: document.getElementById('nome-turma'),
         descricaoTurma: document.getElementById('descricao-turma'),
         tags: document.getElementById('tags-compartilhamento'),
+
         listaAlunos: document.getElementById('lista-alunos'),
+
+        secaoFrequencia: document.getElementById('secao-frequencia'),
+        listaFrequencia: document.getElementById('lista-frequencia'),
+
+        secaoNotas: document.getElementById('secao-notas'),
+        listaNotas: document.getElementById('lista-notas'),
+
+        secaoDiario: document.getElementById('secao-diario'),
+        listaDiario: document.getElementById('lista-diario'),
+
         btnCopiar: document.getElementById('btn-copiar-turma')
     };
 
@@ -32,12 +43,10 @@ async function carregarCompartilhamento() {
         }
 
         dadosCompartilhados = dados;
-
         renderizarCompartilhamento(dados);
 
     } catch (error) {
         console.error(error);
-
         els.status.textContent = error.message;
         els.status.style.color = 'red';
     }
@@ -68,6 +77,9 @@ function renderizarCompartilhamento(dados) {
     }
 
     renderizarAlunos(dados.alunos || []);
+    renderizarFrequencia(dados.frequencia_resumo || []);
+    renderizarNotas(dados.notas_resumo || []);
+    renderizarDiario(dados.diario || []);
 }
 
 function adicionarTag(texto) {
@@ -99,6 +111,115 @@ function renderizarAlunos(alunos) {
     });
 }
 
+function renderizarFrequencia(lista) {
+    if (!Array.isArray(lista) || lista.length === 0) {
+        els.secaoFrequencia.style.display = 'none';
+        return;
+    }
+
+    els.secaoFrequencia.style.display = 'block';
+
+    els.listaFrequencia.innerHTML = `
+        <table class="tabela-comp">
+            <thead>
+                <tr>
+                    <th>Aluno</th>
+                    <th class="center">Presenças</th>
+                    <th class="center">Faltas</th>
+                    <th class="center">Total</th>
+                    <th class="center">%</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${lista.map(item => `
+                    <tr>
+                        <td>${escapeHTML(item.nome_completo)}</td>
+                        <td class="center">${item.presencas}</td>
+                        <td class="center">${item.faltas}</td>
+                        <td class="center">${item.total}</td>
+                        <td class="center">${item.porcentagem}%</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function renderizarNotas(periodos) {
+    if (!Array.isArray(periodos) || periodos.length === 0) {
+        els.secaoNotas.style.display = 'none';
+        return;
+    }
+
+    els.secaoNotas.style.display = 'block';
+    els.listaNotas.innerHTML = '';
+
+    periodos.forEach(periodo => {
+        const div = document.createElement('div');
+        div.className = 'resumo-card';
+
+        div.innerHTML = `
+            <h3>${escapeHTML(periodo.nome_periodo)}</h3>
+
+            <p>
+                Avaliações:
+                ${periodo.avaliacoes.map(av => escapeHTML(av.nome)).join(', ')}
+            </p>
+
+            <table class="tabela-comp">
+                <thead>
+                    <tr>
+                        <th>Aluno</th>
+                        <th class="center">Notas</th>
+                        <th class="center">Média</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${periodo.alunos.map(aluno => `
+                        <tr>
+                            <td>${escapeHTML(aluno.nome_completo)}</td>
+                            <td class="center">
+                                ${aluno.total_lancadas}/${aluno.total_avaliacoes}
+                            </td>
+                            <td class="center">
+                                ${aluno.media ?? '-'}
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+
+        els.listaNotas.appendChild(div);
+    });
+}
+
+function renderizarDiario(lista) {
+    if (!Array.isArray(lista) || lista.length === 0) {
+        els.secaoDiario.style.display = 'none';
+        return;
+    }
+
+    els.secaoDiario.style.display = 'block';
+    els.listaDiario.innerHTML = '';
+
+    lista.forEach(item => {
+        const aluno = item.alunos || {};
+
+        const div = document.createElement('div');
+        div.className = 'diario-card';
+
+        div.innerHTML = `
+            <h3>${escapeHTML(item.titulo)}</h3>
+            <p>Data: ${formatarData(item.data_referencia)}</p>
+            <p>Aluno: ${escapeHTML(aluno.nome_completo || '-')}</p>
+            <p>${escapeHTML(item.conteudo || '')}</p>
+        `;
+
+        els.listaDiario.appendChild(div);
+    });
+}
+
 async function copiarTurmaParaMinhaConta() {
     if (!dadosCompartilhados) {
         alert('Dados ainda não carregados.');
@@ -124,7 +245,6 @@ async function copiarTurmaParaMinhaConta() {
         }
 
         alert('Turma copiada com sucesso!');
-
         window.location.href = `/turma/${resposta.turma_id}`;
 
     } catch (error) {
