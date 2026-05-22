@@ -92,6 +92,7 @@ def listar_compartilhamentos():
         res, _ = supabase.table("compartilhamentos") \
             .select("*") \
             .eq("dono_id", current_user.id) \
+            .eq("ativo", True) \
             .order("created_at", desc=True) \
             .execute()
 
