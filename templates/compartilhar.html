@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}Compartilhar Turma{% endblock %}
+
+{% block content %}
+    <h1>Compartilhar Turma</h1>
+
+    <p>
+        Gere um código para compartilhar esta turma com outros professores
+        ou coordenação.
+    </p>
+
+    <div class="card-form">
+        <h2>Configurações do Compartilhamento</h2>
+
+        <form id="form-compartilhar">
+
+            <div class="checkbox-group">
+                <label>
+                    <input type="checkbox" id="compartilhar-alunos" checked>
+                    Compartilhar alunos
+                </label>
+
+                <label>
+                    <input type="checkbox" id="compartilhar-frequencia">
+                    Compartilhar frequências
+                </label>
+
+                <label>
+                    <input type="checkbox" id="compartilhar-notas">
+                    Compartilhar notas
+                </label>
+
+                <label>
+                    <input type="checkbox" id="compartilhar-diario">
+                    Compartilhar diário de bordo
+                </label>
+            </div>
+
+            <hr>
+
+            <div class="checkbox-group">
+                <label>
+                    <input type="checkbox" id="permite-copia">
+                    Permitir cópia para outro professor
+                </label>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <button type="submit">
+                    Gerar Código
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div id="resultado-compartilhamento" style="display:none;">
+        <div class="dash-card resultado-box">
+            <h2>Código Gerado</h2>
+
+            <div class="codigo-box">
+                <span id="codigo-gerado">------</span>
+            </div>
+
+            <p>
+                Compartilhe este código com outro professor.
+            </p>
+
+            <div class="acoes-codigo">
+                <button id="btn-copiar">
+                    Copiar Código
+                </button>
+
+                <button id="btn-whatsapp">
+                    Compartilhar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <hr style="margin: 2em 0;">
+
+    <h2>Compartilhamentos Ativos</h2>
+
+    <div id="lista-compartilhamentos">
+        <p>Carregando...</p>
+    </div>
+
+    <style>
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+
+        .codigo-box {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            background: var(--icon-bg);
+            border: 2px dashed var(--primary);
+            text-align: center;
+        }
+
+        #codigo-gerado {
+            font-size: 2em;
+            font-weight: bold;
+            letter-spacing: 4px;
+            color: var(--primary);
+        }
+
+        .acoes-codigo {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .acoes-codigo button {
+            flex: 1;
+        }
+
+        .comp-card {
+            margin-bottom: 1em;
+        }
+
+        .comp-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .tag-comp {
+            background: var(--icon-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 4px 10px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .comp-codigo {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+    </style>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/compartilhamentos.js') }}"></script>
+{% endblock %}
