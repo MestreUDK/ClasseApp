@@ -191,6 +191,13 @@ function renderizarCompartilhamentos(lista) {
 
                 <button
                     type="button"
+                    onclick="verCopiasCompartilhamento('${comp.id}')"
+                >
+                    Ver cópias
+                </button>
+
+                <button
+                    type="button"
                     class="btn-danger"
                     onclick="desativarCompartilhamento('${comp.id}', this)"
                 >
@@ -242,6 +249,34 @@ window.desativarCompartilhamento = async function(id, botao = null) {
             botao.disabled = false;
             botao.textContent = textoOriginal || 'Desativar';
         }
+    }
+};
+
+window.verCopiasCompartilhamento = async function(compId) {
+    try {
+        const response = await fetch(`/api/compartilhamentos/${compId}/copias`);
+        const copias = await response.json();
+
+        if (!response.ok) {
+            throw new Error(copias.error || 'Erro ao buscar histórico.');
+        }
+
+        if (!Array.isArray(copias) || copias.length === 0) {
+            alert('Nenhuma cópia registrada para este compartilhamento.');
+            return;
+        }
+
+        const texto = copias.map((copia, index) => {
+            const data = new Date(copia.created_at).toLocaleString('pt-BR');
+
+            return `${index + 1}. Copiado em: ${data}`;
+        }).join('\n');
+
+        alert(`Histórico de cópias:\n\n${texto}`);
+
+    } catch (error) {
+        console.error(error);
+        alert(error.message);
     }
 };
 
