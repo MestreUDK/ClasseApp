@@ -8,8 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
     els = {
         h1Titulo: document.getElementById('nome-turma'),
         linkVoltar: document.getElementById('link-voltar'),
+
         status: document.getElementById('status-stats'),
         tableBody: document.getElementById('stats-tbody'),
+
+        statusNotas: document.getElementById('status-notas'),
+        notasContainer: document.getElementById('notas-container'),
 
         tipoPeriodo: document.getElementById('tipo-periodo'),
         mes: document.getElementById('mes'),
@@ -160,9 +164,7 @@ function intervaloMes(ano, mes) {
 
 function intervaloMeses(ano, mesInicial, mesFinal) {
     const inicio = `${ano}-${String(mesInicial).padStart(2, '0')}-01`;
-
     const ultimoDia = new Date(ano, mesFinal, 0).getDate();
-
     const fim = `${ano}-${String(mesFinal).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
 
     return {
@@ -177,7 +179,12 @@ async function carregarEstatisticas() {
         els.status.style.display = 'block';
         els.status.style.color = '';
 
+        els.statusNotas.textContent = 'Carregando notas...';
+        els.statusNotas.style.display = 'block';
+        els.statusNotas.style.color = '';
+
         els.tableBody.innerHTML = '';
+        els.notasContainer.innerHTML = '';
 
         const intervalo = calcularIntervaloFiltro();
 
@@ -197,63 +204,163 @@ async function carregarEstatisticas() {
         }
 
         const queryString = params.toString();
+
         const url = queryString
             ? `/api/turma/${TURMA_ID}/stats?${queryString}`
             : `/api/turma/${TURMA_ID}/stats`;
 
         const response = await fetch(url);
-        const stats = await response.json();
+        const dados = await response.json();
 
         if (!response.ok) {
-            throw new Error(stats.error || 'Erro ao carregar estatísticas.');
+            throw new Error(dados.error || 'Erro ao carregar estatísticas.');
         }
 
-        if (!Array.isArray(stats) || stats.length === 0) {
-            els.status.textContent = 'Sem alunos vinculados nesta turma.';
-            return;
-        }
-
-        els.status.style.display = 'none';
-
-        stats.forEach(aluno => {
-            const tr = document.createElement('tr');
-
-            const porcentagem = aluno.porcentagem_presenca || 0;
-
-            let corPorcentagem = '';
-
-            if (aluno.total_registros === 0) {
-                corPorcentagem = 'color: #6c757d;';
-            } else if (porcentagem < 50) {
-                corPorcentagem = 'color: #dc3545;';
-            } else if (porcentagem >= 75) {
-                corPorcentagem = 'color: #28a745;';
-            }
-
-            tr.innerHTML = `
-                <td>
-                    <a href="/aluno/editar/${aluno.aluno_id}" class="link-aluno">
-                        ${escapeHTML(aluno.nome_completo)}
-                    </a>
-                </td>
-
-                <td class="center">${aluno.total_presencas}</td>
-                <td class="center">${aluno.total_faltas}</td>
-                <td class="center">${aluno.total_registros}</td>
-
-                <td class="center porcentagem" style="${corPorcentagem}">
-                    ${porcentagem}%
-                </td>
-            `;
-
-            els.tableBody.appendChild(tr);
-        });
+        renderizarFrequencia(dados.frequencia || []);
+        renderizarNotas(dados.notas || { periodos: [] });
 
     } catch (error) {
         console.error(error);
+
         els.status.textContent = `Erro: ${error.message}`;
         els.status.style.color = 'red';
+
+        els.statusNotas.textContent = `Erro: ${error.message}`;
+        els.statusNotas.style.color = 'red';
     }
+}
+
+function renderizarFrequencia(stats) {
+    els.tableBody.innerHTML = '';
+
+    if (!Array.isArray(stats) || stats.length === 0) {
+        els.status.textContent = 'Sem alunos vinculados nesta turma.';
+        return;
+    }
+
+    els.status.style.display = 'none';
+
+    stats.forEach(aluno => {
+        const tr = document.createElement('tr');
+
+        const porcentagem = aluno.porcentagem_presenca || 0;
+
+        let corPorcentagem = '';
+
+        if (aluno.total_registros === 0) {
+            corPorcentagem = 'color: #6c757d;';
+        } else if (porcentagem < 50) {
+            corPorcentagem = 'color: #dc3545;';
+        } else if (porcentagem >= 75) {
+            corPorcentagem = 'color: #28a745;';
+        }
+
+        tr.innerHTML = `
+            <td>
+                <a href="/aluno/editar/${aluno.aluno_id}" class="link-aluno">
+                    ${escapeHTML(aluno.nome_completo)}
+                </a>
+            </td>
+
+            <td class="center">${aluno.total_presencas}</td>
+            <td class="center">${aluno.total_faltas}</td>
+            <td class="center">${aluno.total_registros}</td>
+
+            <td class="center porcentagem" style="${corPorcentagem}">
+                ${porcentagem}%
+            </td>
+        `;
+
+        els.tableBody.appendChild(tr);
+    });
+}
+
+function renderizarNotas(notas) {
+    els.notasContainer.innerHTML = '';
+
+    const periodos = notas.periodos || [];
+
+    if (!Array.isArray(periodos) || periodos.length === 0) {
+        els.statusNotas.textContent = 'Nenhuma avaliação cadastrada nesta turma.';
+        return;
+    }
+
+    els.statusNotas.style.display = 'none';
+
+    periodos.forEach(periodo => {
+        const section = document.createElement('section');
+        section.className = 'periodo-notas';
+
+        const avaliacoesTexto = periodo.avaliacoes
+            .map(av => `${av.nome} (peso ${av.peso || 1})`)
+            .join(' • ');
+
+        section.innerHTML = `
+            <h3>${escapeHTML(periodo.nome_periodo)}</h3>
+
+            <div class="periodo-resumo">
+                <span class="tag-nota">
+                    Média da turma: ${periodo.media_turma ?? '-'}
+                </span>
+
+                <span class="tag-nota">
+                    Atividades: ${periodo.avaliacoes.length}
+                </span>
+            </div>
+
+            <div class="avaliacoes-lista">
+                <strong>Itens:</strong> ${escapeHTML(avaliacoesTexto)}
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Aluno</th>
+                        <th class="center">Notas</th>
+                        <th class="center">Média</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    ${periodo.alunos.map(aluno => criarLinhaNota(aluno)).join('')}
+                </tbody>
+            </table>
+        `;
+
+        els.notasContainer.appendChild(section);
+    });
+}
+
+function criarLinhaNota(aluno) {
+    const media = aluno.media_periodo;
+
+    let corMedia = '';
+
+    if (media === null || media === undefined) {
+        corMedia = 'color: #6c757d;';
+    } else if (media < 5) {
+        corMedia = 'color: #dc3545;';
+    } else if (media >= 7) {
+        corMedia = 'color: #28a745;';
+    }
+
+    return `
+        <tr>
+            <td>
+                <a href="/aluno/editar/${aluno.aluno_id}" class="link-aluno">
+                    ${escapeHTML(aluno.nome_completo)}
+                </a>
+            </td>
+
+            <td class="center">
+                ${aluno.total_lancadas}/${aluno.total_avaliacoes}
+            </td>
+
+            <td class="center media-nota" style="${corMedia}">
+                ${media ?? '-'}
+            </td>
+        </tr>
+    `;
 }
 
 function escapeHTML(valor) {
