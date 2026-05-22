@@ -47,6 +47,11 @@ def page_search_results():
 def page_disciplinas():
     return render_template('disciplinas.html')
 
+@pages_bp.route('/turma/<uuid:turma_id>/compartilhar')
+@login_required
+def page_compartilhar_turma(turma_id):
+    return render_template('compartilhar.html')
+
 # --- ROTAS PÚBLICAS ---
 
 @pages_bp.route('/offline')
