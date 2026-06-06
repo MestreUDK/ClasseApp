@@ -1,0 +1,1 @@
+# modules/compartilhamentos/__init__.py
