@@ -46,6 +46,52 @@ def tratar_expiracao(expira_em):
     return data_local.isoformat()
 
 
+def adicionar_estatisticas_copias(compartilhamentos):
+    if not compartilhamentos:
+        return []
+
+    ids = [item["id"] for item in compartilhamentos]
+
+    res, _ = supabase.table("compartilhamento_copias") \
+        .select("compartilhamento_id, created_at") \
+        .in_("compartilhamento_id", ids) \
+        .execute()
+
+    copias = res[1] or []
+
+    mapa = {}
+
+    for copia in copias:
+        comp_id = copia.get("compartilhamento_id")
+
+        if comp_id not in mapa:
+            mapa[comp_id] = {
+                "total_copias": 0,
+                "ultima_copia_em": None
+            }
+
+        mapa[comp_id]["total_copias"] += 1
+
+        created_at = copia.get("created_at")
+
+        if created_at:
+            atual = mapa[comp_id]["ultima_copia_em"]
+
+            if not atual or created_at > atual:
+                mapa[comp_id]["ultima_copia_em"] = created_at
+
+    for item in compartilhamentos:
+        stats = mapa.get(item["id"], {
+            "total_copias": 0,
+            "ultima_copia_em": None
+        })
+
+        item["total_copias"] = stats["total_copias"]
+        item["ultima_copia_em"] = stats["ultima_copia_em"]
+
+    return compartilhamentos
+
+
 @compartilhamentos_bp.route("/compartilhamentos/turma/<uuid:turma_id>", methods=["POST"])
 @login_required
 def criar_compartilhamento_turma(turma_id):
@@ -99,11 +145,16 @@ def listar_compartilhamentos():
             .execute()
 
         compartilhamentos = res[1] or []
+
         compartilhamentos_validos = filtrar_compartilhamentos_validos(
             compartilhamentos
         )
 
-        return jsonify(compartilhamentos_validos)
+        compartilhamentos_com_stats = adicionar_estatisticas_copias(
+            compartilhamentos_validos
+        )
+
+        return jsonify(compartilhamentos_com_stats)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
