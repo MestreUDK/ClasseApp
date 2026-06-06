@@ -11,7 +11,13 @@
     </p>
 
     <div class="card-form">
-        <h2>Configurações do Compartilhamento</h2>
+        <h2 id="titulo-form-compartilhar">
+            Configurações do Compartilhamento
+        </h2>
+
+        <p id="aviso-edicao" style="display: none; font-weight: bold; color: var(--primary);">
+            Editando compartilhamento existente. O código será mantido.
+        </p>
 
         <form id="form-compartilhar">
             <div class="checkbox-group">
@@ -54,9 +60,17 @@
                 </small>
             </div>
 
-            <div style="margin-top: 15px;">
-                <button type="submit">
+            <div class="acoes-form-compartilhar">
+                <button type="submit" id="btn-submit-compartilhar">
                     Gerar Código
+                </button>
+
+                <button 
+                    type="button" 
+                    id="btn-cancelar-edicao" 
+                    style="display: none; background: #6c757d;"
+                >
+                    Cancelar Edição
                 </button>
             </div>
         </form>
@@ -132,6 +146,18 @@
             display: block;
             margin-top: 5px;
             opacity: 0.75;
+        }
+
+        .acoes-form-compartilhar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .acoes-form-compartilhar button {
+            flex: 1;
+            min-width: 140px;
         }
 
         .codigo-box {
@@ -222,6 +248,11 @@
 
         .btn-danger {
             background: #dc3545;
+        }
+
+        .btn-edit {
+            background: #ffc107;
+            color: #000;
         }
     </style>
 {% endblock %}
