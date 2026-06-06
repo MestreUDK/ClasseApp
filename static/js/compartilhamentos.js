@@ -6,9 +6,17 @@ let els = {};
 let ultimoCodigoGerado = '';
 let ultimoLinkGerado = '';
 
+let modoEdicao = false;
+let compartilhamentoEditandoId = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     els = {
         form: document.getElementById('form-compartilhar'),
+
+        tituloForm: document.getElementById('titulo-form-compartilhar'),
+        avisoEdicao: document.getElementById('aviso-edicao'),
+        btnSubmit: document.getElementById('btn-submit-compartilhar'),
+        btnCancelarEdicao: document.getElementById('btn-cancelar-edicao'),
 
         compartilharAlunos: document.getElementById('compartilhar-alunos'),
         compartilharFrequencia: document.getElementById('compartilhar-frequencia'),
@@ -29,7 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
         lista: document.getElementById('lista-compartilhamentos')
     };
 
-    els.form.addEventListener('submit', criarCompartilhamento);
+    els.form.addEventListener('submit', handleSubmitCompartilhamento);
+    els.btnCancelarEdicao.addEventListener('click', cancelarEdicao);
+
     els.btnCopiar.addEventListener('click', copiarCodigo);
     els.btnCopiarLink.addEventListener('click', copiarLinkGerado);
     els.btnWhatsapp.addEventListener('click', compartilharWhatsapp);
@@ -51,9 +61,48 @@ function formatarDataHora(dataISO) {
     }
 }
 
-async function criarCompartilhamento(e) {
+function converterParaInputDatetimeLocal(dataISO) {
+    if (!dataISO) return '';
+
+    try {
+        const data = new Date(dataISO);
+        const ano = data.getFullYear();
+        const mes = String(data.getMonth() + 1).padStart(2, '0');
+        const dia = String(data.getDate()).padStart(2, '0');
+        const hora = String(data.getHours()).padStart(2, '0');
+        const minuto = String(data.getMinutes()).padStart(2, '0');
+
+        return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
+
+    } catch {
+        return '';
+    }
+}
+
+function montarPayloadCompartilhamento() {
+    return {
+        permissao: 'visualizar',
+        permite_copia: els.permiteCopia.checked,
+        compartilhar_alunos: els.compartilharAlunos.checked,
+        compartilhar_frequencia: els.compartilharFrequencia.checked,
+        compartilhar_notas: els.compartilharNotas.checked,
+        compartilhar_diario: els.compartilharDiario.checked,
+        expira_em: els.expiraEm.value || null
+    };
+}
+
+async function handleSubmitCompartilhamento(e) {
     e.preventDefault();
 
+    if (modoEdicao && compartilhamentoEditandoId) {
+        await salvarEdicaoCompartilhamento();
+        return;
+    }
+
+    await criarCompartilhamento();
+}
+
+async function criarCompartilhamento() {
     try {
         const response = await fetch(
             `/api/compartilhamentos/turma/${TURMA_ID}`,
@@ -62,15 +111,7 @@ async function criarCompartilhamento(e) {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    permissao: 'visualizar',
-                    permite_copia: els.permiteCopia.checked,
-                    compartilhar_alunos: els.compartilharAlunos.checked,
-                    compartilhar_frequencia: els.compartilharFrequencia.checked,
-                    compartilhar_notas: els.compartilharNotas.checked,
-                    compartilhar_diario: els.compartilharDiario.checked,
-                    expira_em: els.expiraEm.value || null
-                })
+                body: JSON.stringify(montarPayloadCompartilhamento())
             }
         );
 
@@ -89,12 +130,45 @@ async function criarCompartilhamento(e) {
         els.codigoGerado.textContent = ultimoCodigoGerado;
         els.linkGerado.value = ultimoLinkGerado;
 
+        limparFormulario();
         await carregarCompartilhamentos();
 
         window.scrollTo({
             top: 0,
             behavior: 'smooth'
         });
+
+    } catch (error) {
+        console.error(error);
+        alert(error.message);
+    }
+}
+
+async function salvarEdicaoCompartilhamento() {
+    try {
+        const response = await fetch(
+            `/api/compartilhamentos/${compartilhamentoEditandoId}`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(montarPayloadCompartilhamento())
+            }
+        );
+
+        const dados = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                dados.error || 'Erro ao atualizar compartilhamento.'
+            );
+        }
+
+        alert('Compartilhamento atualizado com sucesso!');
+
+        cancelarEdicao();
+        await carregarCompartilhamentos();
 
     } catch (error) {
         console.error(error);
@@ -207,6 +281,14 @@ function renderizarCompartilhamentos(lista) {
 
                 <button
                     type="button"
+                    class="btn-edit"
+                    onclick='iniciarEdicaoCompartilhamento(${JSON.stringify(comp)})'
+                >
+                    Editar
+                </button>
+
+                <button
+                    type="button"
                     onclick="verCopiasCompartilhamento('${comp.id}')"
                 >
                     Ver cópias
@@ -224,6 +306,49 @@ function renderizarCompartilhamentos(lista) {
 
         els.lista.appendChild(card);
     });
+}
+
+window.iniciarEdicaoCompartilhamento = function(comp) {
+    modoEdicao = true;
+    compartilhamentoEditandoId = comp.id;
+
+    els.tituloForm.textContent = 'Editar Compartilhamento';
+    els.avisoEdicao.style.display = 'block';
+    els.btnSubmit.textContent = 'Salvar Alterações';
+    els.btnCancelarEdicao.style.display = 'inline-block';
+
+    els.compartilharAlunos.checked = !!comp.compartilhar_alunos;
+    els.compartilharFrequencia.checked = !!comp.compartilhar_frequencia;
+    els.compartilharNotas.checked = !!comp.compartilhar_notas;
+    els.compartilharDiario.checked = !!comp.compartilhar_diario;
+    els.permiteCopia.checked = !!comp.permite_copia;
+    els.expiraEm.value = converterParaInputDatetimeLocal(comp.expira_em);
+
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+};
+
+function cancelarEdicao() {
+    modoEdicao = false;
+    compartilhamentoEditandoId = null;
+
+    els.tituloForm.textContent = 'Configurações do Compartilhamento';
+    els.avisoEdicao.style.display = 'none';
+    els.btnSubmit.textContent = 'Gerar Código';
+    els.btnCancelarEdicao.style.display = 'none';
+
+    limparFormulario();
+}
+
+function limparFormulario() {
+    els.compartilharAlunos.checked = true;
+    els.compartilharFrequencia.checked = false;
+    els.compartilharNotas.checked = false;
+    els.compartilharDiario.checked = false;
+    els.permiteCopia.checked = false;
+    els.expiraEm.value = '';
 }
 
 window.desativarCompartilhamento = async function(id, botao = null) {
