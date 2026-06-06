@@ -2,6 +2,7 @@
 
 import random
 import string
+from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
@@ -36,6 +37,25 @@ def verificar_dono_turma(turma_id):
     return len(res[1]) > 0
 
 
+def compartilhamento_expirado(compartilhamento):
+    expira_em = compartilhamento.get("expira_em")
+
+    if not expira_em:
+        return False
+
+    try:
+        expira_em_limpo = expira_em.replace("Z", "+00:00")
+        data_expiracao = datetime.fromisoformat(expira_em_limpo)
+
+        if data_expiracao.tzinfo is None:
+            data_expiracao = data_expiracao.replace(tzinfo=timezone.utc)
+
+        return data_expiracao < datetime.now(timezone.utc)
+
+    except Exception:
+        return False
+
+
 def buscar_compartilhamento_por_codigo(codigo):
     res, _ = supabase.table("compartilhamentos") \
         .select("*") \
@@ -44,7 +64,15 @@ def buscar_compartilhamento_por_codigo(codigo):
         .single() \
         .execute()
 
-    return res[1]
+    compartilhamento = res[1]
+
+    if not compartilhamento:
+        return None
+
+    if compartilhamento_expirado(compartilhamento):
+        return None
+
+    return compartilhamento
 
 
 @compartilhamentos_bp.route("/compartilhamentos/turma/<uuid:turma_id>", methods=["POST"])
@@ -56,6 +84,7 @@ def criar_compartilhamento_turma(turma_id):
 
         dados = request.get_json() or {}
         codigo = gerar_codigo_compartilhamento()
+        expira_em = dados.get("expira_em") or None
 
         compartilhamento = {
             "codigo": codigo,
@@ -68,6 +97,7 @@ def criar_compartilhamento_turma(turma_id):
             "compartilhar_frequencia": bool(dados.get("compartilhar_frequencia", False)),
             "compartilhar_notas": bool(dados.get("compartilhar_notas", False)),
             "compartilhar_diario": bool(dados.get("compartilhar_diario", False)),
+            "expira_em": expira_em,
             "ativo": True
         }
 
@@ -96,7 +126,14 @@ def listar_compartilhamentos():
             .order("created_at", desc=True) \
             .execute()
 
-        return jsonify(res[1] or [])
+        compartilhamentos = res[1] or []
+
+        compartilhamentos_validos = [
+            item for item in compartilhamentos
+            if not compartilhamento_expirado(item)
+        ]
+
+        return jsonify(compartilhamentos_validos)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -301,7 +338,7 @@ def visualizar_compartilhamento(codigo):
         compartilhamento = buscar_compartilhamento_por_codigo(codigo)
 
         if not compartilhamento:
-            return jsonify({"error": "Código inválido."}), 404
+            return jsonify({"error": "Código inválido, inativo ou expirado."}), 404
 
         if compartilhamento["tipo"] != "turma":
             return jsonify({"error": "Tipo de compartilhamento não suportado."}), 400
@@ -349,7 +386,7 @@ def copiar_compartilhamento_para_minha_conta(codigo):
         compartilhamento = buscar_compartilhamento_por_codigo(codigo)
 
         if not compartilhamento:
-            return jsonify({"error": "Código inválido ou inativo."}), 404
+            return jsonify({"error": "Código inválido, inativo ou expirado."}), 404
 
         if not compartilhamento.get("permite_copia"):
             return jsonify({"error": "Este compartilhamento não permite cópia."}), 403
@@ -359,9 +396,6 @@ def copiar_compartilhamento_para_minha_conta(codigo):
 
         turma_original_id = compartilhamento["recurso_id"]
 
-        # ==========================================
-        # EVITAR CÓPIA DUPLICADA
-        # ==========================================
         copia_existente_res, _ = supabase.table("compartilhamento_copias") \
             .select("nova_turma_id") \
             .eq("compartilhamento_id", compartilhamento["id"]) \
@@ -514,9 +548,6 @@ def copiar_compartilhamento_para_minha_conta(codigo):
                     "user_id": current_user.id
                 }).execute()
 
-# ==========================================
-        # REGISTRAR HISTÓRICO DE CÓPIA
-        # ==========================================
         supabase.table("compartilhamento_copias").insert({
             "compartilhamento_id": compartilhamento["id"],
             "dono_id": compartilhamento["dono_id"],
@@ -532,6 +563,7 @@ def copiar_compartilhamento_para_minha_conta(codigo):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @compartilhamentos_bp.route("/compartilhamentos/<uuid:comp_id>/copias", methods=["GET"])
 @login_required
