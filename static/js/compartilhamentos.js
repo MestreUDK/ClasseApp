@@ -61,6 +61,20 @@ function formatarDataHora(dataISO) {
     }
 }
 
+function formatarTotalCopias(total) {
+    const quantidade = Number(total || 0);
+
+    if (quantidade === 0) {
+        return '0 cópias';
+    }
+
+    if (quantidade === 1) {
+        return '1 cópia';
+    }
+
+    return `${quantidade} cópias`;
+}
+
 function converterParaInputDatetimeLocal(dataISO) {
     if (!dataISO) return '';
 
@@ -231,6 +245,14 @@ function renderizarCompartilhamentos(lista) {
 
                     <div class="comp-link">
                         Expira em: ${escapeHTML(formatarDataHora(comp.expira_em))}
+                    </div>
+
+                    <div class="comp-link">
+                        📊 ${escapeHTML(formatarTotalCopias(comp.total_copias))}
+                    </div>
+
+                    <div class="comp-link">
+                        🕒 Última cópia: ${escapeHTML(formatarDataHora(comp.ultima_copia_em))}
                     </div>
                 </div>
             </div>
