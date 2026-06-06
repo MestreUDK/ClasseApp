@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         compartilharDiario: document.getElementById('compartilhar-diario'),
 
         permiteCopia: document.getElementById('permite-copia'),
+        expiraEm: document.getElementById('expira-em'),
 
         resultado: document.getElementById('resultado-compartilhamento'),
         codigoGerado: document.getElementById('codigo-gerado'),
@@ -40,6 +41,16 @@ function montarLinkCompartilhamento(codigo) {
     return `${window.location.origin}/compartilhado/${codigo}`;
 }
 
+function formatarDataHora(dataISO) {
+    if (!dataISO) return 'Não expira';
+
+    try {
+        return new Date(dataISO).toLocaleString('pt-BR');
+    } catch {
+        return dataISO;
+    }
+}
+
 async function criarCompartilhamento(e) {
     e.preventDefault();
 
@@ -57,7 +68,8 @@ async function criarCompartilhamento(e) {
                     compartilhar_alunos: els.compartilharAlunos.checked,
                     compartilhar_frequencia: els.compartilharFrequencia.checked,
                     compartilhar_notas: els.compartilharNotas.checked,
-                    compartilhar_diario: els.compartilharDiario.checked
+                    compartilhar_diario: els.compartilharDiario.checked,
+                    expira_em: els.expiraEm.value || null
                 })
             }
         );
@@ -141,6 +153,10 @@ function renderizarCompartilhamentos(lista) {
 
                     <div class="comp-link">
                         ${escapeHTML(link)}
+                    </div>
+
+                    <div class="comp-link">
+                        Expira em: ${escapeHTML(formatarDataHora(comp.expira_em))}
                     </div>
                 </div>
             </div>
