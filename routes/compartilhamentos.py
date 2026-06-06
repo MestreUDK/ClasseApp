@@ -30,6 +30,22 @@ from modules.compartilhamentos.copia import (
 compartilhamentos_bp = Blueprint("compartilhamentos_bp", __name__)
 
 
+def tratar_expiracao(expira_em):
+    if not expira_em:
+        return None
+
+    data_local = datetime.strptime(
+        expira_em,
+        "%Y-%m-%dT%H:%M"
+    )
+
+    data_local = data_local.replace(
+        tzinfo=ZoneInfo("America/Belem")
+    )
+
+    return data_local.isoformat()
+
+
 @compartilhamentos_bp.route("/compartilhamentos/turma/<uuid:turma_id>", methods=["POST"])
 @login_required
 def criar_compartilhamento_turma(turma_id):
@@ -40,19 +56,7 @@ def criar_compartilhamento_turma(turma_id):
         dados = request.get_json() or {}
 
         codigo = gerar_codigo_compartilhamento()
-        expira_em = dados.get("expira_em") or None
-
-        if expira_em:
-            data_local = datetime.strptime(
-                expira_em,
-                "%Y-%m-%dT%H:%M"
-            )
-
-            data_local = data_local.replace(
-                tzinfo=ZoneInfo("America/Belem")
-            )
-
-            expira_em = data_local.isoformat()
+        expira_em = tratar_expiracao(dados.get("expira_em") or None)
 
         compartilhamento = {
             "codigo": codigo,
@@ -100,6 +104,42 @@ def listar_compartilhamentos():
         )
 
         return jsonify(compartilhamentos_validos)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@compartilhamentos_bp.route("/compartilhamentos/<uuid:comp_id>", methods=["PUT"])
+@login_required
+def editar_compartilhamento(comp_id):
+    try:
+        dados = request.get_json() or {}
+
+        expira_em = tratar_expiracao(dados.get("expira_em") or None)
+
+        atualizacao = {
+            "permite_copia": bool(dados.get("permite_copia", False)),
+            "compartilhar_alunos": bool(dados.get("compartilhar_alunos", True)),
+            "compartilhar_frequencia": bool(dados.get("compartilhar_frequencia", False)),
+            "compartilhar_notas": bool(dados.get("compartilhar_notas", False)),
+            "compartilhar_diario": bool(dados.get("compartilhar_diario", False)),
+            "expira_em": expira_em
+        }
+
+        res, _ = supabase.table("compartilhamentos") \
+            .update(atualizacao) \
+            .eq("id", str(comp_id)) \
+            .eq("dono_id", current_user.id) \
+            .eq("ativo", True) \
+            .execute()
+
+        if not res[1]:
+            return jsonify({"error": "Compartilhamento não encontrado ou acesso negado."}), 404
+
+        return jsonify({
+            "message": "Compartilhamento atualizado.",
+            "dados": res[1][0]
+        })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
