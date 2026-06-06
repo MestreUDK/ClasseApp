@@ -1,5 +1,8 @@
 # routes/compartilhamentos.py
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 
@@ -38,6 +41,18 @@ def criar_compartilhamento_turma(turma_id):
 
         codigo = gerar_codigo_compartilhamento()
         expira_em = dados.get("expira_em") or None
+
+        if expira_em:
+            data_local = datetime.strptime(
+                expira_em,
+                "%Y-%m-%dT%H:%M"
+            )
+
+            data_local = data_local.replace(
+                tzinfo=ZoneInfo("America/Belem")
+            )
+
+            expira_em = data_local.isoformat()
 
         compartilhamento = {
             "codigo": codigo,
