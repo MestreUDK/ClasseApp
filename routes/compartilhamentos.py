@@ -92,6 +92,51 @@ def adicionar_estatisticas_copias(compartilhamentos):
     return compartilhamentos
 
 
+def enriquecer_copias(copias):
+    if not copias:
+        return []
+
+    turma_ids = []
+
+    for copia in copias:
+        nova_turma_id = copia.get("nova_turma_id")
+
+        if nova_turma_id:
+            turma_ids.append(nova_turma_id)
+
+    turmas_map = {}
+
+    if turma_ids:
+        turmas_res, _ = supabase.table("turmas") \
+            .select("id, nome, descricao, user_id") \
+            .in_("id", turma_ids) \
+            .execute()
+
+        for turma in turmas_res[1] or []:
+            turmas_map[turma["id"]] = turma
+
+    resultado = []
+
+    for copia in copias:
+        nova_turma_id = copia.get("nova_turma_id")
+        turma = turmas_map.get(nova_turma_id) or {}
+
+        resultado.append({
+            "id": copia.get("id"),
+            "created_at": copia.get("created_at"),
+            "compartilhamento_id": copia.get("compartilhamento_id"),
+            "dono_id": copia.get("dono_id"),
+            "copiado_por": copia.get("copiado_por"),
+            "turma_original_id": copia.get("turma_original_id"),
+            "nova_turma_id": nova_turma_id,
+            "nova_turma_nome": turma.get("nome"),
+            "nova_turma_descricao": turma.get("descricao"),
+            "copiado_por_email": None
+        })
+
+    return resultado
+
+
 @compartilhamentos_bp.route("/compartilhamentos/turma/<uuid:turma_id>", methods=["POST"])
 @login_required
 def criar_compartilhamento_turma(turma_id):
@@ -318,7 +363,10 @@ def listar_copias_compartilhamento(comp_id):
             .order("created_at", desc=True) \
             .execute()
 
-        return jsonify(res[1] or [])
+        copias = res[1] or []
+        copias_enriquecidas = enriquecer_copias(copias)
+
+        return jsonify(copias_enriquecidas)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
