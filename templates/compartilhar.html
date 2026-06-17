@@ -109,6 +109,25 @@
         </div>
     </div>
 
+    <div id="box-historico-copias" class="dash-card historico-box" style="display: none;">
+        <div class="historico-topo">
+            <div>
+                <h2>Histórico de Cópias</h2>
+                <p id="historico-subtitulo">
+                    Cópias realizadas a partir deste compartilhamento.
+                </p>
+            </div>
+
+            <button type="button" id="btn-fechar-historico" class="btn-secundario">
+                Fechar
+            </button>
+        </div>
+
+        <div id="lista-historico-copias">
+            <p>Carregando histórico...</p>
+        </div>
+    </div>
+
     <hr style="margin: 2em 0;">
 
     <h2>Compartilhamentos Ativos</h2>
@@ -253,6 +272,66 @@
         .btn-edit {
             background: #ffc107;
             color: #000;
+        }
+
+        .btn-secundario {
+            background: #6c757d;
+        }
+
+        .historico-box {
+            margin-top: 1.5em;
+            border-left: 5px solid var(--primary);
+        }
+
+        .historico-topo {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+
+        .historico-topo h2 {
+            margin-bottom: 4px;
+        }
+
+        .historico-topo p {
+            margin-top: 0;
+            opacity: 0.75;
+        }
+
+        .copia-card {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 10px;
+            background: var(--bg-card);
+        }
+
+        .copia-card strong {
+            color: var(--primary);
+        }
+
+        .copia-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 0.9em;
+        }
+
+        .copia-info {
+            background: var(--icon-bg);
+            border-radius: 6px;
+            padding: 8px;
+            word-break: break-word;
+        }
+
+        .copia-info span {
+            display: block;
+            font-size: 0.78em;
+            opacity: 0.75;
+            margin-bottom: 3px;
         }
     </style>
 {% endblock %}
