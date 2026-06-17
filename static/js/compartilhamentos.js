@@ -34,7 +34,12 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCopiarLink: document.getElementById('btn-copiar-link'),
         btnWhatsapp: document.getElementById('btn-whatsapp'),
 
-        lista: document.getElementById('lista-compartilhamentos')
+        lista: document.getElementById('lista-compartilhamentos'),
+
+        boxHistorico: document.getElementById('box-historico-copias'),
+        listaHistorico: document.getElementById('lista-historico-copias'),
+        historicoSubtitulo: document.getElementById('historico-subtitulo'),
+        btnFecharHistorico: document.getElementById('btn-fechar-historico')
     };
 
     els.form.addEventListener('submit', handleSubmitCompartilhamento);
@@ -43,6 +48,10 @@ document.addEventListener('DOMContentLoaded', () => {
     els.btnCopiar.addEventListener('click', copiarCodigo);
     els.btnCopiarLink.addEventListener('click', copiarLinkGerado);
     els.btnWhatsapp.addEventListener('click', compartilharWhatsapp);
+
+    if (els.btnFecharHistorico) {
+        els.btnFecharHistorico.addEventListener('click', fecharHistoricoCopias);
+    }
 
     carregarCompartilhamentos();
 });
@@ -311,7 +320,7 @@ function renderizarCompartilhamentos(lista) {
 
                 <button
                     type="button"
-                    onclick="verCopiasCompartilhamento('${comp.id}')"
+                    onclick="verCopiasCompartilhamento('${comp.id}', '${escapeHTML(comp.codigo)}')"
                 >
                     Ver cópias
                 </button>
@@ -404,6 +413,12 @@ window.desativarCompartilhamento = async function(id, botao = null) {
         alert('Compartilhamento desativado com sucesso!');
         await carregarCompartilhamentos();
 
+        if (compartilhamentoEditandoId === id) {
+            cancelarEdicao();
+        }
+
+        fecharHistoricoCopias();
+
     } catch (error) {
         console.error(error);
         alert(error.message);
@@ -415,8 +430,22 @@ window.desativarCompartilhamento = async function(id, botao = null) {
     }
 };
 
-window.verCopiasCompartilhamento = async function(compId) {
+window.verCopiasCompartilhamento = async function(compId, codigo = '') {
     try {
+        if (!els.boxHistorico || !els.listaHistorico) {
+            alert('Área de histórico não encontrada no HTML.');
+            return;
+        }
+
+        els.boxHistorico.style.display = 'block';
+        els.listaHistorico.innerHTML = '<p>Carregando histórico...</p>';
+
+        if (els.historicoSubtitulo) {
+            els.historicoSubtitulo.textContent = codigo
+                ? `Cópias realizadas pelo código ${codigo}.`
+                : 'Cópias realizadas a partir deste compartilhamento.';
+        }
+
         const response = await fetch(`/api/compartilhamentos/${compId}/copias`);
         const copias = await response.json();
 
@@ -424,24 +453,92 @@ window.verCopiasCompartilhamento = async function(compId) {
             throw new Error(copias.error || 'Erro ao buscar histórico.');
         }
 
-        if (!Array.isArray(copias) || copias.length === 0) {
-            alert('Nenhuma cópia registrada para este compartilhamento.');
-            return;
-        }
+        renderizarHistoricoCopias(copias);
 
-        const texto = copias.map((copia, index) => {
-            const data = new Date(copia.created_at).toLocaleString('pt-BR');
-
-            return `${index + 1}. Copiado em: ${data}`;
-        }).join('\n');
-
-        alert(`Histórico de cópias:\n\n${texto}`);
+        els.boxHistorico.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
 
     } catch (error) {
         console.error(error);
-        alert(error.message);
+
+        els.listaHistorico.innerHTML = `
+            <p style="color:red;">
+                ${escapeHTML(error.message)}
+            </p>
+        `;
     }
 };
+
+function renderizarHistoricoCopias(copias) {
+    if (!Array.isArray(copias) || copias.length === 0) {
+        els.listaHistorico.innerHTML = `
+            <p style="color:#777;">
+                Nenhuma cópia registrada para este compartilhamento.
+            </p>
+        `;
+        return;
+    }
+
+    els.listaHistorico.innerHTML = '';
+
+    copias.forEach((copia, index) => {
+        const card = document.createElement('div');
+
+        card.className = 'copia-card';
+
+        const turmaNome = copia.nova_turma_nome || 'Turma copiada';
+        const turmaDescricao = copia.nova_turma_descricao || '-';
+        const copiadoPor = copia.copiado_por_email || copia.copiado_por || '-';
+
+        card.innerHTML = `
+            <strong>${index + 1}. ${escapeHTML(turmaNome)}</strong>
+
+            <div class="copia-grid">
+                <div class="copia-info">
+                    <span>Copiado em</span>
+                    ${escapeHTML(formatarDataHora(copia.created_at))}
+                </div>
+
+                <div class="copia-info">
+                    <span>Copiado por</span>
+                    ${escapeHTML(copiadoPor)}
+                </div>
+
+                <div class="copia-info">
+                    <span>Nova turma</span>
+                    ${escapeHTML(turmaNome)}
+                </div>
+
+                <div class="copia-info">
+                    <span>Descrição</span>
+                    ${escapeHTML(turmaDescricao)}
+                </div>
+
+                <div class="copia-info">
+                    <span>ID da nova turma</span>
+                    ${escapeHTML(copia.nova_turma_id || '-')}
+                </div>
+            </div>
+        `;
+
+        els.listaHistorico.appendChild(card);
+    });
+}
+
+function fecharHistoricoCopias() {
+    if (!els.boxHistorico || !els.listaHistorico) {
+        return;
+    }
+
+    els.boxHistorico.style.display = 'none';
+    els.listaHistorico.innerHTML = '<p>Carregando histórico...</p>';
+
+    if (els.historicoSubtitulo) {
+        els.historicoSubtitulo.textContent = 'Cópias realizadas a partir deste compartilhamento.';
+    }
+}
 
 async function copiarCodigo() {
     if (!ultimoCodigoGerado) {
