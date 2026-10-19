@@ -69,3 +69,57 @@ def delete_nota(nota_id):
         return jsonify({"message": "Nota excluída."}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@diario_bp.route('/diario/<uuid:nota_id>', methods=['PUT'])
+@login_required
+def atualizar_nota(nota_id):
+    """Atualiza apenas anotações pertencentes ao usuário autenticado."""
+    dados = request.get_json(silent=True)
+    if not isinstance(dados, dict):
+        return jsonify({"error": "Dados inválidos."}), 400
+
+    titulo = dados.get('titulo')
+    if not isinstance(titulo, str) or not titulo.strip():
+        return jsonify({"error": "O título é obrigatório."}), 400
+
+    from datetime import date
+    referencia = dados.get('data_referencia')
+    try:
+        date.fromisoformat(referencia)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Data de ocorrência inválida."}), 400
+
+    conteudo = dados.get('conteudo')
+    if conteudo is not None and not isinstance(conteudo, str):
+        return jsonify({"error": "Conteúdo inválido."}), 400
+
+    turma_id = dados.get('turma_id') or None
+    aluno_id = dados.get('aluno_id') or None
+    try:
+        # Confirma os vínculos para impedir referências a dados de outros usuários.
+        if turma_id:
+            turma = (supabase.table('turmas').select('id')
+                     .eq('id', turma_id).eq('user_id', current_user.id)
+                     .limit(1).execute())
+            if not turma.data:
+                return jsonify({"error": "Turma não encontrada."}), 400
+        if aluno_id:
+            aluno = (supabase.table('alunos').select('id')
+                     .eq('id', aluno_id).eq('user_id', current_user.id)
+                     .limit(1).execute())
+            if not aluno.data:
+                return jsonify({"error": "Aluno não encontrado."}), 400
+
+        resultado = (supabase.table('diario').update({
+            'titulo': titulo.strip(),
+            'conteudo': conteudo,
+            'data_referencia': referencia,
+            'turma_id': turma_id,
+            'aluno_id': aluno_id,
+        }).eq('id', str(nota_id)).eq('user_id', current_user.id)
+            .execute())
+        if not resultado.data:
+            return jsonify({"error": "Anotação não encontrada ou acesso negado."}), 404
+        return jsonify(resultado.data[0]), 200
+    except Exception:
+        return jsonify({"error": "Não foi possível atualizar a anotação."}), 500
