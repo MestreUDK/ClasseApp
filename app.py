@@ -1,6 +1,7 @@
 # app.py
 
 import os
+from datetime import datetime
 from flask import Flask, session # <-- IMPORTAR SESSION
 from flask_login import LoginManager
 
@@ -26,12 +27,12 @@ app = Flask(__name__)
 # ==========================================
 # --- NOVO: CONFIGURAÇÃO DE VERSÃO ---
 # ==========================================
-app.config['VERSION'] = '2.1'
+app.config['VERSION'] = '2.1.4'
 
 # Context Processor para injetar a variável em todos os templates HTML
 @app.context_processor
 def inject_version():
-    return dict(app_version=app.config['VERSION'])
+    return dict(app_version=app.config['VERSION'], current_year=datetime.now().year)
 
 # CONFIGURAÇÃO DE SEGURANÇA
 app.secret_key = os.environ.get("SECRET_KEY", "minha_chave_secreta_super_segura")
