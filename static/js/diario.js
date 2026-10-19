@@ -1,6 +1,8 @@
 // static/js/diario.js
 
 let els = {};
+let notasCarregadas = [];
+let notaEmEdicao = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     els = {
@@ -12,7 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
         selectTurma: document.getElementById('select-turma'),
         selectAluno: document.getElementById('select-aluno'),
 
-        listaNotas: document.getElementById('lista-notas')
+        listaNotas: document.getElementById('lista-notas'),
+        tituloForm: document.getElementById('titulo-form-diario'),
+        btnSalvar: document.getElementById('btn-salvar-diario'),
+        btnCancelar: document.getElementById('btn-cancelar-edicao-diario')
     };
 
     if (els.dataReferencia) {
@@ -23,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarNotas();
 
     els.form.addEventListener('submit', handleSalvarNota);
+    els.btnCancelar.addEventListener('click', cancelarEdicao);
 });
 
 function escapeHTML(valor) {
@@ -77,6 +83,7 @@ async function carregarNotas() {
         const notas = await response.json();
 
         els.listaNotas.innerHTML = '';
+        notasCarregadas = Array.isArray(notas) ? notas : [];
 
         if (!Array.isArray(notas) || notas.length === 0) {
             els.listaNotas.innerHTML = '<p style="color:#777;">Nenhuma anotação encontrada.</p>';
@@ -116,13 +123,18 @@ async function carregarNotas() {
                             <small>Registrado em: ${escapeHTML(dataRegistro)} às ${escapeHTML(horaRegistro)}</small>
                         </span>
                     </div>
-                    <button class="btn-delete-nota" onclick="deletarNota('${nota.id}')">Excluir</button>
+                    <div class="nota-acoes">
+                        <button class="btn-edit-nota" type="button" data-editar="${escapeHTML(nota.id)}">Editar</button>
+                        <button class="btn-delete-nota" type="button" data-excluir="${escapeHTML(nota.id)}">Excluir</button>
+                    </div>
                 </div>
 
                 <div class="nota-tags">${tagsHTML}</div>
                 <div class="nota-conteudo">${escapeHTML(nota.conteudo || '')}</div>
             `;
 
+            div.querySelector('[data-editar]').addEventListener('click', () => editarNota(nota.id));
+            div.querySelector('[data-excluir]').addEventListener('click', () => deletarNota(nota.id));
             els.listaNotas.appendChild(div);
         });
 
@@ -144,8 +156,8 @@ async function handleSalvarNota(e) {
     };
 
     try {
-        const res = await fetch('/api/diario', {
-            method: 'POST',
+        const res = await fetch(notaEmEdicao ? `/api/diario/${notaEmEdicao}` : '/api/diario', {
+            method: notaEmEdicao ? 'PUT' : 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         });
@@ -155,13 +167,8 @@ async function handleSalvarNota(e) {
             throw new Error(erro.error || 'Erro ao salvar anotação.');
         }
 
-        els.form.reset();
-
-        if (els.dataReferencia) {
-            els.dataReferencia.valueAsDate = new Date();
-        }
-
-        carregarNotas();
+        cancelarEdicao();
+        await carregarNotas();
 
     } catch (error) {
         alert(error.message);
@@ -187,3 +194,28 @@ window.deletarNota = async function(id) {
         alert(error.message);
     }
 };
+
+function editarNota(id) {
+    const nota = notasCarregadas.find(item => String(item.id) === String(id));
+    if (!nota) return;
+    notaEmEdicao = nota.id;
+    els.titulo.value = nota.titulo || '';
+    els.conteudo.value = nota.conteudo || '';
+    els.dataReferencia.value = (nota.data_referencia || '').slice(0, 10);
+    els.selectTurma.value = nota.turma_id || '';
+    els.selectAluno.value = nota.aluno_id || '';
+    els.tituloForm.textContent = 'Editar Anotação';
+    els.btnSalvar.textContent = 'Salvar alterações';
+    els.btnCancelar.hidden = false;
+    els.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    els.titulo.focus({ preventScroll: true });
+}
+
+function cancelarEdicao() {
+    notaEmEdicao = null;
+    els.form.reset();
+    els.dataReferencia.valueAsDate = new Date();
+    els.tituloForm.textContent = 'Nova Anotação';
+    els.btnSalvar.textContent = 'Salvar Nota';
+    els.btnCancelar.hidden = true;
+}
