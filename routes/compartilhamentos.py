@@ -185,7 +185,6 @@ def listar_compartilhamentos():
         res, _ = supabase.table("compartilhamentos") \
             .select("*") \
             .eq("dono_id", current_user.id) \
-            .eq("ativo", True) \
             .order("created_at", desc=True) \
             .execute()
 
@@ -296,6 +295,45 @@ def desativar_compartilhamento(comp_id):
 
         return jsonify({"message": "Compartilhamento desativado."})
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@compartilhamentos_bp.route("/compartilhamentos/<uuid:comp_id>", methods=["DELETE"])
+@login_required
+def excluir_compartilhamento_definitivamente(comp_id):
+    """Exclui o link e seu histórico, sem apagar turmas copiadas."""
+    try:
+        comp_id_str = str(comp_id)
+        consulta, _ = supabase.table("compartilhamentos") \
+            .select("id, codigo") \
+            .eq("id", comp_id_str) \
+            .eq("dono_id", current_user.id) \
+            .execute()
+
+        if not consulta[1]:
+            return jsonify({"error": "Compartilhamento não encontrado ou acesso negado."}), 404
+
+        # O histórico referencia o compartilhamento; excluí-lo primeiro evita
+        # violações de chave estrangeira sem afetar as turmas já copiadas.
+        # Caso a segunda operação falhe, o histórico não pode ser recuperado:
+        # para atomicidade integral, seria necessária uma função SQL transacional.
+        supabase.table("compartilhamento_copias") \
+            .delete() \
+            .eq("compartilhamento_id", comp_id_str) \
+            .eq("dono_id", current_user.id) \
+            .execute()
+
+        resultado, _ = supabase.table("compartilhamentos") \
+            .delete() \
+            .eq("id", comp_id_str) \
+            .eq("dono_id", current_user.id) \
+            .execute()
+
+        if not resultado[1]:
+            return jsonify({"error": "Não foi possível excluir o compartilhamento."}), 500
+
+        return jsonify({"message": "Compartilhamento e histórico excluídos definitivamente."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
