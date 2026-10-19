@@ -174,7 +174,14 @@ def registrar_historico_copia(
     }).execute()
 
 
-def copiar_compartilhamento_turma(compartilhamento, user_id):
+def copiar_compartilhamento_turma(compartilhamento, user_id, selecao=None):
+    """Copia apenas conjuntos selecionados e autorizados pelo proprietário."""
+    if selecao is None:
+        selecao = {campo: bool(compartilhamento.get(campo)) for campo in (
+            "compartilhar_alunos", "compartilhar_frequencia",
+            "compartilhar_notas", "compartilhar_diario"
+        )}
+
     turma_original_id = compartilhamento["recurso_id"]
 
     turma_res, _ = supabase.table("turmas") \
@@ -193,21 +200,21 @@ def copiar_compartilhamento_turma(compartilhamento, user_id):
 
     mapa_alunos = {}
 
-    if compartilhamento.get("compartilhar_alunos"):
+    if selecao["compartilhar_alunos"]:
         mapa_alunos = copiar_alunos(
             turma_original_id,
             nova_turma_id,
             user_id
         )
 
-    if compartilhamento.get("compartilhar_frequencia"):
+    if selecao["compartilhar_frequencia"]:
         copiar_frequencia(
             turma_original_id,
             nova_turma_id,
             mapa_alunos
         )
 
-    if compartilhamento.get("compartilhar_notas"):
+    if selecao["compartilhar_notas"]:
         copiar_notas(
             turma_original_id,
             nova_turma_id,
@@ -215,7 +222,7 @@ def copiar_compartilhamento_turma(compartilhamento, user_id):
             user_id
         )
 
-    if compartilhamento.get("compartilhar_diario"):
+    if selecao["compartilhar_diario"]:
         copiar_diario(
             turma_original_id,
             nova_turma_id,
