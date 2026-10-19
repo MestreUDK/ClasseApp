@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         lista: document.getElementById('lista-compartilhamentos'),
         listaExpirados: document.getElementById('lista-compartilhamentos-expirados'),
+        listaDesativados: document.getElementById('lista-compartilhamentos-desativados'),
 
         boxHistorico: document.getElementById('box-historico-copias'),
         listaHistorico: document.getElementById('lista-historico-copias'),
@@ -218,6 +219,7 @@ async function carregarCompartilhamentos() {
         console.error(error);
 
         if (els.listaExpirados) els.listaExpirados.textContent = 'Não foi possível carregar os expirados.';
+        if (els.listaDesativados) els.listaDesativados.textContent = 'Não foi possível carregar os desativados.';
         els.lista.innerHTML = `
             <p style="color:red;">
                 ${escapeHTML(error.message)}
@@ -229,23 +231,32 @@ async function carregarCompartilhamentos() {
 function renderizarCompartilhamentos(lista) {
     els.lista.innerHTML = '';
     if (els.listaExpirados) els.listaExpirados.innerHTML = '';
+    if (els.listaDesativados) els.listaDesativados.innerHTML = '';
 
     if (!Array.isArray(lista)) {
         els.lista.textContent = 'Resposta inválida do servidor.';
         return;
     }
 
-    const ativos = lista.filter(comp => !comp.expirado);
-    const expirados = lista.filter(comp => comp.expirado);
+    const ativos = lista.filter(comp => comp.ativo && !comp.expirado);
+    const expirados = lista.filter(comp => comp.ativo && comp.expirado);
+    const desativados = lista.filter(comp => !comp.ativo);
 
     if (!ativos.length) els.lista.textContent = 'Nenhum compartilhamento ativo.';
     if (els.listaExpirados && !expirados.length) {
         els.listaExpirados.textContent = 'Nenhum compartilhamento expirado.';
     }
 
+    if (els.listaDesativados && !desativados.length) {
+        els.listaDesativados.textContent = 'Nenhum compartilhamento desativado.';
+    }
+
     ativos.forEach(comp => montarCardCompartilhamento(comp, els.lista, false));
     if (els.listaExpirados) {
         expirados.forEach(comp => montarCardCompartilhamento(comp, els.listaExpirados, true));
+    }
+    if (els.listaDesativados) {
+        desativados.forEach(comp => montarCardCompartilhamento(comp, els.listaDesativados, !!comp.expirado));
     }
 }
 
@@ -253,7 +264,8 @@ function montarCardCompartilhamento(comp, destino, expirado) {
     const card = document.createElement('div');
     const link = montarLinkCompartilhamento(comp.codigo);
     const total = formatarTotalCopias(comp.total_copias);
-    card.className = `dash-card comp-card${expirado ? ' comp-expirado' : ''}`;
+    const desativado = !comp.ativo;
+    card.className = `dash-card comp-card${desativado ? ' comp-desativado' : (expirado ? ' comp-expirado' : '')}`;
 
     const tags = [
         [comp.compartilhar_alunos, 'Alunos'],
@@ -268,6 +280,7 @@ function montarCardCompartilhamento(comp, destino, expirado) {
         <div class="comp-top"><div>
             <div class="comp-codigo">${escapeHTML(comp.codigo)}</div>
             <div class="comp-link">${escapeHTML(link)}</div>
+            ${desativado ? '<div class="comp-link"><strong>Desativado</strong></div>' : ''}
             <div class="comp-link">${expirado ? 'Expirou em' : 'Expira em'}: ${escapeHTML(formatarDataHora(comp.expira_em))}</div>
             <div class="comp-link">📊 ${escapeHTML(total)}</div>
             <div class="comp-link">🕒 Última cópia: ${escapeHTML(comp.ultima_copia_em ? formatarDataHora(comp.ultima_copia_em) : 'Nenhuma')}</div>
@@ -286,18 +299,53 @@ function montarCardCompartilhamento(comp, destino, expirado) {
         acoes.appendChild(botao);
     }
 
-    if (!expirado) {
+    if (!expirado && !desativado) {
         adicionarBotao('Copiar Código', () => copiarTexto(comp.codigo, 'Código copiado!'));
         adicionarBotao('Copiar Link', () => copiarTexto(link, 'Link copiado!'));
         adicionarBotao('Compartilhar', () => compartilharLinkWhatsapp(comp.codigo));
     }
-    adicionarBotao('Editar', () => iniciarEdicaoCompartilhamento(comp), 'btn-edit');
+    if (!desativado) adicionarBotao('Editar', () => iniciarEdicaoCompartilhamento(comp), 'btn-edit');
     adicionarBotao(`Ver cópias (${Number(comp.total_copias) || 0})`, () => verCopiasCompartilhamento(comp.id, comp.codigo));
-    if (expirado) {
+    if (expirado && !desativado) {
         adicionarBotao('Reativar', botao => reativarCompartilhamento(comp, botao));
     }
-    adicionarBotao('Desativar', botao => desativarCompartilhamento(comp.id, botao), 'btn-danger');
+    if (!desativado) adicionarBotao('Desativar', botao => desativarCompartilhamento(comp.id, botao), 'btn-danger');
+    adicionarBotao('Excluir definitivamente', botao => excluirCompartilhamento(comp, botao), 'btn-danger');
     destino.appendChild(card);
+}
+
+async function excluirCompartilhamento(comp, botao) {
+    const quantidade = Number(comp.total_copias) || 0;
+    const mensagem = `Excluir DEFINITIVAMENTE o compartilhamento ${comp.codigo}?\n\n` +
+        `O código deixará de existir e seu histórico (${formatarTotalCopias(quantidade)}) será apagado.\n` +
+        'As turmas já copiadas por outros professores NÃO serão excluídas.\n\n' +
+        'Esta ação não pode ser desfeita.';
+    if (!confirm(mensagem)) return;
+
+    const confirmacao = prompt(`Para confirmar, digite exatamente o código ${comp.codigo}:`);
+    if (confirmacao !== comp.codigo) {
+        if (confirmacao !== null) alert('Código diferente. Exclusão cancelada.');
+        return;
+    }
+
+    botao.disabled = true;
+    const textoOriginal = botao.textContent;
+    botao.textContent = 'Excluindo...';
+    try {
+        const response = await fetch(`/api/compartilhamentos/${comp.id}`, { method: 'DELETE' });
+        const dados = await response.json();
+        if (!response.ok) throw new Error(dados.error || 'Não foi possível excluir.');
+        if (compartilhamentoEditandoId === comp.id) cancelarEdicao();
+        fecharHistoricoCopias();
+        await carregarCompartilhamentos();
+        alert('Compartilhamento excluído definitivamente.');
+    } catch (error) {
+        console.error(error);
+        alert(error.message);
+    } finally {
+        botao.disabled = false;
+        botao.textContent = textoOriginal;
+    }
 }
 
 async function reativarCompartilhamento(comp, botao) {
