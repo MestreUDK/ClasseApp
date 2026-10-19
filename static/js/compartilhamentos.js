@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnWhatsapp: document.getElementById('btn-whatsapp'),
 
         lista: document.getElementById('lista-compartilhamentos'),
+        listaExpirados: document.getElementById('lista-compartilhamentos-expirados'),
 
         boxHistorico: document.getElementById('box-historico-copias'),
         listaHistorico: document.getElementById('lista-historico-copias'),
@@ -64,7 +65,8 @@ function formatarDataHora(dataISO) {
     if (!dataISO) return 'Não expira';
 
     try {
-        return new Date(dataISO).toLocaleString('pt-BR');
+        const data = new Date(dataISO);
+        return Number.isNaN(data.getTime()) ? 'Data inválida' : data.toLocaleString('pt-BR');
     } catch {
         return dataISO;
     }
@@ -215,6 +217,7 @@ async function carregarCompartilhamentos() {
     } catch (error) {
         console.error(error);
 
+        if (els.listaExpirados) els.listaExpirados.textContent = 'Não foi possível carregar os expirados.';
         els.lista.innerHTML = `
             <p style="color:red;">
                 ${escapeHTML(error.message)}
@@ -225,118 +228,110 @@ async function carregarCompartilhamentos() {
 
 function renderizarCompartilhamentos(lista) {
     els.lista.innerHTML = '';
+    if (els.listaExpirados) els.listaExpirados.innerHTML = '';
 
-    if (!Array.isArray(lista) || lista.length === 0) {
-        els.lista.innerHTML = `
-            <p style="color:#777;">
-                Nenhum compartilhamento ativo.
-            </p>
-        `;
+    if (!Array.isArray(lista)) {
+        els.lista.textContent = 'Resposta inválida do servidor.';
         return;
     }
 
-    lista.forEach(comp => {
-        const card = document.createElement('div');
-        const link = montarLinkCompartilhamento(comp.codigo);
+    const ativos = lista.filter(comp => !comp.expirado);
+    const expirados = lista.filter(comp => comp.expirado);
 
-        card.className = 'dash-card comp-card';
+    if (!ativos.length) els.lista.textContent = 'Nenhum compartilhamento ativo.';
+    if (els.listaExpirados && !expirados.length) {
+        els.listaExpirados.textContent = 'Nenhum compartilhamento expirado.';
+    }
 
-        card.innerHTML = `
-            <div class="comp-top">
-                <div>
-                    <div class="comp-codigo">
-                        ${escapeHTML(comp.codigo)}
-                    </div>
+    ativos.forEach(comp => montarCardCompartilhamento(comp, els.lista, false));
+    if (els.listaExpirados) {
+        expirados.forEach(comp => montarCardCompartilhamento(comp, els.listaExpirados, true));
+    }
+}
 
-                    <div class="comp-link">
-                        ${escapeHTML(link)}
-                    </div>
+function montarCardCompartilhamento(comp, destino, expirado) {
+    const card = document.createElement('div');
+    const link = montarLinkCompartilhamento(comp.codigo);
+    const total = formatarTotalCopias(comp.total_copias);
+    card.className = `dash-card comp-card${expirado ? ' comp-expirado' : ''}`;
 
-                    <div class="comp-link">
-                        Expira em: ${escapeHTML(formatarDataHora(comp.expira_em))}
-                    </div>
+    const tags = [
+        [comp.compartilhar_alunos, 'Alunos'],
+        [comp.compartilhar_frequencia, 'Frequência'],
+        [comp.compartilhar_notas, 'Notas'],
+        [comp.compartilhar_diario, 'Diário'],
+        [comp.permite_copia, 'Permite cópia']
+    ].filter(([habilitado]) => habilitado)
+     .map(([, nome]) => `<span class="tag-comp">${nome}</span>`).join('');
 
-                    <div class="comp-link">
-                        📊 ${escapeHTML(formatarTotalCopias(comp.total_copias))}
-                    </div>
+    card.innerHTML = `
+        <div class="comp-top"><div>
+            <div class="comp-codigo">${escapeHTML(comp.codigo)}</div>
+            <div class="comp-link">${escapeHTML(link)}</div>
+            <div class="comp-link">${expirado ? 'Expirou em' : 'Expira em'}: ${escapeHTML(formatarDataHora(comp.expira_em))}</div>
+            <div class="comp-link">📊 ${escapeHTML(total)}</div>
+            <div class="comp-link">🕒 Última cópia: ${escapeHTML(comp.ultima_copia_em ? formatarDataHora(comp.ultima_copia_em) : 'Nenhuma')}</div>
+        </div></div>
+        <div class="comp-tags">${tags}</div>
+        <div class="comp-acoes"></div>
+    `;
 
-                    <div class="comp-link">
-                        🕒 Última cópia: ${escapeHTML(formatarDataHora(comp.ultima_copia_em))}
-                    </div>
-                </div>
-            </div>
+    const acoes = card.querySelector('.comp-acoes');
+    function adicionarBotao(texto, acao, classe = '') {
+        const botao = document.createElement('button');
+        botao.type = 'button';
+        botao.textContent = texto;
+        if (classe) botao.className = classe;
+        botao.addEventListener('click', () => acao(botao));
+        acoes.appendChild(botao);
+    }
 
-            <div class="comp-tags">
-                ${comp.compartilhar_alunos
-                    ? '<span class="tag-comp">Alunos</span>'
-                    : ''}
+    if (!expirado) {
+        adicionarBotao('Copiar Código', () => copiarTexto(comp.codigo, 'Código copiado!'));
+        adicionarBotao('Copiar Link', () => copiarTexto(link, 'Link copiado!'));
+        adicionarBotao('Compartilhar', () => compartilharLinkWhatsapp(comp.codigo));
+    }
+    adicionarBotao('Editar', () => iniciarEdicaoCompartilhamento(comp), 'btn-edit');
+    adicionarBotao(`Ver cópias (${Number(comp.total_copias) || 0})`, () => verCopiasCompartilhamento(comp.id, comp.codigo));
+    if (expirado) {
+        adicionarBotao('Reativar', botao => reativarCompartilhamento(comp, botao));
+    }
+    adicionarBotao('Desativar', botao => desativarCompartilhamento(comp.id, botao), 'btn-danger');
+    destino.appendChild(card);
+}
 
-                ${comp.compartilhar_frequencia
-                    ? '<span class="tag-comp">Frequência</span>'
-                    : ''}
-
-                ${comp.compartilhar_notas
-                    ? '<span class="tag-comp">Notas</span>'
-                    : ''}
-
-                ${comp.compartilhar_diario
-                    ? '<span class="tag-comp">Diário</span>'
-                    : ''}
-
-                ${comp.permite_copia
-                    ? '<span class="tag-comp">Permite cópia</span>'
-                    : ''}
-            </div>
-
-            <div class="comp-acoes">
-                <button
-                    type="button"
-                    onclick="copiarTexto('${escapeHTML(comp.codigo)}', 'Código copiado!')"
-                >
-                    Copiar Código
-                </button>
-
-                <button
-                    type="button"
-                    onclick="copiarTexto('${escapeHTML(link)}', 'Link copiado!')"
-                >
-                    Copiar Link
-                </button>
-
-                <button
-                    type="button"
-                    onclick="compartilharLinkWhatsapp('${escapeHTML(comp.codigo)}')"
-                >
-                    Compartilhar
-                </button>
-
-                <button
-                    type="button"
-                    class="btn-edit"
-                    onclick='iniciarEdicaoCompartilhamento(${JSON.stringify(comp)})'
-                >
-                    Editar
-                </button>
-
-                <button
-                    type="button"
-                    onclick="verCopiasCompartilhamento('${comp.id}', '${escapeHTML(comp.codigo)}')"
-                >
-                    Ver cópias
-                </button>
-
-                <button
-                    type="button"
-                    class="btn-danger"
-                    onclick="desativarCompartilhamento('${comp.id}', this)"
-                >
-                    Desativar
-                </button>
-            </div>
-        `;
-
-        els.lista.appendChild(card);
-    });
+async function reativarCompartilhamento(comp, botao) {
+    const sugestao = converterParaInputDatetimeLocal(comp.expira_em);
+    const valor = prompt(
+        'Informe a nova validade (AAAA-MM-DDTHH:MM). Deixe vazio para não expirar.\nO código original será mantido.',
+        sugestao
+    );
+    if (valor === null) return;
+    const expiraEm = valor.trim();
+    if (expiraEm && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(expiraEm)) {
+        alert('Formato inválido. Use AAAA-MM-DDTHH:MM.');
+        return;
+    }
+    const original = botao.textContent;
+    botao.disabled = true;
+    botao.textContent = 'Reativando...';
+    try {
+        const response = await fetch(`/api/compartilhamentos/${comp.id}/reativar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ expira_em: expiraEm || null })
+        });
+        const dados = await response.json();
+        if (!response.ok) throw new Error(dados.error || 'Erro ao reativar compartilhamento.');
+        alert('Compartilhamento reativado! O código foi mantido.');
+        await carregarCompartilhamentos();
+    } catch (error) {
+        console.error(error);
+        alert(error.message);
+    } finally {
+        botao.disabled = false;
+        botao.textContent = original;
+    }
 }
 
 window.iniciarEdicaoCompartilhamento = function(comp) {
