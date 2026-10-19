@@ -413,9 +413,34 @@ def copiar_compartilhamento_para_minha_conta(codigo):
                 "ja_existia": True
             }), 200
 
+        dados = request.get_json(silent=True) or {}
+        selecao_recebida = dados.get("selecionar")
+        campos = (
+            "compartilhar_alunos", "compartilhar_frequencia",
+            "compartilhar_notas", "compartilhar_diario"
+        )
+        if selecao_recebida is None:
+            # Compatibilidade com clientes anteriores.
+            selecao = {campo: bool(compartilhamento.get(campo)) for campo in campos}
+        else:
+            if not isinstance(selecao_recebida, dict) or any(
+                campo not in campos or not isinstance(valor, bool)
+                for campo, valor in selecao_recebida.items()
+            ):
+                return jsonify({"error": "Seleção de dados inválida."}), 400
+            selecao = {campo: selecao_recebida.get(campo, False) for campo in campos}
+            if any(selecao[campo] and not compartilhamento.get(campo) for campo in campos):
+                return jsonify({"error": "Você selecionou dados não autorizados."}), 403
+
+        if any(selecao[campo] for campo in (
+            "compartilhar_frequencia", "compartilhar_notas"
+        )) and not selecao["compartilhar_alunos"]:
+            return jsonify({"error": "Para copiar notas ou frequência, selecione também os alunos."}), 400
+
         nova_turma = copiar_compartilhamento_turma(
             compartilhamento,
-            current_user.id
+            current_user.id,
+            selecao
         )
 
         if not nova_turma:
