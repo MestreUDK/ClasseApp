@@ -6,7 +6,7 @@
     <h1>Diário de Bordo</h1>
 
     <div class="card-form">
-        <h2>Nova Anotação</h2>
+        <h2 id="titulo-form-diario">Nova Anotação</h2>
 
         <form id="form-diario">
             <div>
@@ -61,8 +61,11 @@
 
             </div>
 
-            <button type="submit" style="margin-top: 15px;">
+            <button id="btn-salvar-diario" type="submit" style="margin-top: 15px;">
                 Salvar Nota
+            </button>
+            <button id="btn-cancelar-edicao-diario" type="button" hidden style="margin-top:15px;">
+                Cancelar edição
             </button>
         </form>
     </div>
@@ -140,6 +143,9 @@
             line-height: 1.5;
         }
 
+        .nota-acoes { display:flex; gap:14px; flex-wrap:wrap; }
+        .btn-edit-nota { background:none; border:none; color:var(--primary); cursor:pointer; padding:0; font-size:.9em; }
+        .btn-edit-nota:hover { text-decoration:underline; }
         .btn-delete-nota {
             background: none;
             border: none;
