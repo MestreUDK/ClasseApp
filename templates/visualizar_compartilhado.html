@@ -32,6 +32,20 @@
             </button>
         </div>
 
+        <section id="painel-copia-seletiva" class="dash-card" hidden aria-label="Opções de cópia">
+            <h2>Escolher dados para copiar</h2>
+            <p>Uma nova turma será criada em seu espaço. Marque os dados que deseja importar.</p>
+            <div class="opcoes-copia">
+                <label><input type="checkbox" data-copia="compartilhar_alunos"> Alunos</label>
+                <label><input type="checkbox" data-copia="compartilhar_frequencia"> Frequência</label>
+                <label><input type="checkbox" data-copia="compartilhar_notas"> Notas</label>
+                <label><input type="checkbox" data-copia="compartilhar_diario"> Diário</label>
+            </div>
+            <p id="aviso-copia-seletiva" role="status"></p>
+            <button type="button" id="confirmar-copia-seletiva">Confirmar cópia</button>
+            <button type="button" id="cancelar-copia-seletiva">Cancelar</button>
+        </section>
+
         <nav id="navegacao-consulta" class="consulta-navegacao" aria-label="Seções da consulta">
             <a href="#secao-alunos" data-secao="secao-alunos">Alunos</a>
             <a href="#secao-frequencia" data-secao="secao-frequencia">Frequência</a>
@@ -71,6 +85,8 @@
     </div>
 
     <style>
+        .opcoes-copia { display:flex; flex-wrap:wrap; gap:1rem; margin:1rem 0; }
+        .opcoes-copia label { display:flex; gap:.35rem; align-items:center; }
         .consulta-cabecalho { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1.2rem; }
         .consulta-cabecalho h1 { margin:0.2rem 0; }
         .consulta-cabecalho p { color:var(--text-sec); }
@@ -85,7 +101,7 @@
         .consulta-ferramentas span { color:var(--text-sec); }
         .tabela-comp { display:block; overflow-x:auto; }
         @media print {
-            body > nav, .consulta-acao, .consulta-navegacao, .consulta-ferramentas, #btn-copiar-turma { display:none !important; }
+            body > nav, .consulta-acao, .consulta-navegacao, .consulta-ferramentas, #btn-copiar-turma, #painel-copia-seletiva { display:none !important; }
             .aluno-comp-card, .resumo-card, .diario-card { break-inside:avoid; box-shadow:none; }
             .tabela-comp { display:table; }
         }
