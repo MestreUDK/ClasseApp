@@ -10,7 +10,7 @@ from utils import supabase
 
 from modules.compartilhamentos.helpers import (
     buscar_compartilhamento_por_codigo,
-    filtrar_compartilhamentos_validos,
+    compartilhamento_expirado,
     gerar_codigo_compartilhamento,
     verificar_dono_turma
 )
@@ -191,12 +191,12 @@ def listar_compartilhamentos():
 
         compartilhamentos = res[1] or []
 
-        compartilhamentos_validos = filtrar_compartilhamentos_validos(
-            compartilhamentos
-        )
+        # Mantém os registros expirados para o proprietário poder renová-los.
+        for item in compartilhamentos:
+            item["expirado"] = compartilhamento_expirado(item)
 
         compartilhamentos_com_stats = adicionar_estatisticas_copias(
-            compartilhamentos_validos
+            compartilhamentos
         )
 
         return jsonify(compartilhamentos_com_stats)
@@ -237,6 +237,46 @@ def editar_compartilhamento(comp_id):
             "dados": res[1][0]
         })
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@compartilhamentos_bp.route("/compartilhamentos/<uuid:comp_id>/reativar", methods=["POST"])
+@login_required
+def reativar_compartilhamento(comp_id):
+    try:
+        dados = request.get_json(silent=True) or {}
+        if "expira_em" not in dados:
+            return jsonify({"error": "Informe uma nova validade ou envie null para não expirar."}), 400
+
+        expira_em = tratar_expiracao(dados.get("expira_em") or None)
+        if expira_em and datetime.fromisoformat(expira_em) <= datetime.now(ZoneInfo("America/Belem")):
+            return jsonify({"error": "A nova validade deve ser futura."}), 400
+
+        consulta, _ = supabase.table("compartilhamentos") \
+            .select("id, recurso_id, tipo, ativo") \
+            .eq("id", str(comp_id)) \
+            .eq("dono_id", current_user.id) \
+            .eq("ativo", True) \
+            .execute()
+        if not consulta[1]:
+            return jsonify({"error": "Compartilhamento não encontrado ou desativado."}), 404
+
+        registro = consulta[1][0]
+        if registro.get("tipo") != "turma" or not verificar_dono_turma(registro["recurso_id"], current_user.id):
+            return jsonify({"error": "Acesso à turma não autorizado."}), 403
+
+        res, _ = supabase.table("compartilhamentos") \
+            .update({"expira_em": expira_em}) \
+            .eq("id", str(comp_id)) \
+            .eq("dono_id", current_user.id) \
+            .eq("ativo", True) \
+            .execute()
+        if not res[1]:
+            return jsonify({"error": "Não foi possível reativar."}), 404
+        return jsonify({"message": "Compartilhamento reativado.", "dados": res[1][0]})
+    except ValueError:
+        return jsonify({"error": "Formato de data inválido."}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
