@@ -25,10 +25,18 @@ document.addEventListener('DOMContentLoaded', () => {
         secaoDiario: document.getElementById('secao-diario'),
         listaDiario: document.getElementById('lista-diario'),
 
-        btnCopiar: document.getElementById('btn-copiar-turma')
+        btnCopiar: document.getElementById('btn-copiar-turma'),
+        btnImprimir: document.getElementById('btn-imprimir-consulta'),
+        buscaAlunos: document.getElementById('busca-alunos-compartilhados'),
+        totalAlunos: document.getElementById('total-alunos-compartilhados'),
+        navegacao: document.getElementById('navegacao-consulta')
     };
 
     els.btnCopiar.addEventListener('click', copiarTurmaParaMinhaConta);
+    els.btnImprimir.addEventListener('click', () => window.print());
+    els.buscaAlunos.addEventListener('input', () => {
+        renderizarAlunos(dadosCompartilhados?.alunos || []);
+    });
 
     carregarCompartilhamento();
 });
@@ -58,6 +66,7 @@ function renderizarCompartilhamento(dados) {
 
     els.status.style.display = 'none';
     els.conteudo.style.display = 'block';
+    els.btnImprimir.style.display = 'inline-block';
 
     els.nomeTurma.textContent = turma.nome || 'Turma sem nome';
     els.descricaoTurma.textContent = turma.descricao || 'Sem descrição.';
@@ -80,6 +89,19 @@ function renderizarCompartilhamento(dados) {
     renderizarFrequencia(dados.frequencia_resumo || []);
     renderizarNotas(dados.notas_resumo || []);
     renderizarDiario(dados.diario || []);
+
+    // O menu só apresenta os conjuntos de dados autorizados pelo proprietário.
+    const permissoes = {
+        'secao-alunos': comp.compartilhar_alunos,
+        'secao-frequencia': comp.compartilhar_frequencia,
+        'secao-notas': comp.compartilhar_notas,
+        'secao-diario': comp.compartilhar_diario
+    };
+    els.navegacao.querySelectorAll('[data-secao]').forEach(link => {
+        link.hidden = !permissoes[link.dataset.secao];
+    });
+    document.getElementById('secao-alunos').hidden = !comp.compartilhar_alunos;
+    els.buscaAlunos.disabled = !comp.compartilhar_alunos;
 }
 
 function adicionarTag(texto) {
@@ -94,10 +116,20 @@ function renderizarAlunos(alunos) {
 
     if (!Array.isArray(alunos) || alunos.length === 0) {
         els.listaAlunos.innerHTML = '<p>Nenhum aluno compartilhado.</p>';
+        els.totalAlunos.textContent = '0 alunos';
         return;
     }
 
-    alunos.forEach(aluno => {
+    const busca = els.buscaAlunos.value.trim().toLocaleLowerCase('pt-BR');
+    const filtrados = alunos.filter(aluno =>
+        `${aluno.nome_completo || ''} ${aluno.matricula || ''}`
+            .toLocaleLowerCase('pt-BR').includes(busca)
+    );
+    els.totalAlunos.textContent = `${filtrados.length} de ${alunos.length} aluno(s)`;
+    if (!filtrados.length) {
+        els.listaAlunos.textContent = 'Nenhum aluno encontrado.';
+    }
+    filtrados.forEach(aluno => {
         const div = document.createElement('div');
         div.className = 'aluno-comp-card';
 
@@ -134,10 +166,10 @@ function renderizarFrequencia(lista) {
                 ${lista.map(item => `
                     <tr>
                         <td>${escapeHTML(item.nome_completo)}</td>
-                        <td class="center">${item.presencas}</td>
-                        <td class="center">${item.faltas}</td>
-                        <td class="center">${item.total}</td>
-                        <td class="center">${item.porcentagem}%</td>
+                        <td class="center">${escapeHTML(item.presencas)}</td>
+                        <td class="center">${escapeHTML(item.faltas)}</td>
+                        <td class="center">${escapeHTML(item.total)}</td>
+                        <td class="center">${escapeHTML(item.porcentagem)}%</td>
                     </tr>
                 `).join('')}
             </tbody>
@@ -179,10 +211,10 @@ function renderizarNotas(periodos) {
                         <tr>
                             <td>${escapeHTML(aluno.nome_completo)}</td>
                             <td class="center">
-                                ${aluno.total_lancadas}/${aluno.total_avaliacoes}
+                                ${escapeHTML(aluno.total_lancadas)}/${escapeHTML(aluno.total_avaliacoes)}
                             </td>
                             <td class="center">
-                                ${aluno.media ?? '-'}
+                                ${escapeHTML(aluno.media ?? '-')}
                             </td>
                         </tr>
                     `).join('')}
