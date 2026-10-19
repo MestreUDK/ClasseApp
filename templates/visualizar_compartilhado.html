@@ -1,9 +1,16 @@
 {% extends 'base.html' %}
 
-{% block title %}Turma Compartilhada{% endblock %}
+{% block title %}Consulta de Turma Compartilhada{% endblock %}
 
 {% block content %}
-    <h1>Turma Compartilhada</h1>
+    <header class="consulta-cabecalho">
+        <div>
+            <p class="consulta-sobretitulo">Painel de consulta • Somente leitura</p>
+            <h1>Turma Compartilhada</h1>
+            <p>Visualize os dados disponibilizados pelo professor responsável, sem alterar registros.</p>
+        </div>
+        <button type="button" id="btn-imprimir-consulta" class="consulta-acao" style="display:none;">Imprimir consulta</button>
+    </header>
 
     <p id="status-compartilhado">
         Carregando compartilhamento...
@@ -15,6 +22,7 @@
             <p id="descricao-turma"></p>
 
             <div class="comp-tags" id="tags-compartilhamento"></div>
+            <p class="consulta-aviso">Esta visualização não permite editar alunos, notas, frequências ou diário.</p>
 
             <button 
                 id="btn-copiar-turma" 
@@ -24,9 +32,19 @@
             </button>
         </div>
 
-        <hr style="margin: 2em 0;">
+        <nav id="navegacao-consulta" class="consulta-navegacao" aria-label="Seções da consulta">
+            <a href="#secao-alunos" data-secao="secao-alunos">Alunos</a>
+            <a href="#secao-frequencia" data-secao="secao-frequencia">Frequência</a>
+            <a href="#secao-notas" data-secao="secao-notas">Notas</a>
+            <a href="#secao-diario" data-secao="secao-diario">Diário</a>
+        </nav>
 
         <section id="secao-alunos">
+            <div class="consulta-ferramentas">
+                <label for="busca-alunos-compartilhados">Pesquisar aluno</label>
+                <input id="busca-alunos-compartilhados" type="search" placeholder="Digite o nome ou matrícula" autocomplete="off">
+                <span id="total-alunos-compartilhados" aria-live="polite"></span>
+            </div>
             <h2>Alunos Compartilhados</h2>
             <div id="lista-alunos">
                 <p>Nenhum aluno compartilhado.</p>
@@ -53,6 +71,24 @@
     </div>
 
     <style>
+        .consulta-cabecalho { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1.2rem; }
+        .consulta-cabecalho h1 { margin:0.2rem 0; }
+        .consulta-cabecalho p { color:var(--text-sec); }
+        .consulta-sobretitulo { font-weight:700; text-transform:uppercase; letter-spacing:.06em; font-size:.8rem; }
+        .consulta-aviso { color:var(--text-sec); font-size:.9rem; }
+        .consulta-acao { padding:.65rem 1rem; cursor:pointer; }
+        .consulta-navegacao { display:flex; gap:.6rem; flex-wrap:wrap; margin:1.5rem 0; }
+        .consulta-navegacao a { padding:.65rem .85rem; border:1px solid var(--border-color); border-radius:8px; color:inherit; text-decoration:none; background:var(--bg-card); }
+        .consulta-navegacao a:hover, .consulta-navegacao a:focus-visible { outline:2px solid var(--text-sec); }
+        .consulta-ferramentas { display:flex; align-items:center; flex-wrap:wrap; gap:.65rem; margin-bottom:1rem; }
+        .consulta-ferramentas input { padding:.65rem; min-width:200px; flex:1; max-width:380px; }
+        .consulta-ferramentas span { color:var(--text-sec); }
+        .tabela-comp { display:block; overflow-x:auto; }
+        @media print {
+            body > nav, .consulta-acao, .consulta-navegacao, .consulta-ferramentas, #btn-copiar-turma { display:none !important; }
+            .aluno-comp-card, .resumo-card, .diario-card { break-inside:avoid; box-shadow:none; }
+            .tabela-comp { display:table; }
+        }
         .comp-tags {
             display: flex;
             flex-wrap: wrap;
