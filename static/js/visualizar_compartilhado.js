@@ -32,7 +32,14 @@ document.addEventListener('DOMContentLoaded', () => {
         navegacao: document.getElementById('navegacao-consulta')
     };
 
-    els.btnCopiar.addEventListener('click', copiarTurmaParaMinhaConta);
+    els.btnCopiar.addEventListener('click', abrirCopiaSeletiva);
+    document.getElementById('confirmar-copia-seletiva').addEventListener('click', copiarTurmaParaMinhaConta);
+    document.getElementById('cancelar-copia-seletiva').addEventListener('click', () => {
+        document.getElementById('painel-copia-seletiva').hidden = true;
+    });
+    document.querySelectorAll('[data-copia]').forEach(input => {
+        input.addEventListener('change', atualizarDependenciasCopia);
+    });
     els.btnImprimir.addEventListener('click', () => window.print());
     els.buscaAlunos.addEventListener('input', () => {
         renderizarAlunos(dadosCompartilhados?.alunos || []);
@@ -252,39 +259,71 @@ function renderizarDiario(lista) {
     });
 }
 
+const CAMPOS_COPIA = [
+    'compartilhar_alunos', 'compartilhar_frequencia',
+    'compartilhar_notas', 'compartilhar_diario'
+];
+
+function abrirCopiaSeletiva() {
+    const comp = dadosCompartilhados?.compartilhamento;
+    if (!comp || !comp.permite_copia) return;
+    CAMPOS_COPIA.forEach(campo => {
+        const input = document.querySelector(`[data-copia="${campo}"]`);
+        input.closest('label').hidden = !comp[campo];
+        input.checked = Boolean(comp[campo]);
+        input.disabled = !comp[campo];
+    });
+    atualizarDependenciasCopia();
+    document.getElementById('painel-copia-seletiva').hidden = false;
+    document.getElementById('painel-copia-seletiva').scrollIntoView({ behavior: 'smooth' });
+}
+
+function atualizarDependenciasCopia() {
+    const alunos = document.querySelector('[data-copia="compartilhar_alunos"]');
+    const frequencia = document.querySelector('[data-copia="compartilhar_frequencia"]');
+    const notas = document.querySelector('[data-copia="compartilhar_notas"]');
+    const aviso = document.getElementById('aviso-copia-seletiva');
+    if (!alunos.checked) {
+        frequencia.checked = false;
+        notas.checked = false;
+    }
+    frequencia.disabled = !alunos.checked || !dadosCompartilhados.compartilhamento.compartilhar_frequencia;
+    notas.disabled = !alunos.checked || !dadosCompartilhados.compartilhamento.compartilhar_notas;
+    aviso.textContent = 'Notas e frequência exigem a cópia dos alunos. Registros do diário associados a alunos não selecionados serão copiados sem vínculo individual.';
+}
+
 async function copiarTurmaParaMinhaConta() {
-    if (!dadosCompartilhados) {
-        alert('Dados ainda não carregados.');
-        return;
-    }
+    if (!dadosCompartilhados?.compartilhamento?.permite_copia) return;
+    const selecionar = {};
+    CAMPOS_COPIA.forEach(campo => {
+        const input = document.querySelector(`[data-copia="${campo}"]`);
+        selecionar[campo] = Boolean(input.checked && !input.disabled);
+    });
+    if (!confirm('Criar uma nova turma com os dados selecionados?')) return;
 
-    if (!confirm('Deseja copiar esta turma e os dados permitidos para seu espaço?')) {
-        return;
-    }
-
+    const botao = document.getElementById('confirmar-copia-seletiva');
     try {
-        els.btnCopiar.disabled = true;
-        els.btnCopiar.textContent = 'Copiando...';
-
+        botao.disabled = true;
+        botao.textContent = 'Copiando...';
         const response = await fetch(`/api/compartilhamentos/codigo/${CODIGO}/copiar`, {
-            method: 'POST'
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ selecionar })
         });
-
         const resposta = await response.json();
-
-        if (!response.ok) {
-            throw new Error(resposta.error || 'Erro ao copiar turma.');
+        if (!response.ok) throw new Error(resposta.error || 'Erro ao copiar turma.');
+        if (resposta.ja_existia) {
+            alert('Esta turma já foi copiada anteriormente. Abrindo a cópia existente.');
+        } else {
+            alert('Turma copiada com sucesso!');
         }
-
-        alert('Turma copiada com sucesso!');
         window.location.href = `/turma/${resposta.turma_id}`;
-
     } catch (error) {
         console.error(error);
         alert(error.message);
-
-        els.btnCopiar.disabled = false;
-        els.btnCopiar.textContent = 'Copiar para meu espaço';
+    } finally {
+        botao.disabled = false;
+        botao.textContent = 'Confirmar cópia';
     }
 }
 
