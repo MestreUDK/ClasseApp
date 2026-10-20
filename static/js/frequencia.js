@@ -72,11 +72,12 @@ async function syncPendentes() {
     let enviados = 0;
     try {
         const pendentes = await getPendentes();
-        if (!pendentes.length) return;
+        const meusPendentes = pendentes.filter(item => item.usuario_id && item.usuario_id === window.CLASSE_USUARIO_ID);
+        if (!meusPendentes.length) return;
 
         els.statusConexao.style.display = 'block';
-        els.statusConexao.textContent = `🔄 Enviando ${pendentes.length} registros...`;
-        for (const item of pendentes) {
+        els.statusConexao.textContent = `🔄 Enviando ${meusPendentes.length} registros...`;
+        for (const item of meusPendentes) {
             try {
                 const resposta = await fetch('/api/frequencia', {
                     method: 'POST',
@@ -237,12 +238,12 @@ async function marcarPresenca(botaoClicado, alunoId, statusPresenca) {
         } catch (error) {
             // Falhou online, salva offline
             console.warn("Falha online, salvando offline...");
-            await salvarOffline({ dados: payload });
+            await salvarOffline({ dados: payload, usuario_id: window.CLASSE_USUARIO_ID || null });
             atualizarStatusConexao(); // Mostra aviso vermelho
         }
     } else {
         // Já está offline, salva direto
-        await salvarOffline({ dados: payload });
+        await salvarOffline({ dados: payload, usuario_id: window.CLASSE_USUARIO_ID || null });
         atualizarStatusConexao(); // Mostra aviso vermelho
     }
 }
