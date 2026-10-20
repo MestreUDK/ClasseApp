@@ -2,6 +2,7 @@
 
 const TURMA_ID = window.location.pathname.split('/')[2];
 let els = {};
+const revisoesFrequencia = new Map();
 
 document.addEventListener('DOMContentLoaded', () => {
     els = {
@@ -89,6 +90,8 @@ async function syncPendentes() {
                 if (!resposta.ok) {
                     throw new Error(`Servidor retornou HTTP ${resposta.status}`);
                 }
+                const gravado = await resposta.json();
+                revisoesFrequencia.set(`${item.dados.data}:${item.dados.aluno_id}`, gravado.revision);
                 await limparPendentes(item.id);
                 enviados += 1;
             } catch (erro) {
@@ -166,10 +169,14 @@ async function carregarChamada() {
 
         // Se estiver offline, o respFreq pode falhar ou vir vazio, tratamos isso
         let frequenciaMap = new Map();
+        revisoesFrequencia.clear();
 
         try {
             const registrosFrequencia = await respFreq.json();
-            registrosFrequencia.forEach(reg => frequenciaMap.set(reg.aluno_id, reg.presente));
+            registrosFrequencia.forEach(reg => {
+                frequenciaMap.set(reg.aluno_id, reg.presente);
+                revisoesFrequencia.set(`${dataSelecionada}:${reg.aluno_id}`, reg.revision);
+            });
         } catch(e) { console.log("Sem dados online de freq."); }
 
         els.listaChamada.innerHTML = '';
@@ -221,7 +228,8 @@ async function marcarPresenca(botaoClicado, alunoId, statusPresenca) {
         turma_id: TURMA_ID,
         aluno_id: alunoId,
         data: data,
-        presente: statusPresenca
+        presente: statusPresenca,
+        revision: revisoesFrequencia.get(`${data}:${alunoId}`) ?? 0
     };
 
     // 2. Tenta enviar
@@ -233,7 +241,17 @@ async function marcarPresenca(botaoClicado, alunoId, statusPresenca) {
                 credentials: 'same-origin',
                 body: JSON.stringify(payload)
             });
-            if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+            if (!resposta.ok) {
+                const erro = await resposta.json().catch(() => ({}));
+                if ([409, 428, 403, 401].includes(resposta.status)) {
+                    alert(erro.error || 'Conflito de frequência. Recarregue a chamada.');
+                    await carregarChamada();
+                    return;
+                }
+                throw new Error(`HTTP ${resposta.status}`);
+            }
+            const gravado = await resposta.json();
+            revisoesFrequencia.set(`${data}:${alunoId}`, gravado.revision);
             // Sucesso Online
         } catch (error) {
             // Falhou online, salva offline

@@ -52,7 +52,13 @@
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(item.dados)
                     });
-                    if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+                    if (!resposta.ok) {
+                        const detalhes = await resposta.json().catch(() => ({}));
+                        if (resposta.status === 409 || resposta.status === 428) {
+                            throw new Error(`CONFLITO: ${detalhes.error || 'Revisão desatualizada'}`);
+                        }
+                        throw new Error(`HTTP ${resposta.status}`);
+                    }
                     await limparPendentes(item.id);
                     enviados++;
                 } catch (erro) {
@@ -61,7 +67,7 @@
                     if (erro.message === 'HTTP 401' || erro.message === 'HTTP 403') break;
                 }
             }
-            estado.textContent = `${enviados} enviado(s); ${falhas} falha(s). Registros não confirmados foram mantidos.`;
+            estado.textContent = `${enviados} enviado(s); ${falhas} pendência(s)/conflito(s) preservado(s). Revise os registros antes de tentar novamente.`;
         } catch (erro) {
             estado.textContent = 'Não foi possível concluir o envio. Tente novamente.';
         } finally {

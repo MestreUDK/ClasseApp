@@ -152,7 +152,8 @@ async function handleSalvarNota(e) {
         data_referencia: els.dataReferencia.value,
         conteudo: els.conteudo.value,
         turma_id: els.selectTurma.value || null,
-        aluno_id: els.selectAluno.value || null
+        aluno_id: els.selectAluno.value || null,
+        ...(notaEmEdicao ? {revision: notasCarregadas.find(n => String(n.id) === String(notaEmEdicao))?.revision} : {})
     };
 
     try {
@@ -172,6 +173,7 @@ async function handleSalvarNota(e) {
 
     } catch (error) {
         alert(error.message);
+        if (/Conflito|Revisão/i.test(error.message)) await carregarNotas();
     }
 }
 

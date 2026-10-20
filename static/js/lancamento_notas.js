@@ -4,6 +4,7 @@ const AVALIACAO_ID = window.location.pathname.split('/')[2];
 
 let els = {};
 let avaliacaoAtual = null;
+const revisoesNotas = new Map();
 
 document.addEventListener('DOMContentLoaded', () => {
     els = {
@@ -107,8 +108,10 @@ async function carregarDados() {
 
 function renderizarTabela(lista) {
     els.tbody.innerHTML = '';
+    revisoesNotas.clear();
 
     lista.forEach(aluno => {
+        revisoesNotas.set(String(aluno.id), aluno.revision ?? 0);
         const tr = document.createElement('tr');
         const valorNota = aluno.nota !== null && aluno.nota !== undefined ? aluno.nota : '';
 
@@ -168,7 +171,8 @@ window.salvarNota = async function(input) {
             body: JSON.stringify({
                 avaliacao_id: AVALIACAO_ID,
                 aluno_id: alunoId,
-                valor: valor
+                valor: valor,
+                revision: revisoesNotas.get(String(alunoId))
             })
         });
 
@@ -178,6 +182,7 @@ window.salvarNota = async function(input) {
             throw new Error(resposta.error || 'Erro ao salvar nota.');
         }
 
+        revisoesNotas.set(String(alunoId), resposta.revision);
         input.classList.remove('salvando');
         input.classList.add('salvo');
 
@@ -192,5 +197,6 @@ window.salvarNota = async function(input) {
         input.classList.add('erro');
 
         alert(error.message);
+        if (/Conflito|Revisão/i.test(error.message)) await carregarDados();
     }
 };
