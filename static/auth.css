@@ -1,0 +1,32 @@
+/* Telas de autenticação do ClasseApp — tema escuro independente. */
+:root { color-scheme: dark; }
+html { min-height: 100%; background: #101827; }
+body.auth-page {
+  min-height: 100vh; min-height: 100dvh; margin: 0; padding: 24px 16px;
+  box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 20% 10%, #1b3554 0, transparent 46%), #101827;
+  color: #e9f0fa; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+.auth-card { width: 100%; max-width: 390px; box-sizing: border-box; padding: 32px;
+  background: #1c283a; border: 1px solid #33445c; border-radius: 18px;
+  box-shadow: 0 18px 45px rgba(0,0,0,.35); }
+.auth-brand { text-align: center; color: #8bc4ff; font-weight: 800; letter-spacing: .025em; margin: 0 0 8px; font-size: 1rem; }
+.auth-card h1 { text-align: center; font-size: 1.65rem; margin: 0 0 26px; color: #f3f7ff; }
+.auth-card label { display: block; margin: 0 0 7px; font-size: .94rem; color: #dce7f5; }
+.auth-card input { display: block; box-sizing: border-box; width: 100%; padding: 12px 13px;
+  margin: 0 0 18px; border: 1px solid #52637a; border-radius: 9px; background: #111b2a;
+  color: #f6faff; font: inherit; }
+.auth-card input:focus-visible { outline: 2px solid #80bfff; outline-offset: 2px; border-color: #80bfff; }
+.auth-card button { display: block; width: 100%; padding: 12px; border: 0; border-radius: 9px;
+  background: #388ce8; color: white; font: inherit; font-weight: 700; cursor: pointer; }
+.auth-card button:hover { background: #2876cc; }
+.auth-card button:focus-visible, .auth-links a:focus-visible { outline: 2px solid #b0d8ff; outline-offset: 3px; }
+.auth-links { margin-top: 22px; text-align: center; font-size: .94rem; }
+.auth-links a { color: #91caff; text-decoration: underline; text-underline-offset: 3px; }
+.auth-links a:hover { color: #c4e4ff; }
+.auth-alert { padding: 12px; margin: 0 0 18px; border-radius: 9px; font-size: .92rem; overflow-wrap: anywhere; }
+.auth-alert.error, .auth-alert.danger { background: #4c252b; border: 1px solid #aa535d; color: #ffd9de; }
+.auth-alert.success { background: #1d443b; border: 1px solid #438f79; color: #d4fff1; }
+.auth-alert.warning { background: #4b3d21; border: 1px solid #9c7d39; color: #ffe8b1; }
+.auth-alert.info, .auth-alert.message { background: #223b54; border: 1px solid #4c779c; color: #deefff; }
+@media (max-width: 440px) { .auth-card { padding: 25px 22px; } }
