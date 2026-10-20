@@ -2,7 +2,8 @@
 (() => {
     'use strict';
     const painel = document.getElementById('dados-offline');
-    if (!painel) return;
+    if (!painel || painel.dataset.offlineInicializado === '1') return;
+    painel.dataset.offlineInicializado = '1';
     const usuario = painel.dataset.userId;
     const el = id => document.getElementById(id);
     const estado = el('offline-estado');
@@ -53,6 +54,8 @@
     });
 
     el('offline-consultar').addEventListener('click', async () => {
+        if (ocupado) return;
+        bloquear(true);
         try {
             const copia = await atualizar();
             area.replaceChildren();
@@ -74,9 +77,12 @@
             area.hidden = false;
             estado.textContent = 'Exibindo cópia local somente para consulta.';
         } catch (erro) { estado.textContent = 'Falha ao consultar a cópia local.'; }
+        finally { bloquear(false); }
     });
 
     el('offline-exportar').addEventListener('click', async () => {
+        if (ocupado) return;
+        bloquear(true);
         try {
             const copia = await obterSnapshot(usuario);
             if (!copia) { estado.textContent = 'Nenhuma cópia disponível para exportar.'; return; }
@@ -92,17 +98,21 @@
             setTimeout(() => URL.revokeObjectURL(url), 30000);
             estado.textContent = 'Arquivo de consulta exportado.';
         } catch (erro) { estado.textContent = 'Não foi possível exportar a cópia.'; }
+        finally { bloquear(false); }
     });
 
     el('offline-apagar').addEventListener('click', async () => {
-        if (!confirm('Apagar a cópia de consulta desta conta neste navegador? Isso não remove dados da nuvem nem frequências pendentes.')) return;
+        if (ocupado) return;
+        bloquear(true);
         try {
+            if (!confirm('Apagar a cópia de consulta desta conta neste navegador? Isso não remove dados da nuvem nem frequências pendentes.')) return;
             await apagarSnapshot(usuario);
             area.replaceChildren();
             area.hidden = true;
             await atualizar();
             estado.textContent = 'Cópia local apagada.';
         } catch (erro) { estado.textContent = 'Falha ao apagar cópia local.'; }
+        finally { bloquear(false); }
     });
 
     atualizar().catch(() => { estado.textContent = 'Armazenamento local indisponível.'; });
