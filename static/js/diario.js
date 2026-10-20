@@ -207,6 +207,7 @@ function editarNota(id) {
     els.tituloForm.textContent = 'Editar Anotação';
     els.btnSalvar.textContent = 'Salvar alterações';
     els.btnCancelar.hidden = false;
+    els.btnCancelar.style.display = 'inline-block';
     els.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     els.titulo.focus({ preventScroll: true });
 }
@@ -218,4 +219,5 @@ function cancelarEdicao() {
     els.tituloForm.textContent = 'Nova Anotação';
     els.btnSalvar.textContent = 'Salvar Nota';
     els.btnCancelar.hidden = true;
+    els.btnCancelar.style.display = 'none';
 }
