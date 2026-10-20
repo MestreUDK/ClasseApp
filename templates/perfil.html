@@ -16,6 +16,16 @@
 
         <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
 
+        <section id="notificacoes" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
+            <h3>🔔 Central de Notificações <span id="notificacoes-contador" class="notificacoes-contador" hidden></span></h3>
+            <p class="notificacoes-descricao">Aniversários nos próximos 7 dias e frequências aguardando sincronização neste dispositivo.</p>
+            <p id="notificacoes-estado" role="status">Carregando avisos...</p>
+            <div id="notificacoes-lista" aria-live="polite"></div>
+            <button type="button" id="notificacoes-atualizar" class="notificacoes-atualizar">Atualizar avisos</button>
+        </section>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
+
         <h3>Alterar Senha</h3>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -43,6 +53,13 @@
     </div>
 
     <style>
+        .notificacoes-painel { padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; margin: 18px 0; }
+        .notificacoes-descricao { color: var(--text-sec); font-size: .9rem; }
+        .notificacoes-item { border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin: 10px 0; }
+        .notificacoes-item p { margin: 6px 0; overflow-wrap: anywhere; }
+        .notificacoes-item button, .notificacoes-atualizar { cursor: pointer; padding: 8px 12px; border-radius: 7px; border: 1px solid var(--border-color); background: var(--icon-bg); color: var(--text-main); }
+        .notificacoes-contador { font-size: .8rem; padding: 2px 7px; border-radius: 10px; background: #b42318; color: white; }
+
         /* Estilos específicos apenas para centralizar e ajustar layout */
         .perfil-card {
             max-width: 500px; 
@@ -89,4 +106,8 @@
         .alert.success { background: #d4edda; color: #155724; }
         .alert.error { background: #f8d7da; color: #721c24; }
     </style>
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/db.js') }}"></script>
+<script src="{{ url_for('static', filename='js/notificacoes.js') }}"></script>
+{% endblock %}
 {% endblock %}
