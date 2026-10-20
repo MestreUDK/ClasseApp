@@ -9,7 +9,7 @@
     const estado = el('offline-estado');
     const resumo = el('offline-resumo');
     const area = el('offline-dados');
-    const botoes = ['offline-baixar', 'offline-consultar', 'offline-exportar', 'offline-apagar', 'offline-comparar'].map(el);
+    const botoes = ['offline-baixar', 'offline-consultar', 'offline-exportar', 'offline-apagar', 'offline-comparar', 'offline-versoes'].map(el);
     let ocupado = false;
 
     function bloquear(valor) {
@@ -44,7 +44,7 @@
             const [turmas, alunos] = await Promise.all([
                 carregarApi('/api/turmas'), carregarApi('/api/alunos')
             ]);
-            await salvarSnapshot({usuario_id: usuario, salvo_em: new Date().toISOString(), turmas, alunos});
+            await salvarSnapshotVersionado({usuario_id: usuario, salvo_em: new Date().toISOString(), turmas, alunos});
             estado.textContent = 'Cópia de consulta salva neste dispositivo.';
             await atualizar();
         } catch (erro) {
@@ -206,12 +206,65 @@
         }
     });
 
+    el('offline-versoes').addEventListener('click', async () => {
+        if (ocupado) return;
+        bloquear(true);
+        const historico = el('offline-historico');
+        historico.replaceChildren();
+        try {
+            const versoes = await listarVersoesSnapshot(usuario);
+            if (!versoes.length) {
+                estado.textContent = 'Nenhuma versão anterior. Baixe novamente para criar histórico.';
+                return;
+            }
+            const titulo = document.createElement('h4');
+            titulo.textContent = 'Versões anteriores neste dispositivo';
+            historico.append(titulo);
+            versoes.forEach((versao, indice) => {
+                const linha = document.createElement('div');
+                linha.style.marginBottom = '10px';
+                const rotulo = document.createElement('span');
+                const data = new Date(versao.salvo_em);
+                rotulo.textContent = `${Number.isNaN(data.getTime()) ? 'Data desconhecida' : data.toLocaleString('pt-BR')} — ${versao.turmas.length} turma(s), ${versao.alunos.length} aluno(s). `;
+                const botao = document.createElement('button');
+                botao.type = 'button';
+                botao.textContent = 'Restaurar cópia local';
+                botao.className = 'notificacoes-atualizar';
+                botao.addEventListener('click', async () => {
+                    if (ocupado) return;
+                    if (!confirm('Restaurar esta versão SOMENTE neste dispositivo? A cópia atual ficará no histórico. Nada será enviado à nuvem.')) return;
+                    bloquear(true);
+                    try {
+                        await restaurarVersaoSnapshot(usuario, indice);
+                        await atualizar();
+                        area.hidden = true;
+                        el('offline-comparacao').hidden = true;
+                        historico.hidden = true;
+                        estado.textContent = 'Versão local restaurada. Nenhum dado da nuvem foi modificado.';
+                    } catch (erro) {
+                        console.error(erro);
+                        estado.textContent = 'Não foi possível restaurar a versão.';
+                    } finally { bloquear(false); }
+                });
+                linha.append(rotulo, botao);
+                historico.append(linha);
+            });
+            historico.hidden = false;
+            estado.textContent = `${versoes.length} versão(ões) anterior(es) encontrada(s).`;
+        } catch (erro) {
+            console.error(erro);
+            estado.textContent = 'Falha ao consultar histórico local.';
+        } finally { bloquear(false); }
+    });
+
     el('offline-apagar').addEventListener('click', async () => {
         if (ocupado) return;
         bloquear(true);
         try {
             if (!confirm('Apagar a cópia de consulta desta conta neste navegador? Isso não remove dados da nuvem nem frequências pendentes.')) return;
-            await apagarSnapshot(usuario);
+            await apagarSnapshotComHistorico(usuario);
+            el('offline-historico').replaceChildren();
+            el('offline-historico').hidden = true;
             area.replaceChildren();
             area.hidden = true;
             await atualizar();
