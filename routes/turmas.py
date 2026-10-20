@@ -117,16 +117,22 @@ def update_turma(turma_id):
         if not verificar_dono_disciplina(disciplina_id):
             return jsonify({"error": "Disciplina inválida ou acesso negado."}), 403
 
-        data, _ = supabase.table('turmas').update({
+        # Revisão opcional para clientes legados; obrigatória para futuras edições offline.
+        revisao = dados.get('expected_revision')
+        if revisao is not None and (type(revisao) is not int or revisao < 1):
+            return jsonify({'error': 'Revisão inválida.'}), 400
+
+        consulta = supabase.table('turmas').update({
             'nome': dados.get('nome'),
             'descricao': dados.get('descricao'),
             'disciplina_id': disciplina_id
-        }).eq('id', str(turma_id)) \
-          .eq('user_id', current_user.id) \
-          .execute()
+        }).eq('id', str(turma_id)).eq('user_id', current_user.id)
+        if revisao is not None:
+            consulta = consulta.eq('revision', revisao)
+        data, _ = consulta.execute()
 
         if not data[1]:
-            return jsonify({"error": "Turma não encontrada ou acesso negado."}), 404
+            return jsonify({'error': 'Turma não encontrada ou alterada em outro dispositivo. Atualize os dados antes de salvar.', 'conflict': revisao is not None}), 409 if revisao is not None else 404
 
         return jsonify(data[1][0]), 200
 

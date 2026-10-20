@@ -78,17 +78,24 @@ def update_aluno(aluno_id):
         if not dados or 'nome_completo' not in dados:
             return jsonify({"error": "O campo 'nome_completo' é obrigatório."}), 400
 
-        data, count = supabase.table('alunos').update({
+        revisao = dados.get('expected_revision')
+        if revisao is not None and (type(revisao) is not int or revisao < 1):
+            return jsonify({'error': 'Revisão inválida.'}), 400
+
+        consulta = supabase.table('alunos').update({
             'nome_completo': dados.get('nome_completo'),
             'matricula': dados.get('matricula'),
             'telefone': dados.get('telefone'),
             'email': dados.get('email'),
             'data_nascimento': dados.get('data_nascimento'), # <-- ADICIONADO
             'detalhes': dados.get('detalhes')                # <-- ADICIONADO
-        }).eq('id', aluno_id).eq('user_id', current_user.id).execute()
+        }).eq('id', str(aluno_id)).eq('user_id', current_user.id)
+        if revisao is not None:
+            consulta = consulta.eq('revision', revisao)
+        data, count = consulta.execute()
 
         if not data[1]:
-             return jsonify({"error": "Aluno não encontrado ou acesso negado."}), 404
+            return jsonify({'error': 'Aluno não encontrado ou alterado em outro dispositivo. Atualize os dados antes de salvar.', 'conflict': revisao is not None}), 409 if revisao is not None else 404
 
         return jsonify(data[1][0]), 200
 
