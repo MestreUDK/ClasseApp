@@ -85,7 +85,8 @@ async function handleEditSubmit(event) {
     const dados = {
         nome: els.nome.value.trim(),
         descricao: els.descricao.value.trim() || null,
-        disciplina_id: els.disciplinaId.value || null
+        disciplina_id: els.disciplinaId.value || null,
+        expected_revision: turmaAtual.revision
     };
 
     if (!dados.nome) {

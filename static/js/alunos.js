@@ -2,6 +2,7 @@
 
 // Estado Global
 let editMode = false;
+let revisaoEmEdicao = null;
 let listaAlunosCache = [];
 
 // Elementos do DOM (Serão inicializados no DOMContentLoaded)
@@ -113,6 +114,7 @@ function filtrarLista(termo) {
 
 // --- CRUD: CREATE / UPDATE ---
 window.prepararEdicao = function(aluno) {
+    revisaoEmEdicao = aluno.revision;
     editMode = true;
     els.id.value = aluno.id;
     els.nome.value = aluno.nome_completo;
@@ -139,6 +141,7 @@ window.prepararEdicao = function(aluno) {
 
 function resetFormulario() {
     editMode = false;
+    revisaoEmEdicao = null;
     els.form.reset();
     els.id.value = '';
 
@@ -166,7 +169,8 @@ async function handleFormSubmit(event) {
         // --- NOVO: ENVIA OS NOVOS CAMPOS ---
         // ==========================================
         data_nascimento: els.dataNascimento.value || null,
-        detalhes: els.detalhes.value || null
+        detalhes: els.detalhes.value || null,
+        ...(editMode ? { expected_revision: revisaoEmEdicao } : {})
     };
 
     try {

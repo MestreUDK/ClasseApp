@@ -29,12 +29,15 @@ document.addEventListener('DOMContentLoaded', () => {
     els.form.addEventListener('submit', handleEditSubmit);
 });
 
+let revisaoAluno = null;
+
 async function carregarDadosAluno() {
     try {
         const response = await fetch(`/api/alunos/${ALUNO_ID}`);
         if (!response.ok) throw new Error('Erro ao buscar dados do aluno');
 
         const aluno = await response.json();
+        revisaoAluno = aluno.revision;
 
         // Preenche os campos
         els.nome.value = aluno.nome_completo;
@@ -70,7 +73,8 @@ async function handleEditSubmit(event) {
         // --- NOVO: ENVIA OS NOVOS CAMPOS ---
         // ==========================================
         data_nascimento: els.dataNascimento.value || null,
-        detalhes: els.detalhes.value || null
+        detalhes: els.detalhes.value || null,
+        expected_revision: revisaoAluno
     };
 
     try {
@@ -85,6 +89,8 @@ async function handleEditSubmit(event) {
             throw new Error(erro.error || 'Erro ao salvar alterações');
         }
 
+        const atualizado = await response.json();
+        revisaoAluno = atualizado.revision;
         els.msgSucesso.textContent = 'Aluno atualizado com sucesso!';
         els.msgSucesso.style.display = 'block';
 
