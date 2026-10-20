@@ -34,5 +34,6 @@
 
 {% block scripts %}
     <script src="{{ url_for('static', filename='js/db.js') }}"></script> 
-    <script src="{{ url_for('static', filename='js/frequencia.js') }}"></script>
+    <script>window.CLASSE_USUARIO_ID = {{ current_user.id|string|tojson }};</script>
+<script src="{{ url_for('static', filename='js/frequencia.js') }}"></script>
 {% endblock %}

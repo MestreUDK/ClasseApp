@@ -24,6 +24,19 @@
             <button type="button" id="notificacoes-atualizar" class="notificacoes-atualizar">Atualizar avisos</button>
         </section>
 
+        <section id="sincronizacao" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
+            <h3>☁️ Central de Sincronização</h3>
+            <p class="notificacoes-descricao">Gerencie os lançamentos de frequência armazenados neste dispositivo. Envie apenas alterações associadas à sua conta.</p>
+            <p id="sync-estado" role="status">Consultando armazenamento local...</p>
+            <div id="sync-resumo"></div>
+            <div id="sync-registros"></div>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:12px">
+                <button type="button" id="sync-atualizar" class="notificacoes-atualizar">Atualizar lista</button>
+                <button type="button" id="sync-enviar" class="notificacoes-atualizar">Enviar minhas pendências</button>
+            </div>
+            <p class="notificacoes-descricao">Registros antigos sem identificação de conta ficam bloqueados para envio automático. Esta versão ainda não baixa dados completos para uso offline nem resolve conflitos entre dispositivos.</p>
+        </section>
+
         <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
 
         <h3>Alterar Senha</h3>
@@ -109,5 +122,6 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/db.js') }}"></script>
 <script src="{{ url_for('static', filename='js/notificacoes.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sincronizacao.js') }}"></script>
 {% endblock %}
 {% endblock %}
