@@ -1,53 +1,46 @@
-// static/js/db.js
+// Persistência local das frequências ainda não enviadas.
+// Não armazene credenciais ou tokens de autenticação neste banco.
+const CLASSE_DB_NAME = 'ClasseAppDB';
+const CLASSE_DB_VERSION = 1;
+const CLASSE_QUEUE = 'frequencia_pendente';
 
-// Abre (ou cria) o banco de dados local
 function openDB() {
     return new Promise((resolve, reject) => {
-        // MUDANÇA AQUI: De 'TurmaOnDB' para 'ClasseAppDB'
-        const request = indexedDB.open('ClasseAppDB', 1);
-
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            // Cria uma "tabela" para frequencias pendentes
-            if (!db.objectStoreNames.contains('frequencia_pendente')) {
-                db.createObjectStore('frequencia_pendente', { keyPath: 'id', autoIncrement: true });
+        const request = indexedDB.open(CLASSE_DB_NAME, CLASSE_DB_VERSION);
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(CLASSE_QUEUE)) {
+                db.createObjectStore(CLASSE_QUEUE, { keyPath: 'id', autoIncrement: true });
             }
         };
-
-        request.onsuccess = (event) => resolve(event.target.result);
-        request.onerror = (event) => reject('Erro ao abrir DB local');
-    });
-}
-
-// Salva uma frequência na fila local
-async function salvarOffline(dados) {
-    const db = await openDB();
-    const tx = db.transaction('frequencia_pendente', 'readwrite');
-    const store = tx.objectStore('frequencia_pendente');
-
-    // Adiciona timestamp para saber a ordem
-    dados.criado_em = new Date().toISOString();
-
-    store.add(dados);
-    return tx.complete;
-}
-
-// Pega todas as frequências pendentes
-async function getPendentes() {
-    const db = await openDB();
-    return new Promise((resolve) => {
-        const tx = db.transaction('frequencia_pendente', 'readonly');
-        const store = tx.objectStore('frequencia_pendente');
-        const request = store.getAll();
-
         request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+        request.onblocked = () => reject(new Error('Banco local bloqueado por outra aba.'));
     });
 }
 
-// Limpa a fila (após sincronizar)
+function executarTransacao(modo, operacao) {
+    return openDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(CLASSE_QUEUE, modo);
+        const store = tx.objectStore(CLASSE_QUEUE);
+        let resultado;
+        const request = operacao(store);
+        request.onsuccess = () => { resultado = request.result; };
+        tx.oncomplete = () => { db.close(); resolve(resultado); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+        tx.onabort = () => { db.close(); reject(tx.error || new Error('Transação cancelada.')); };
+    }));
+}
+
+async function salvarOffline(item) {
+    const registro = { ...item, criado_em: new Date().toISOString() };
+    return executarTransacao('readwrite', store => store.add(registro));
+}
+
+async function getPendentes() {
+    return executarTransacao('readonly', store => store.getAll());
+}
+
 async function limparPendentes(id) {
-    const db = await openDB();
-    const tx = db.transaction('frequencia_pendente', 'readwrite');
-    const store = tx.objectStore('frequencia_pendente');
-    store.delete(id);
+    return executarTransacao('readwrite', store => store.delete(id));
 }

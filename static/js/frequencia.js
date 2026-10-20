@@ -62,36 +62,53 @@ function atualizarLinkExportar() {
 }
 
 // --- SINCRONIZAÇÃO ---
+let sincronizacaoEmAndamento = false;
 async function syncPendentes() {
-    if (!navigator.onLine) return;
+    if (!navigator.onLine || sincronizacaoEmAndamento ||
+        typeof getPendentes !== 'function') return;
 
-    // Precisa do db.js carregado
-    if (typeof getPendentes !== 'function') return;
+    sincronizacaoEmAndamento = true;
+    let falhas = 0;
+    let enviados = 0;
+    try {
+        const pendentes = await getPendentes();
+        if (!pendentes.length) return;
 
-    const pendentes = await getPendentes();
-    if (pendentes.length === 0) return;
-
-    console.log(`Sincronizando ${pendentes.length} registros...`);
-    els.statusConexao.style.display = 'block';
-    els.statusConexao.textContent = `🔄 Sincronizando ${pendentes.length} registros...`;
-
-    for (const item of pendentes) {
-        try {
-            await fetch('/api/frequencia', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(item.dados)
-            });
-            // Se sucesso, remove do local
-            await limparPendentes(item.id);
-        } catch (e) {
-            console.error("Erro ao sincronizar item", item, e);
+        els.statusConexao.style.display = 'block';
+        els.statusConexao.textContent = `🔄 Enviando ${pendentes.length} registros...`;
+        for (const item of pendentes) {
+            try {
+                const resposta = await fetch('/api/frequencia', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(item.dados)
+                });
+                // Erros 401/403/500 não são confirmação de salvamento.
+                if (!resposta.ok) {
+                    throw new Error(`Servidor retornou HTTP ${resposta.status}`);
+                }
+                await limparPendentes(item.id);
+                enviados += 1;
+            } catch (erro) {
+                falhas += 1;
+                console.error('Registro mantido na fila local:', item.id, erro);
+            }
         }
+        if (falhas) {
+            els.statusConexao.style.display = 'block';
+            els.statusConexao.style.backgroundColor = '#fff3cd';
+            els.statusConexao.style.color = '#664d03';
+            els.statusConexao.textContent = `⚠️ ${falhas} registro(s) ainda pendente(s).`;
+        } else {
+            atualizarStatusConexao();
+        }
+        if (enviados) carregarChamada();
+    } catch (erro) {
+        console.error('Não foi possível consultar a fila local:', erro);
+    } finally {
+        sincronizacaoEmAndamento = false;
     }
-
-    atualizarStatusConexao();
-    // Recarrega a lista para confirmar os dados vindos do servidor
-    carregarChamada();
 }
 
 // --- API CALLS ---
@@ -209,11 +226,13 @@ async function marcarPresenca(botaoClicado, alunoId, statusPresenca) {
     // 2. Tenta enviar
     if (navigator.onLine) {
         try {
-            await fetch('/api/frequencia', {
+            const resposta = await fetch('/api/frequencia', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
                 body: JSON.stringify(payload)
             });
+            if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
             // Sucesso Online
         } catch (error) {
             // Falhou online, salva offline
