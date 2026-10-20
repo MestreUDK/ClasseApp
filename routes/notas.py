@@ -3,6 +3,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from utils import supabase
+from modules.revisoes import salvar_versionado
 
 notas_bp = Blueprint('notas_bp', __name__)
 
@@ -158,13 +159,13 @@ def get_notas_avaliacao(avaliacao_id):
             .execute()
 
         notas_res, _ = supabase.table('notas') \
-            .select('aluno_id, valor') \
+            .select('aluno_id, valor, revision, updated_at') \
             .eq('avaliacao_id', str(avaliacao_id)) \
             .eq('user_id', current_user.id) \
             .execute()
 
         notas_map = {
-            nota['aluno_id']: nota['valor']
+            nota['aluno_id']: nota
             for nota in notas_res[1] or []
         }
 
@@ -178,7 +179,8 @@ def get_notas_avaliacao(avaliacao_id):
                     'id': aluno['id'],
                     'nome': aluno['nome_completo'],
                     'matricula': aluno.get('matricula'),
-                    'nota': notas_map.get(aluno['id']),
+                    'nota': (notas_map.get(aluno['id']) or {}).get('valor'),
+                    'revision': (notas_map.get(aluno['id']) or {}).get('revision', 0),
                     'nota_maxima': avaliacao['nota_maxima']
                 })
 
@@ -206,14 +208,26 @@ def set_nota():
 
         valor = dados.get('valor')
 
-        data, _ = supabase.table('notas').upsert({
-            'avaliacao_id': avaliacao_id,
-            'aluno_id': dados.get('aluno_id'),
-            'valor': valor,
-            'user_id': current_user.id
-        }, on_conflict='avaliacao_id, aluno_id').execute()
-
-        return jsonify(data[1][0]), 200
-
+        aluno_id = dados.get('aluno_id')
+        av = (supabase.table('avaliacoes').select('turma_id, nota_maxima')
+              .eq('id', avaliacao_id).eq('user_id', current_user.id)
+              .limit(1).execute().data or [])
+        if not av or not aluno_id:
+            return jsonify({"error": "Avaliação ou aluno inválido."}), 400
+        vinculo = (supabase.table('turmas_alunos').select('aluno_id')
+                   .eq('turma_id', av[0]['turma_id']).eq('aluno_id', aluno_id)
+                   .limit(1).execute().data or [])
+        if not vinculo:
+            return jsonify({"error": "Aluno não pertence à turma."}), 403
+        try:
+            numero = None if valor is None else float(valor)
+            if numero is not None and not (0 <= numero <= float(av[0]['nota_maxima'])):
+                raise ValueError()
+        except (ValueError, TypeError):
+            return jsonify({"error": "Nota fora dos limites."}), 400
+        resultado, status = salvar_versionado('notas',
+            {'avaliacao_id': avaliacao_id, 'aluno_id': aluno_id},
+            {'valor': numero, 'user_id': current_user.id}, dados.get('revision'))
+        return jsonify(resultado), status
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -110,6 +110,10 @@ def atualizar_nota(nota_id):
             if not aluno.data:
                 return jsonify({"error": "Aluno não encontrado."}), 400
 
+        revisao = dados.get('revision')
+        if not isinstance(revisao, int) or isinstance(revisao, bool) or revisao < 1:
+            return jsonify({'error': 'Revisão obrigatória. Recarregue o diário.'}), 428
+
         resultado = (supabase.table('diario').update({
             'titulo': titulo.strip(),
             'conteudo': conteudo,
@@ -117,9 +121,9 @@ def atualizar_nota(nota_id):
             'turma_id': turma_id,
             'aluno_id': aluno_id,
         }).eq('id', str(nota_id)).eq('user_id', current_user.id)
-            .execute())
+            .eq('revision', revisao).execute())
         if not resultado.data:
-            return jsonify({"error": "Anotação não encontrada ou acesso negado."}), 404
+            return jsonify({"error": "Conflito: anotação alterada ou removida. Recarregue o diário."}), 409
         return jsonify(resultado.data[0]), 200
     except Exception:
         return jsonify({"error": "Não foi possível atualizar a anotação."}), 500

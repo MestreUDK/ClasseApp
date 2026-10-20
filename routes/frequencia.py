@@ -2,7 +2,8 @@
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user # <-- Importar
-from utils import supabase 
+from utils import supabase
+from modules.revisoes import salvar_versionado 
 
 frequencia_bp = Blueprint('frequencia_bp', __name__)
 
@@ -24,7 +25,7 @@ def get_frequencia():
         if not verificar_dono_turma(turma_id): return jsonify({"error": "Acesso negado."}), 403
 
         data, count = supabase.table('frequencia') \
-            .select('aluno_id, presente') \
+            .select('aluno_id, presente, revision, updated_at') \
             .eq('turma_id', turma_id) \
             .eq('data', data) \
             .execute()
@@ -43,14 +44,18 @@ def set_frequencia():
         # Verifica segurança antes de salvar
         if not verificar_dono_turma(turma_id): return jsonify({"error": "Acesso negado."}), 403
 
-        data, count = supabase.table('frequencia').upsert({
-            'turma_id': turma_id,
-            'aluno_id': dados.get('aluno_id'),
-            'data': dados.get('data'),
-            'presente': dados.get('presente')
-        }, on_conflict='data, aluno_id, turma_id').execute()
-
-        return jsonify(data[1][0]), 200
+        aluno_id = dados.get('aluno_id')
+        if not aluno_id or not dados.get('data') or not isinstance(dados.get('presente'), bool):
+            return jsonify({"error": "Dados de frequência inválidos."}), 400
+        vinculo = (supabase.table('turmas_alunos').select('aluno_id')
+                   .eq('turma_id', turma_id).eq('aluno_id', aluno_id)
+                   .limit(1).execute().data or [])
+        if not vinculo:
+            return jsonify({"error": "Aluno não pertence à turma."}), 403
+        resultado, status = salvar_versionado('frequencia',
+            {'turma_id': turma_id, 'aluno_id': aluno_id, 'data': dados['data']},
+            {'presente': dados['presente']}, dados.get('revision'))
+        return jsonify(resultado), status
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
