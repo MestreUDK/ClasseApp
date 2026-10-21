@@ -73,7 +73,7 @@ async function syncPendentes() {
     let enviados = 0;
     try {
         const pendentes = await getPendentes();
-        const meusPendentes = pendentes.filter(item => item.usuario_id && item.usuario_id === window.CLASSE_USUARIO_ID);
+        const meusPendentes = pendentes.filter(item => item.usuario_id && item.usuario_id === window.CLASSE_USUARIO_ID && !item.conflito);
         if (!meusPendentes.length) return;
 
         els.statusConexao.style.display = 'block';
@@ -88,6 +88,11 @@ async function syncPendentes() {
                 });
                 // Erros 401/403/500 não são confirmação de salvamento.
                 if (!resposta.ok) {
+                    if (resposta.status === 409 || resposta.status === 428) {
+                        item.conflito = true;
+                        item.erro_conflito = `HTTP ${resposta.status}`;
+                        await atualizarPendente(item);
+                    }
                     throw new Error(`Servidor retornou HTTP ${resposta.status}`);
                 }
                 const gravado = await resposta.json();

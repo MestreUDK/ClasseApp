@@ -53,6 +53,12 @@ async function limparPendentes(id) {
     return executarTransacao('readwrite', store => store.delete(id));
 }
 
+// Atualiza o estado de uma pendência sem perder seu identificador local.
+async function atualizarPendente(item) {
+    if (!item || !Number.isInteger(item.id)) throw new Error('Pendência inválida');
+    return executarTransacao('readwrite', store => store.put(item));
+}
+
 // Cópia local de consulta, separada da fila de alterações pendentes.
 function executarSnapshot(modo, operacao) {
     return openDB().then(db => new Promise((resolve, reject) => {
