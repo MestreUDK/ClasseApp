@@ -1,10 +1,11 @@
 // Persistência local das frequências ainda não enviadas.
 // Não armazene credenciais ou tokens de autenticação neste banco.
 const CLASSE_DB_NAME = 'ClasseAppDB';
-const CLASSE_DB_VERSION = 3;
+const CLASSE_DB_VERSION = 4;
 const CLASSE_QUEUE = 'frequencia_pendente';
 const CLASSE_SNAPSHOTS = 'snapshots_consulta';
 const CLASSE_HISTORICO = 'snapshots_historico';
+const CLASSE_EDICOES = 'edicoes_offline';
 
 function openDB() {
     return new Promise((resolve, reject) => {
@@ -16,6 +17,9 @@ function openDB() {
             }
             if (!db.objectStoreNames.contains(CLASSE_SNAPSHOTS)) {
                 db.createObjectStore(CLASSE_SNAPSHOTS, { keyPath: 'usuario_id' });
+            }
+            if (!db.objectStoreNames.contains(CLASSE_EDICOES)) {
+                db.createObjectStore(CLASSE_EDICOES, { keyPath: 'chave' });
             }
             if (!db.objectStoreNames.contains(CLASSE_HISTORICO)) {
                 db.createObjectStore(CLASSE_HISTORICO, { keyPath: 'usuario_id' });
@@ -153,4 +157,27 @@ function apagarSnapshotComHistorico(usuarioId) {
         atual.delete(usuarioId);
         historico.delete(usuarioId);
     });
+}
+
+// Fila isolada de edições offline. Chave inclui usuário, tipo e ID do registro.
+function transacaoEdicoes(modo, executar) {
+    return openDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(CLASSE_EDICOES, modo);
+        const req = executar(tx.objectStore(CLASSE_EDICOES));
+        let resultado;
+        req.onsuccess = () => { resultado = req.result; };
+        tx.oncomplete = () => { db.close(); resolve(resultado); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+        tx.onabort = () => { db.close(); reject(tx.error); };
+    }));
+}
+function listarEdicoesOffline(usuario) {
+    return transacaoEdicoes('readonly', store => store.getAll())
+        .then(lista => lista.filter(item => item.usuario_id === usuario));
+}
+function salvarEdicaoOffline(item) {
+    return transacaoEdicoes('readwrite', store => store.put(item));
+}
+function removerEdicaoOffline(chave) {
+    return transacaoEdicoes('readwrite', store => store.delete(chave));
 }
