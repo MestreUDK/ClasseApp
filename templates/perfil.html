@@ -34,12 +34,12 @@
                 <button type="button" id="sync-atualizar" class="notificacoes-atualizar">Atualizar lista</button>
                 <button type="button" id="sync-enviar" class="notificacoes-atualizar">Enviar minhas pendências</button>
             </div>
-            <p class="notificacoes-descricao">Registros antigos sem identificação de conta ficam bloqueados para envio automático. Conflitos de frequência podem ser comparados e resolvidos manualmente abaixo. A edição offline dos demais módulos ainda não está disponível.</p>
+            <p class="notificacoes-descricao">Registros antigos sem identificação de conta ficam bloqueados para envio automático. Conflitos de frequência podem ser comparados e resolvidos manualmente abaixo. A edição offline de turmas e alunos está disponível na seção de dados locais abaixo.</p>
         </section>
 
         <section id="dados-offline" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
-            <h3>📥 Dados para consulta offline</h3>
-            <p class="notificacoes-descricao">Baixe uma cópia local de suas turmas e alunos para consultar neste dispositivo sem conexão. Esta cópia não permite editar ou enviar dados e não substitui a sincronização de frequências.</p>
+            <h3>📥 Dados locais e edição offline</h3>
+            <p class="notificacoes-descricao">Baixe uma cópia local de suas turmas e alunos para consultar neste dispositivo sem conexão. Você pode editar dados básicos de turmas e alunos na cópia local e enviar as alterações manualmente após reconectar. Não substitui a sincronização de frequências.</p>
             <p id="offline-estado" role="status">Verificando cópia local...</p>
             <div id="offline-resumo"></div>
             <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">
@@ -50,11 +50,21 @@
                 <button type="button" id="offline-comparar" class="notificacoes-atualizar">Comparar com a nuvem</button>
                 <button type="button" id="offline-apagar" class="notificacoes-atualizar">Apagar cópia local</button>
             </div>
+            <div id="offline-edicoes" style="margin-top:16px">
+                <h4>Edição offline de turmas e alunos</h4>
+                <p class="notificacoes-descricao">Selecione um registro da cópia baixada. Alterações ficam neste dispositivo até você enviar. O envio exige sessão ativa e revisão original ainda válida na nuvem.</p>
+                <div style="display:flex;flex-wrap:wrap;gap:10px">
+                    <button type="button" id="edicoes-listar" class="notificacoes-atualizar">Editar dados locais</button>
+                    <button type="button" id="edicoes-enviar" class="notificacoes-atualizar">Enviar edições pendentes</button>
+                </div>
+                <p id="edicoes-estado" role="status"></p>
+                <div id="edicoes-lista"></div>
+            </div>
             <div id="offline-dados" hidden style="margin-top:12px"></div>
             <div id="offline-historico" hidden style="margin-top:12px"></div>
             <div id="offline-comparacao" hidden style="margin-top:12px" aria-live="polite"></div>
             <p class="notificacoes-descricao">As últimas três cópias anteriores ficam disponíveis para restauração local. Restaurar não envia dados à nuvem. A comparação é somente leitura: não envia, apaga nem substitui registros. Diferenças não significam necessariamente conflitos de edição. Requer conexão e sessão ativa.</p>
-            <p class="notificacoes-descricao">Atenção: os dados ficam armazenados neste navegador sem criptografia adicional. Evite dispositivos compartilhados; apague a cópia ao terminar. Não inclui notas, diário ou frequências.</p>
+            <p class="notificacoes-descricao">Atenção: os dados ficam armazenados neste navegador sem criptografia adicional. Evite dispositivos compartilhados; apague a cópia ao terminar. Edições pendentes são armazenadas separadamente e não são apagadas com a cópia de consulta. Não inclui notas, diário ou frequências.</p>
         </section>
 
         <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
@@ -144,5 +154,6 @@
 <script src="{{ url_for('static', filename='js/notificacoes.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sincronizacao.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dados_offline.js') }}"></script>
+<script src="{{ url_for('static', filename='js/edicoes_offline.js') }}"></script>
 {% endblock %}
 {% endblock %}
