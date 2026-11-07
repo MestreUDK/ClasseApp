@@ -87,17 +87,20 @@ def create_turma():
 @login_required
 def get_turma_detalhe(turma_id):
     try:
+        # Não use .single(): quando uma turma deixa de existir ou não
+        # pertence ao usuário, zero linhas devem resultar em 404, não PGRST116.
         data, _ = supabase.table('turmas') \
             .select('*, disciplinas(id, nome, cor)') \
             .eq('id', str(turma_id)) \
             .eq('user_id', current_user.id) \
-            .single() \
+            .limit(1) \
             .execute()
 
-        if not data[1]:
+        registros = data[1] or []
+        if not registros:
             return jsonify({"error": "Turma não encontrada ou acesso negado."}), 404
 
-        return jsonify(data[1])
+        return jsonify(registros[0])
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

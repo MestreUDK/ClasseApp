@@ -56,16 +56,20 @@ def create_aluno():
 @login_required
 def get_aluno_by_id(aluno_id):
     try:
-        data, count = supabase.table('alunos')\
+        # Uma cópia offline pode referenciar um registro que já foi excluído
+        # ou que não pertence à sessão atual. .single() geraria PGRST116
+        # quando a consulta retornasse zero linhas; tratamos isso como 404.
+        data, _ = supabase.table('alunos')\
             .select('*')\
-            .eq('id', aluno_id)\
+            .eq('id', str(aluno_id))\
             .eq('user_id', current_user.id)\
-            .single().execute()
+            .limit(1).execute()
 
-        if not data[1]:
-             return jsonify({"error": "Aluno não encontrado ou acesso negado."}), 404
+        registros = data[1] or []
+        if not registros:
+            return jsonify({"error": "Aluno não encontrado ou acesso negado."}), 404
 
-        return jsonify(data[1])
+        return jsonify(registros[0])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

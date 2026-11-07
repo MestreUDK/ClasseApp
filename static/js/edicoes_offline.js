@@ -55,6 +55,19 @@
         const resposta = await fetch(url, {
             credentials: 'same-origin', cache: 'no-store', ...opcoes
         });
+        // Quando a sessão expira, o Flask-Login pode redirecionar para
+        // uma página HTML de login. Não tratar esse HTML como JSON válido.
+        const tipo = resposta.headers.get('content-type') || '';
+        if (resposta.redirected && /\/login(?:[?#]|$)/.test(new URL(resposta.url).pathname)) {
+            const erro = new Error('Sua sessão expirou. Entre novamente para sincronizar.');
+            erro.status = 401;
+            throw erro;
+        }
+        if (!tipo.includes('application/json')) {
+            const erro = new Error('Resposta inesperada do servidor. Verifique sua sessão.');
+            erro.status = resposta.ok ? 401 : resposta.status;
+            throw erro;
+        }
         const dados = await resposta.json().catch(() => ({}));
         if (!resposta.ok) throw erroHttp(resposta, dados);
         return dados;
@@ -98,9 +111,33 @@
             const aviso = erro.status === 401 || erro.status === 403
                 ? 'Sua sessão não permite consultar este registro. Entre novamente na conta correta.'
                 : erro.status === 404
-                    ? 'Registro não encontrado na nuvem. A edição local foi preservada.'
+                    ? 'Este registro não foi encontrado na nuvem para a conta atual. ' +
+                      'Ele pode ter sido excluído ou a cópia local pode estar desatualizada. ' +
+                      'Sua edição permanece salva no dispositivo. Confira a conta e os dados ' +
+                      'online antes de descartá-la.'
                     : `Não foi possível comparar: ${erro.message}`;
             recipiente.replaceChildren(linha(aviso));
+            if (erro.status === 404) {
+                const descartar = document.createElement('button');
+                descartar.type = 'button';
+                descartar.textContent = 'Descartar esta edição local';
+                descartar.addEventListener('click', async () => {
+                    if (ocupado || !confirm('Descartar definitivamente esta edição local? ' +
+                        'O registro não foi encontrado na nuvem e esta ação não o recria.')) return;
+                    bloqueio(true);
+                    try {
+                        const removida = await removerEdicaoOfflineSeIgual(item);
+                        mensagem(removida ? 'Edição local descartada. A nuvem não foi alterada.' :
+                            'Esta edição mudou em outra aba e foi preservada. Atualize a lista.');
+                        await desenhar();
+                        notificarEdicoes();
+                    } catch (falha) {
+                        console.error(falha);
+                        mensagem('Não foi possível descartar a edição local.');
+                    } finally { bloqueio(false); }
+                });
+                recipiente.append(descartar);
+            }
             bloqueio(false);
             return;
         }
