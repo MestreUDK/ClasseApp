@@ -179,10 +179,16 @@ async function handleSalvarNota(e) {
 
 window.deletarNota = async function(id) {
     if (!confirm('Tem certeza que deseja excluir esta anotação?')) return;
-
+    const registro = notasCarregadas.find(item => String(item.id) === String(id));
+    if (!Number.isInteger(registro?.revision) || registro.revision < 1) {
+        alert('Revisão não disponível. Atualize o diário e tente novamente.');
+        return;
+    }
     try {
         const res = await fetch(`/api/diario/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({revision: registro.revision})
         });
 
         if (!res.ok) {

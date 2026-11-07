@@ -125,54 +125,129 @@
         atualizarLista();
     }
 
+    // Criações e exclusões compartilham a mesma chave do diário. Assim,
+    // salvar duas vezes o mesmo rascunho não gera dois registros na nuvem.
     async function desenharDiario(snapshot, conta, fila) {
         if (!Array.isArray(snapshot.diario)) {
             area.append(elemento('p', 'Esta cópia não contém o diário. Conecte-se e use Meu Perfil → Baixar da nuvem.', 'warning'));
             return;
         }
-        area.append(elemento('h3', 'Anotações do Diário de Bordo'));
-        area.append(elemento('p', 'Nesta fase, somente anotações existentes podem ser editadas. Criação e exclusão offline virão depois.', 'muted'));
+        area.append(elemento('h3', 'Diário de Bordo — sem conexão'));
+        area.append(elemento('p', 'Crie, edite ou marque anotações para exclusão. As operações só serão realizadas na nuvem após confirmar o envio no Perfil.', 'muted'));
+
+        const criacao = elemento('div', '', 'academico-selecao');
+        const novo = elemento('button', 'Nova anotação offline'); novo.type = 'button';
+        criacao.append(novo); area.append(criacao);
+        novo.addEventListener('click', () => {
+            criacao.querySelector('.editor')?.remove();
+            const editor = elemento('div', '', 'editor');
+            const form = document.createElement('form');
+            const titulo = campo('Título', ''); titulo.input.required = true;
+            const data = campo('Data de ocorrência', new Date().toISOString().slice(0, 10), 'date');
+            data.input.required = true;
+            const conteudo = campo('Conteúdo', '', 'textarea');
+            const turma = document.createElement('select');
+            turma.append(new Option('Sem turma vinculada', ''));
+            snapshot.turmas.forEach(t => turma.append(new Option(t.nome, String(t.id))));
+            const turmaRotulo = elemento('label'); turmaRotulo.append(elemento('span', 'Turma'), turma);
+            const aluno = document.createElement('select');
+            aluno.append(new Option('Sem aluno vinculado', ''));
+            snapshot.alunos.forEach(a => aluno.append(new Option(a.nome_completo, String(a.id))));
+            const alunoRotulo = elemento('label'); alunoRotulo.append(elemento('span', 'Aluno'), aluno);
+            const salvar = elemento('button', 'Salvar anotação no dispositivo'); salvar.type = 'submit';
+            const cancelar = elemento('button', 'Cancelar'); cancelar.type = 'button';
+            cancelar.addEventListener('click', () => editor.remove());
+            form.append(titulo.label, data.label, conteudo.label, turmaRotulo, alunoRotulo, salvar, cancelar);
+            form.addEventListener('submit', async ev => {
+                ev.preventDefault();
+                if (typeof crypto.randomUUID !== 'function') {
+                    window.alert('Este navegador não oferece identificadores seguros. Atualize-o antes de criar anotações offline.');
+                    return;
+                }
+                salvar.disabled = true;
+                try {
+                    const id = crypto.randomUUID();
+                    await salvarEdicaoAcademica({
+                        chave: chaveDiario(conta, id), usuario_id: conta, tipo: 'diario_criar', id,
+                        expected_revision: 0,
+                        dados: {titulo: titulo.input.value.trim(), conteudo: conteudo.input.value,
+                            data_referencia: data.input.value, turma_id: turma.value || null,
+                            aluno_id: aluno.value || null},
+                        edicao_id: idDeEdicao(), alterado_localmente_em: new Date().toISOString(),
+                        estado: 'pendente'
+                    });
+                    area.dispatchEvent(new CustomEvent('academico-offline:gravado', {bubbles:true}));
+                    await window.ClasseAcademicoOffline.render('diario', {snapshot, conta});
+                } catch (erro) {
+                    console.error(erro);
+                    window.alert('Falha ao criar anotação local. Nenhum dado foi enviado à nuvem.');
+                    salvar.disabled = false;
+                }
+            });
+            editor.append(form); criacao.append(editor);
+        });
+
         const lista = elemento('div', '', 'items'); area.append(lista);
-        const registros = snapshot.diario.slice().sort((a,b) =>
+        const pendentesDiario = fila.filter(item => item.tipo.startsWith('diario'));
+        const idsBaixados = new Set(snapshot.diario.map(item => String(item.id)));
+        const criados = pendentesDiario.filter(item =>
+            (item.tipo === 'diario_criar' || (item.tipo === 'diario_excluir' && item.origem_local)) &&
+            !idsBaixados.has(String(item.id)))
+            .map(item => ({id: item.id,
+                ...(item.tipo === 'diario_criar' ? item.dados : item.restaurar_pendencia?.dados || item.dados),
+                revision: 0, _criado: item.tipo === 'diario_criar'}));
+        const registros = [...snapshot.diario, ...criados].sort((a,b) =>
             String(b.data_referencia || '').localeCompare(String(a.data_referencia || '')));
         for (const registro of registros) {
-            const pendencia = fila.find(item => item.chave === chaveDiario(conta, registro.id));
-            const atual = pendencia ? {...registro, ...pendencia.dados} : registro;
+            const chave = chaveDiario(conta, registro.id);
+            const pendencia = pendentesDiario.find(item => item.chave === chave);
+            const atual = pendencia?.tipo === 'diario_criar' || pendencia?.tipo === 'diario' ?
+                {...registro, ...pendencia.dados} : registro;
             const card = elemento('article', '', 'item');
+            if (pendencia?.tipo === 'diario_excluir') {
+                card.append(elemento('h3', registro.titulo));
+                card.append(elemento('p', 'Exclusão pendente de confirmação online.', 'pending'));
+                const desfazer = elemento('button', 'Desfazer exclusão local'); desfazer.type = 'button';
+                desfazer.addEventListener('click', async () => {
+                    if (await restaurarEdicaoAcademicaSeIgual(pendencia, pendencia.restaurar_pendencia || null)) {
+                        area.dispatchEvent(new CustomEvent('academico-offline:gravado', {bubbles:true}));
+                        await window.ClasseAcademicoOffline.render('diario', {snapshot,conta});
+                    } else window.alert('A pendência mudou. Atualize os dados locais.');
+                });
+                card.append(desfazer); lista.append(card); continue;
+            }
             card.append(elemento('h3', atual.titulo));
-            card.append(elemento('p', `${atual.data_referencia || 'Sem data'} · ${nomeTurma(snapshot, atual.turma_id)}`, 'meta'));
+            card.append(elemento('p', `${atual.data_referencia || 'Sem data'} · ${atual.turma_id ? nomeTurma(snapshot, atual.turma_id) : 'Sem turma'}${registro._criado ? ' · Nova anotação' : ''}`, 'meta'));
             card.append(elemento('p', (atual.conteudo || '').slice(0, 180)));
             if (pendencia) card.append(elemento('p', pendencia.estado === 'conflito' ?
-                'Conflito: resolver online no Perfil.' : 'Alteração ainda não enviada', 'pending'));
-            const editar = elemento('button', 'Editar anotação no dispositivo'); editar.type = 'button';
+                'Conflito: resolver online no Perfil.' : 'Operação ainda não enviada', 'pending'));
+            const editar = elemento('button', 'Editar no dispositivo'); editar.type = 'button';
             editar.addEventListener('click', () => {
                 card.querySelector('.editor')?.remove();
                 const form = document.createElement('form');
                 const editor = elemento('div', '', 'editor');
-                const titulo = campo('Título', atual.titulo);
-                titulo.input.required = true;
+                const titulo = campo('Título', atual.titulo); titulo.input.required = true;
                 const data = campo('Data de ocorrência', atual.data_referencia, 'date'); data.input.required = true;
                 const conteudo = campo('Conteúdo', atual.conteudo || '', 'textarea');
                 form.append(titulo.label, data.label, conteudo.label);
-                const salvar = elemento('button', 'Salvar no dispositivo'); salvar.type='submit';
-                form.append(salvar);
+                const salvar = elemento('button', 'Salvar no dispositivo'); salvar.type='submit'; form.append(salvar);
                 form.addEventListener('submit', async ev => {
                     ev.preventDefault();
                     if (!titulo.input.value.trim() || !data.input.value) return;
-                    if (!Number.isInteger(registro.revision) || registro.revision < 1) {
+                    if (!registro._criado && (!Number.isInteger(registro.revision) || registro.revision < 1)) {
                         window.alert('Anotação sem revisão válida. Baixe a cópia novamente.'); return;
                     }
                     salvar.disabled = true;
                     try {
                         const anteriores = await listarEdicoesAcademicas(conta);
-                        const anterior = anteriores.find(item => item.chave === chaveDiario(conta,registro.id));
+                        const anterior = anteriores.find(item => item.chave === chave);
                         await salvarEdicaoAcademica({
-                            chave: chaveDiario(conta,registro.id), usuario_id:conta,
-                            tipo:'diario', id:registro.id,
-                            expected_revision: anterior?.expected_revision ?? registro.revision,
-                            dados: {titulo: titulo.input.value.trim(),
-                                conteudo: conteudo.input.value, data_referencia: data.input.value,
-                                turma_id: registro.turma_id || null, aluno_id: registro.aluno_id || null},
+                            chave, usuario_id:conta,
+                            tipo: registro._criado ? 'diario_criar' : 'diario', id:registro.id,
+                            expected_revision: registro._criado ? 0 : (anterior?.expected_revision ?? registro.revision),
+                            dados: {titulo: titulo.input.value.trim(), conteudo: conteudo.input.value,
+                                data_referencia: data.input.value, turma_id: atual.turma_id || null,
+                                aluno_id: atual.aluno_id || null},
                             edicao_id: idDeEdicao(), alterado_localmente_em:new Date().toISOString(),
                             estado: anterior?.estado === 'conflito' ? 'conflito' : 'pendente'
                         });
@@ -184,9 +259,33 @@
                 });
                 editor.append(form);card.append(editor);
             });
-            card.append(editar); lista.append(card);
+            card.append(editar);
+            const excluir = elemento('button', 'Excluir no dispositivo'); excluir.type = 'button';
+            excluir.addEventListener('click', async () => {
+                if (!confirm('Marcar esta anotação para exclusão quando sincronizar?')) return;
+                excluir.disabled = true;
+                try {
+                    const anteriores = await listarEdicoesAcademicas(conta);
+                    const anterior = anteriores.find(item => item.chave === chave);
+                    // Uma anotação criada offline pode ter sido aceita pelo servidor
+                    // durante uma tentativa cujo retorno de rede se perdeu.
+                    // Conserva uma exclusão pendente para limpar esse possível envio.
+                    await salvarEdicaoAcademica({
+                        chave, usuario_id: conta, tipo: 'diario_excluir', id:registro.id,
+                        expected_revision: registro._criado ? 1 : (anterior?.expected_revision ?? registro.revision),
+                        origem_local: Boolean(registro._criado),
+                        restaurar_pendencia: anterior || null,
+                        dados: {titulo:atual.titulo},
+                        edicao_id: idDeEdicao(), alterado_localmente_em:new Date().toISOString(),
+                        estado: anterior?.estado === 'conflito' ? 'conflito' : 'pendente'
+                    });
+                    area.dispatchEvent(new CustomEvent('academico-offline:gravado', {bubbles:true}));
+                    await window.ClasseAcademicoOffline.render('diario', {snapshot,conta});
+                } catch (erro) {console.error(erro);window.alert('Falha ao marcar exclusão.');excluir.disabled=false;}
+            });
+            card.append(excluir); lista.append(card);
         }
-        if (!registros.length) lista.append(elemento('p', 'Não há anotações nesta cópia.'));
+        if (!registros.length) lista.append(elemento('p', 'Não há anotações nesta cópia. Crie uma acima.'));
     }
 
     window.ClasseAcademicoOffline = {

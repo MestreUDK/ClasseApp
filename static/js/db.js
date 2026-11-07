@@ -248,7 +248,7 @@ function listarEdicoesAcademicas(usuarioId) {
         .then(lista => lista.filter(item => item.usuario_id === usuarioId));
 }
 function salvarEdicaoAcademica(item) {
-    if (!item?.usuario_id || !item?.chave || !['nota', 'diario'].includes(item.tipo)) {
+    if (!item?.usuario_id || !item?.chave || !['nota', 'diario', 'diario_criar', 'diario_excluir'].includes(item.tipo)) {
         return Promise.reject(new Error('Edição acadêmica inválida.'));
     }
     return transacaoAcademica('readwrite', store => store.put(item));
@@ -257,6 +257,29 @@ function mesmaEdicaoAcademica(a, b) {
     return Boolean(a && b && a.usuario_id === b.usuario_id && a.chave === b.chave &&
         a.edicao_id === b.edicao_id && a.estado === b.estado &&
         JSON.stringify(a.dados) === JSON.stringify(b.dados));
+}
+// Desfaz exclusão sem correr o risco de apagar uma pendência mais nova.
+function restaurarEdicaoAcademicaSeIgual(esperada, anterior) {
+    if (!esperada?.chave) return Promise.reject(new Error('Pendência inválida.'));
+    return openDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(CLASSE_ACADEMICO_EDICOES, 'readwrite');
+        const store = tx.objectStore(CLASSE_ACADEMICO_EDICOES);
+        let ok = false;
+        const req = store.get(esperada.chave);
+        req.onsuccess = () => {
+            if (!mesmaEdicaoAcademica(req.result, esperada)) return;
+            if (anterior) {
+                if (anterior.chave !== esperada.chave || anterior.usuario_id !== esperada.usuario_id) {
+                    tx.abort(); return;
+                }
+                store.put(anterior);
+            } else store.delete(esperada.chave);
+            ok = true;
+        };
+        tx.oncomplete = () => { db.close(); resolve(ok); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+        tx.onabort = () => { db.close(); reject(tx.error || new Error('Transação cancelada.')); };
+    }));
 }
 function alterarEdicaoAcademicaSeIgual(esperada, estado = null) {
     return openDB().then(db => new Promise((resolve, reject) => {
