@@ -32,13 +32,21 @@
     #offline-relatorios label{display:grid;gap:7px;margin:10px 0;max-width:420px}
     #offline-relatorios select{width:100%;background:#101b2b;color:var(--fg);border:1px solid var(--line);border-radius:9px;padding:10px}
     .unlock-form{display:grid;gap:10px;max-width:450px}.unlock-form label{display:grid;gap:6px;color:var(--muted)}.unlock-form input,.unlock-form select{background:#101b2b;color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:12px;width:100%}.unlock-form button{border:1px solid var(--accent);border-radius:10px;color:white;background:#276da8;padding:12px}.unlock-form button:disabled{opacity:.6;cursor:wait}
+    .chamada-controles{display:grid;grid-template-columns:2fr 1fr 2fr;gap:10px;margin:12px 0}
+    .chamada-controles input,.chamada-controles select{min-width:0;background:#101b2b;color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:11px}
+    .chamada-lista{display:grid;gap:9px;margin:14px 0}.chamada-aluno{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;background:var(--panel2);border-radius:12px;border:1px solid var(--line)}
+    .chamada-nome{display:grid;gap:2px;min-width:0}.chamada-nome small{font-size:.82rem}
+    .chamada-opcoes{display:flex;gap:8px;flex-shrink:0}.chamada-botao{border-radius:9px;padding:9px 12px;background:#15253a;border:1px solid var(--line);color:var(--fg);font-weight:700}
+    .chamada-presente[aria-pressed=true]{background:#157446;border-color:#23a16d;color:#fff}.chamada-falta[aria-pressed=true]{background:#973f3f;border-color:#dc7171;color:#fff}
     .footer{color:var(--muted);font-size:.85rem;padding-top:10px}
-    @media(max-width:580px){.app{padding:15px 12px 45px}.stats{grid-template-columns:repeat(3,1fr)}.stat{padding:9px}.stat strong{font-size:1.2rem}.items{grid-template-columns:1fr}header{margin-bottom:14px}}
+    @media(max-width:580px){.chamada-controles{grid-template-columns:1fr}.chamada-aluno{align-items:stretch;flex-direction:column}.chamada-opcoes button{flex:1}.app{padding:15px 12px 45px}.stats{grid-template-columns:repeat(3,1fr)}.stat{padding:9px}.stat strong{font-size:1.2rem}.items{grid-template-columns:1fr}header{margin-bottom:14px}}
   </style>
   <script src="/static/js/db.js" defer></script>
+  <script src="/static/js/vault.js" defer></script>
   <script src="/static/js/offline_access.js" defer></script>
   <script src="/static/js/offline_academico.js" defer></script>
   <script src="/static/js/offline_relatorios.js" defer></script>
+  <script src="/static/js/offline_frequencia.js" defer></script>
   <script src="/static/js/offline_workspace.js" defer></script>
 </head>
 <body>
@@ -46,7 +54,7 @@
   <header><div class="brand">ClasseApp <span class="tag">Espaço offline</span></div><a class="button" href="/">Voltar ao ClasseApp online</a></header>
   <h1>Seus dados disponíveis no dispositivo</h1>
   <p class="muted">Navegue entre turmas, alunos e alterações locais sem precisar abrir páginas autenticadas. Ele utiliza a cópia baixada anteriormente e exige a senha local configurada no Perfil.</p>
-  <p class="warning">Consulte e edite turmas, alunos, notas e diário sem conexão. A seção Relatórios gera uma prévia do Mapa Final e um Excel local, usando notas, recuperações e frequências do ano escolhido. Esses resultados podem incluir alterações pendentes e <strong>não substituem a exportação oficial online</strong>. Nenhuma edição é enviada sem sua confirmação.</p>
+  <p class="warning">Consulte e edite turmas, alunos, notas, diário e faça a chamada de frequência sem conexão. A seção Relatórios gera uma prévia do Mapa Final e um Excel local, usando notas, recuperações e frequências do ano escolhido. Esses resultados podem incluir alterações pendentes e <strong>não substituem a exportação oficial online</strong>. Nenhuma edição é enviada sem sua confirmação.</p>
   <section id="offline-desbloqueio" class="panel" aria-label="Desbloquear acesso offline">
     <h2>Desbloquear dados deste dispositivo</h2>
     <p class="muted">Escolha sua conta e use a senha local cadastrada anteriormente no Perfil, enquanto estava conectado.</p>
@@ -68,6 +76,7 @@
     <nav class="toolbar" aria-label="Navegação offline">
       <button type="button" data-view="turmas" aria-pressed="true">Turmas</button>
       <button type="button" data-view="alunos" aria-pressed="false">Alunos</button>
+      <button type="button" data-view="frequencia" aria-pressed="false">Frequência</button>
       <button type="button" data-view="notas" aria-pressed="false">Notas</button>
       <button type="button" data-view="diario" aria-pressed="false">Diário</button>
       <button type="button" data-view="relatorios" aria-pressed="false">Relatórios</button>
@@ -78,11 +87,12 @@
     <section class="panel">
       <div class="filters"><h2 id="offline-title">Turmas</h2><input id="offline-filter" type="search" placeholder="Pesquisar nesta seção" aria-label="Pesquisar registros offline"></div>
       <div id="offline-items" class="items" aria-live="polite"></div>
+      <div id="offline-frequencia" hidden></div>
       <div id="offline-academico" hidden></div>
       <div id="offline-relatorios" hidden></div>
     </section>
   </div>
-  <p class="footer">Para conferir o ano letivo, atualizar o histórico de frequência ou refletir operações já sincronizadas, conecte-se e use Meu Perfil → Baixar da nuvem novamente. A senha local bloqueia o acesso pela interface, mas os dados escolares ainda não estão criptografados no IndexedDB. Não utilize dispositivos compartilhados. Para baixar uma cópia nova ou sincronizar, conecte-se e acesse Meu Perfil.</p>
+  <p class="footer">Para conferir o ano letivo, atualizar o histórico de frequência ou refletir operações já sincronizadas, conecte-se e use Meu Perfil → Baixar da nuvem novamente. As cópias e pendências das contas com senha local configurada são criptografadas no IndexedDB após o primeiro desbloqueio desta atualização. A chave permanece apenas na memória da página. Não use aparelhos compartilhados ou com acesso não confiável. Para baixar uma cópia nova ou sincronizar, conecte-se e acesse Meu Perfil.</p>
 </div>
 </body>
 </html>

@@ -82,6 +82,10 @@
     el('offline-baixar').addEventListener('click', async () => {
         if (ocupado) return;
         if (!navigator.onLine) { estado.textContent = 'Conecte-se à internet para baixar os dados.'; return; }
+        if (!await obterAcessoOffline(usuario)) {
+            estado.textContent = 'Ative a senha e a criptografia local na seção acima antes de baixar os dados.';
+            return;
+        }
         if (!confirm('Baixar turmas, alunos, notas e diário neste dispositivo? Esses dados escolares são sensíveis e permanecerão armazenados no navegador.')) return;
         bloquear(true);
         const anoLetivo = Number(el('offline-ano')?.value);

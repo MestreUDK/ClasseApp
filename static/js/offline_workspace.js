@@ -13,6 +13,7 @@
     const title = get('offline-title');
     const info = get('offline-info');
     const academic = get('offline-academico');
+    const attendance = get('offline-frequencia');
     const reports = get('offline-relatorios');
     const forms = {
         turmas: [['nome', 'Nome'], ['descricao', 'Descrição']],
@@ -24,6 +25,7 @@
     let snapshot = null;
     let drafts = [];
     let academicDrafts = [];
+    let frequenciaDrafts = [];
     let view = 'turmas';
     let classFilter = null;
 
@@ -141,6 +143,10 @@
             open.type = 'button';
             open.addEventListener('click', () => enterView('alunos', hasLinks ? record.id : null));
             element.append(open);
+            const chamada = text('button', 'Fazer chamada offline');
+            chamada.type = 'button';
+            chamada.addEventListener('click', () => enterView('frequencia', record.id));
+            element.append(chamada);
         } else {
             element.append(text('p', `Turmas: ${classNamesOfStudent(record.id)}`, 'meta'));
             if (value.matricula) element.append(text('p', `Matrícula: ${value.matricula}`, 'meta'));
@@ -160,16 +166,30 @@
     function draw() {
         list.replaceChildren();
         academic.hidden = true;
+        if (attendance) attendance.hidden = true;
         if (reports) reports.hidden = true;
         get('stat-turmas').textContent = String(snapshot.turmas.length);
         get('stat-alunos').textContent = String(snapshot.alunos.length);
-        get('stat-edicoes').textContent = String(drafts.length + academicDrafts.length);
+        get('stat-edicoes').textContent = String(drafts.length + academicDrafts.length + frequenciaDrafts.length);
         title.textContent = view === 'turmas' ? 'Turmas' : view === 'alunos' ?
             (classFilter ? `Alunos — ${classNameById(classFilter)}` : 'Alunos') :
-            view === 'notas' ? 'Avaliações e notas' : view === 'diario' ? 'Diário de Bordo' :
+            view === 'frequencia' ? 'Frequência' : view === 'notas' ? 'Avaliações e notas' : view === 'diario' ? 'Diário de Bordo' :
             view === 'relatorios' ? 'Relatórios e rendimento escolar' : 'Alterações pendentes';
         search.closest('.filters').querySelector('input').hidden =
-            (view === 'notas' || view === 'diario' || view === 'relatorios');
+            (view === 'notas' || view === 'diario' || view === 'relatorios' || view === 'frequencia');
+        if (view === 'frequencia') {
+            if (attendance) {
+                attendance.hidden = false;
+                if (window.ClasseFrequenciaOffline?.render) {
+                    window.ClasseFrequenciaOffline.render({snapshot, conta: account,
+                        turmaId:classFilter}).catch(error => {
+                        console.error(error);
+                        attendance.textContent = 'Não foi possível abrir a chamada offline. ' + error.message;
+                    });
+                } else attendance.textContent = 'Atualize o Espaço offline com internet.';
+            }
+            return;
+        }
         if (view === 'relatorios') {
             if (reports) {
                 reports.hidden = false;
@@ -199,6 +219,13 @@
                 element.append(text('h3', item.dados?.nome_completo || item.dados?.nome || String(item.id)));
                 element.append(text('p', `${item.tipo === 'turmas' ? 'Turma' : 'Aluno'} • revisão base ${item.expected_revision}`, 'meta'));
                 element.append(text('p', item.estado === 'conflito' ? 'Conflito: resolver online' : 'Aguardando envio', 'pending'));
+                list.append(element);
+            }
+            for (const item of frequenciaDrafts) {
+                const d=item.dados || {};
+                const element=text('article','','item');
+                element.append(text('h3',`Chamada ${d.data}: ${d.presente?'Presença':'Falta'}`));
+                element.append(text('p',`Aluno ${d.aluno_id} · ${item.conflito?'Conflito a resolver':'Pendente de envio no Perfil'}`,'pending'));
                 list.append(element);
             }
             for (const item of academicDrafts) {
@@ -231,10 +258,11 @@
     async function reload() {
         const contaConsultada = account;
         if (!contaConsultada || !window.ClasseOfflineAccess?.estaDesbloqueado(contaConsultada)) return;
-        const [novaCopia, novasEdicoes, novasPendencias] = await Promise.all([
+        const [novaCopia, novasEdicoes, novasPendencias, chamadas] = await Promise.all([
             obterSnapshot(contaConsultada),
             listarEdicoesOffline(contaConsultada),
-            listarEdicoesAcademicas(contaConsultada)
+            listarEdicoesAcademicas(contaConsultada),
+            getPendentes()
         ]);
         // O bloqueio ou a troca de conta pode ocorrer durante a leitura do IndexedDB.
         if (account !== contaConsultada ||
@@ -242,6 +270,7 @@
         snapshot = novaCopia;
         drafts = novasEdicoes;
         academicDrafts = novasPendencias;
+        frequenciaDrafts = chamadas.filter(x => x.usuario_id === contaConsultada);
         if (!snapshot || !Array.isArray(snapshot.turmas) || !Array.isArray(snapshot.alunos)) {
             showError('Não existe uma cópia local desta conta. Conecte-se, faça login e use Meu Perfil → Baixar da nuvem antes de utilizar o espaço offline.');
             return;
@@ -275,20 +304,32 @@
         snapshot = null;
         drafts = [];
         academicDrafts = [];
+        frequenciaDrafts = [];
         root.hidden = true;
         list.replaceChildren();
         academic.replaceChildren();
         reports?.replaceChildren();
+        window.ClasseFrequenciaOffline?.limpar();
         errorBox.hidden = true;
     });
     document.querySelectorAll('[data-view]').forEach(button => {
         button.addEventListener('click', () => enterView(button.dataset.view));
     });
     search.addEventListener('input', draw);
+    document.addEventListener('classeapp:frequencia:gravada', async () => {
+        const conta=account;
+        if (!conta || !window.ClasseOfflineAccess?.estaDesbloqueado(conta)) return;
+        try {
+            frequenciaDrafts = (await getPendentes()).filter(x=>x.usuario_id===conta);
+            if (account !== conta || !window.ClasseOfflineAccess?.estaDesbloqueado(conta)) return;
+            get('stat-edicoes').textContent=String(drafts.length+academicDrafts.length+frequenciaDrafts.length);
+            if (view === 'pendencias') draw();
+        } catch(e) {info.textContent='A marcação foi salva, mas não foi possível atualizar o contador local.';}
+    });
     document.addEventListener('academico-offline:gravado', async () => {
         try {
             academicDrafts = await listarEdicoesAcademicas(account);
-            get('stat-edicoes').textContent = String(drafts.length + academicDrafts.length);
+            get('stat-edicoes').textContent = String(drafts.length + academicDrafts.length + frequenciaDrafts.length);
             if (view === 'pendencias') draw();
         } catch (_) { info.textContent = 'Edição salva, mas não foi possível atualizar a contagem.'; }
     });

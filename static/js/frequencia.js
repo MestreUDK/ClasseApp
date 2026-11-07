@@ -261,13 +261,23 @@ async function marcarPresenca(botaoClicado, alunoId, statusPresenca) {
         } catch (error) {
             // Falhou online, salva offline
             console.warn("Falha online, salvando offline...");
-            await salvarOffline({ dados: payload, usuario_id: window.CLASSE_USUARIO_ID || null });
-            atualizarStatusConexao(); // Mostra aviso vermelho
+            try {
+                await salvarFrequenciaUnica({dados:payload,usuario_id:window.CLASSE_USUARIO_ID||null});
+                atualizarStatusConexao();
+            } catch (falhaLocal) {
+                alert('Não foi possível guardar a chamada no dispositivo. ' + falhaLocal.message);
+                await carregarChamada();
+            }
         }
     } else {
         // Já está offline, salva direto
-        await salvarOffline({ dados: payload, usuario_id: window.CLASSE_USUARIO_ID || null });
-        atualizarStatusConexao(); // Mostra aviso vermelho
+        try {
+            await salvarFrequenciaUnica({dados:payload,usuario_id:window.CLASSE_USUARIO_ID||null});
+            atualizarStatusConexao();
+        } catch (falhaLocal) {
+            alert('A frequência NÃO foi salva neste dispositivo. ' + falhaLocal.message +
+                ' Use o Espaço offline para registrar a chamada.');
+        }
     }
 }
 

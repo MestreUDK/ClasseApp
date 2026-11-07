@@ -100,11 +100,14 @@
         <section id="offline-acesso" class="notificacoes-painel" data-user-id="{{ notification_user_id }}"
                  data-user-email="{{ email }}">
             <h3>🔐 Acesso local ao Espaço offline</h3>
-            <p class="notificacoes-descricao">Configure uma senha <strong>exclusiva deste dispositivo</strong> para abrir o Espaço offline mesmo depois de fechar o navegador ou o aplicativo. É necessário baixar a cópia local primeiro.</p>
+            <p class="notificacoes-descricao">Configure uma senha <strong>exclusiva deste dispositivo</strong> para abrir o Espaço offline e criptografar a cópia e as pendências locais. Após a atualização, o primeiro desbloqueio também protege os dados antigos.</p>
             <p id="offline-acesso-estado" role="status">Verificando acesso local...</p>
             <form id="offline-acesso-form" autocomplete="off"
                   style="background:transparent;border:0;padding:0;box-shadow:none;display:grid;gap:10px;max-width:440px">
-                <label>Senha local (10 a 128 caracteres)
+                <label id="offline-acesso-atual-box" hidden style="display:none!important">Senha local atual (obrigatória para troca)
+                    <input id="offline-acesso-atual" type="password" minlength="10" maxlength="128" autocomplete="current-password">
+                </label>
+                <label>Nova senha local (10 a 128 caracteres)
                     <input id="offline-acesso-senha" type="password" minlength="10" maxlength="128"
                            autocomplete="new-password" required>
                 </label>
@@ -114,7 +117,7 @@
                 </label>
                 <button type="submit" id="offline-acesso-salvar" class="notificacoes-atualizar">Ativar acesso offline</button>
             </form>
-            <p class="notificacoes-descricao"><strong>Atenção:</strong> este bloqueio protege a entrada pela interface, mas <strong>não criptografa os dados do IndexedDB</strong>. Não use em aparelhos compartilhados. A senha local não é sua senha do Supabase e pode ser substituída aqui após fazer login online.</p>
+            <p class="notificacoes-descricao"><strong>Atenção:</strong> o cofre criptografa cópias e alterações locais por conta com AES-GCM; a chave só fica na memória enquanto desbloqueada. Uma senha local perdida não pode ser recuperada pelo Supabase. Para trocar a senha, informe a senha anterior. Não use aparelhos compartilhados ou comprometidos.</p>
         </section>
 
         <section id="dados-offline" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
@@ -151,7 +154,7 @@
             <div id="offline-historico" hidden style="margin-top:12px"></div>
             <div id="offline-comparacao" hidden style="margin-top:12px" aria-live="polite"></div>
             <p class="notificacoes-descricao">As últimas três cópias anteriores podem ser restauradas localmente. <strong>Comparar</strong> não envia nada e exige internet; <strong>Editar</strong> salva uma pendência no navegador; <strong>Enviar</strong> tenta salvar a pendência na nuvem, verificando a revisão. Nem toda diferença é conflito.</p>
-            <p class="notificacoes-descricao">Atenção: os dados escolares, inclusive notas e diário, ficam neste navegador sem criptografia adicional. Evite dispositivos compartilhados e apague cópias desnecessárias. As filas de edição são separadas da cópia de consulta e não são apagadas com ela.</p>
+            <p class="notificacoes-descricao">Atenção: configure e desbloqueie o cofre local para criptografar as cópias, histórico e filas da sua conta. Mantenha sua senha local segura. Exportações JSON e Excel são arquivos não criptografados, portanto guarde-os com cuidado.</p>
         </section>
 
         <section id="sync-academico" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
@@ -270,6 +273,7 @@
     </style>
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/db.js', v=app_version) }}"></script>
+<script src="{{ url_for('static', filename='js/vault.js', v=app_version) }}"></script>
 <script src="{{ url_for('static', filename='js/offline_access.js', v=app_version) }}"></script>
 <script src="{{ url_for('static', filename='js/notificacoes.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sincronizacao.js') }}"></script>

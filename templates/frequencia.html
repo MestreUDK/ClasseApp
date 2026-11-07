@@ -7,6 +7,7 @@
 
     <a href="" id="link-voltar" class="botao-acao" style="margin-bottom: 1em; background-color: #6c757d;">Voltar para Turma</a>
 
+    <p><a href="/offline" class="botao-acao" style="background:#216c9f;margin:0 0 12px;display:inline-block">📱 Fazer chamada no Espaço offline protegido</a></p>
     <div class="chamada-container">
         <h2>Data da Chamada</h2>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
@@ -33,7 +34,9 @@
 {% endblock %}
 
 {% block scripts %}
-    <script src="{{ url_for('static', filename='js/db.js') }}"></script> 
+    <script src="{{ url_for('static', filename='js/db.js', v=app_version) }}"></script>
+    <script src="{{ url_for('static', filename='js/vault.js', v=app_version) }}"></script>
+    <script src="{{ url_for('static', filename='js/offline_access.js', v=app_version) }}"></script> 
     <script>window.CLASSE_USUARIO_ID = {{ current_user.id|string|tojson }};</script>
-<script src="{{ url_for('static', filename='js/frequencia.js') }}"></script>
+<script src="{{ url_for('static', filename='js/frequencia.js', v=app_version) }}"></script>
 {% endblock %}
