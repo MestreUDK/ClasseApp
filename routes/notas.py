@@ -36,7 +36,7 @@ def get_avaliacoes(turma_id):
             return jsonify({"error": "Acesso negado."}), 403
 
         av_res, _ = supabase.table('avaliacoes') \
-            .select('id, nome, data, nota_maxima, periodo_tipo, periodo_numero, categoria, peso, turma_id') \
+            .select('id, nome, data, nota_maxima, periodo_tipo, periodo_numero, categoria, peso, turma_id, revision') \
             .eq('turma_id', str(turma_id)) \
             .eq('user_id', current_user.id) \
             .order('periodo_numero', desc=False) \
@@ -112,6 +112,58 @@ def create_avaliacao():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@notas_bp.route('/avaliacoes/<uuid:avaliacao_id>', methods=['PUT'])
+@login_required
+def editar_avaliacao(avaliacao_id):
+    """Edita metadados de uma avaliação sem modificar notas já lançadas."""
+    try:
+        dados = request.get_json(silent=True) or {}
+        atuais = (supabase.table('avaliacoes')
+                  .select('id, turma_id, revision')
+                  .eq('id', str(avaliacao_id))
+                  .eq('user_id', current_user.id)
+                  .limit(1).execute().data or [])
+        if not atuais or not verificar_dono_turma(atuais[0]['turma_id']):
+            return jsonify({'error': 'Avaliação não encontrada.'}), 404
+        revisao = dados.get('revision')
+        if not isinstance(revisao, int) or isinstance(revisao, bool):
+            return jsonify({'error': 'Revisão obrigatória. Atualize a página.'}), 428
+        nome = str(dados.get('nome') or '').strip()
+        if not nome or len(nome) > 200:
+            return jsonify({'error': 'Informe um nome com até 200 caracteres.'}), 400
+        try:
+            nota_maxima = float(dados.get('nota_maxima'))
+            peso = float(dados.get('peso'))
+            periodo_numero = int(dados.get('periodo_numero'))
+            if not (0 < nota_maxima <= 100 and 0 < peso <= 100 and 1 <= periodo_numero <= 12):
+                raise ValueError()
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Nota máxima, peso ou período inválido.'}), 400
+        tipo = dados.get('periodo_tipo')
+        categoria = dados.get('categoria')
+        if tipo not in ('avaliacao', 'bimestre', 'trimestre', 'semestre'):
+            return jsonify({'error': 'Tipo de período inválido.'}), 400
+        if categoria not in ('atividade', 'trabalho', 'prova', 'participacao', 'recuperacao', 'outro'):
+            return jsonify({'error': 'Categoria inválida.'}), 400
+        if categoria == 'recuperacao' and periodo_numero not in (1, 2):
+            return jsonify({'error': 'A recuperação deve ser a 1ª ou a 2ª.'}), 400
+        valores = {
+            'nome': nome, 'data': dados.get('data') or None,
+            'nota_maxima': nota_maxima, 'peso': peso,
+            'periodo_tipo': tipo, 'periodo_numero': periodo_numero,
+            'categoria': categoria,
+        }
+        alterados = (supabase.table('avaliacoes').update(valores)
+                     .eq('id', str(avaliacao_id))
+                     .eq('user_id', current_user.id)
+                     .eq('revision', revisao).execute().data or [])
+        if not alterados:
+            return jsonify({'error': 'Conflito: avaliação alterada em outra sessão.'}), 409
+        return jsonify(alterados[0]), 200
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
 
 
 @notas_bp.route('/avaliacoes/<uuid:avaliacao_id>', methods=['DELETE'])
