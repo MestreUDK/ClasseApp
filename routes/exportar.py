@@ -1,6 +1,8 @@
 # routes/exportar.py
 
 import io
+import re
+from datetime import datetime
 import openpyxl
 
 from flask import Blueprint, request, send_file, jsonify
@@ -8,6 +10,7 @@ from flask_login import login_required, current_user
 from openpyxl.styles import Font, Alignment, PatternFill
 from utils import supabase
 from modules.rendimento import calcular_rendimento, media_atividades
+from modules.mapa_final import montar_mapa_final
 
 exportar_bp = Blueprint('exportar_bp', __name__)
 
@@ -61,6 +64,34 @@ def buscar_nome_turma(turma_id):
         .execute()
 
     return res[1]["nome"] if res[1] else "Turma"
+
+
+def buscar_metadados_turma(turma_id):
+    """Busca nome e componente com autorização da conta proprietária."""
+    registros = (supabase.table('turmas')
+                 .select('nome, disciplinas(nome)')
+                 .eq('id', str(turma_id))
+                 .eq('user_id', current_user.id)
+                 .limit(1).execute().data or [])
+    if not registros:
+        return None
+    turma = registros[0]
+    disciplina = turma.get('disciplinas') or {}
+    if isinstance(disciplina, list):
+        disciplina = disciplina[0] if disciplina else {}
+    return turma.get('nome') or 'Turma', disciplina.get('nome') or 'Não informado'
+
+
+def buscar_registros_paginados(consulta, pagina=1000):
+    """Busca todos os registros, evitando truncamento no limite da API."""
+    resultado = []
+    inicio = 0
+    while True:
+        parte = consulta.range(inicio, inicio + pagina - 1).execute().data or []
+        resultado.extend(parte)
+        if len(parte) < pagina:
+            return resultado
+        inicio += pagina
 
 
 def buscar_alunos_da_turma(turma_id):
@@ -269,11 +300,11 @@ def buscar_dados_notas_modulares(turma_id):
     notas_map = {}
     destinos = {}
     if avaliacoes:
-        registros = (supabase.table('notas')
-                     .select('aluno_id, avaliacao_id, valor, recupera_periodo')
-                     .in_('avaliacao_id', [av['id'] for av in avaliacoes])
-                     .eq('user_id', current_user.id)
-                     .execute().data or [])
+        registros = buscar_registros_paginados(
+            supabase.table('notas')
+            .select('aluno_id, avaliacao_id, valor, recupera_periodo')
+            .in_('avaliacao_id', [av['id'] for av in avaliacoes])
+            .eq('user_id', current_user.id))
         for registro in registros:
             notas_map.setdefault(registro['aluno_id'], {})[
                 registro['avaliacao_id']] = registro.get('valor')
@@ -328,15 +359,55 @@ def _celula_segura(texto):
 @exportar_bp.route('/exportar/turma/<uuid:turma_id>/notas', methods=['GET'])
 @login_required
 def exportar_notas_excel(turma_id):
-    """Resumo ponderado e abas modulares, sem somar REC como avaliação extra."""
+    """Exporta Mapa Final anual ou, opcionalmente, notas modulares."""
     try:
         if not verificar_dono_turma(turma_id):
             return jsonify({'error': 'Acesso negado.'}), 403
 
-        turma_nome = buscar_nome_turma(turma_id)
+        formato = request.args.get('formato', 'mapa')
+        if formato not in ('mapa', 'modular'):
+            return jsonify({'error': 'Formato de exportação inválido.'}), 400
+        ano_texto = request.args.get('ano', str(datetime.now().year))
+        try:
+            ano = int(ano_texto)
+            if not 2000 <= ano <= 2100:
+                raise ValueError()
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Ano letivo inválido.'}), 400
+
+        metadados = buscar_metadados_turma(turma_id)
+        if not metadados:
+            return jsonify({'error': 'Turma não encontrada.'}), 404
+        turma_nome, componente = metadados
         alunos, periodos, notas_map, avaliacoes, destinos = buscar_dados_notas_modulares(turma_id)
+        if formato == 'mapa':
+            # Avaliações com data pertencem ao ano selecionado. As sem data
+            # permanecem para não descartar lançamentos antigos válidos.
+            avaliacoes = [av for av in avaliacoes if not av.get('data')
+                          or str(av['data']).startswith(f'{ano}-')]
+            ids_validos = {av['id'] for av in avaliacoes}
+            periodos_ano = []
+            for grupo in periodos:
+                filtradas = [av for av in grupo['avaliacoes']
+                             if av['id'] in ids_validos]
+                if filtradas:
+                    periodos_ano.append({**grupo, 'avaliacoes': filtradas})
+            periodos = periodos_ano
         wb = openpyxl.Workbook()
-        resumo = wb.active
+        if formato == 'mapa':
+            chamadas = buscar_registros_paginados(
+                supabase.table('frequencia')
+                .select('aluno_id, presente, data, updated_at')
+                .eq('turma_id', str(turma_id))
+                .gte('data', f'{ano}-01-01')
+                .lte('data', f'{ano}-12-31')
+                .order('data', desc=False))
+            montar_mapa_final(wb, alunos, avaliacoes, notas_map, destinos,
+                              chamadas, turma_nome, componente, ano)
+            # A aba padrão é removida: agora o mapa é a primeira planilha.
+            wb.remove(wb['Sheet'])
+        resumo = (wb.create_sheet('Resumo de Notas')
+                  if formato == 'mapa' else wb.active)
         resumo.title = 'Resumo de Notas'
         resumo.append([
             'Aluno', '1ª AV. (×2)', '2ª AV. (×3)', '3ª AV. (×2)',
@@ -418,7 +489,10 @@ def exportar_notas_excel(turma_id):
                 ws.column_dimensions[col].width = 20
             ajustar_texto_planilha(ws)
 
-        return gerar_resposta_excel(wb, f'Notas_Modulares_{turma_nome}.xlsx')
+        nome_seguro = re.sub(r'[^\w .-]+', '_', turma_nome, flags=re.UNICODE).strip(' .') or 'Turma'
+        arquivo = (f'Mapa_Final_{nome_seguro}_{ano}.xlsx' if formato == 'mapa'
+                   else f'Notas_Modulares_{nome_seguro}.xlsx')
+        return gerar_resposta_excel(wb, arquivo)
     except Exception as exc:
         return jsonify({
             'error': 'Erro ao gerar boletim de notas.',
