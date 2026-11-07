@@ -27,7 +27,7 @@ app = Flask(__name__)
 # ==========================================
 # --- NOVO: CONFIGURAÇÃO DE VERSÃO ---
 # ==========================================
-app.config['VERSION'] = '2.2.21.1'
+app.config['VERSION'] = '2.2.22'
 
 # Context Processor para injetar a variável em todos os templates HTML
 @app.context_processor

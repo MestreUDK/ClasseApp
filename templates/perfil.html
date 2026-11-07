@@ -97,6 +97,26 @@
             <p class="notificacoes-descricao">Registros antigos sem identificação de conta ficam bloqueados para envio automático. Conflitos de frequência podem ser comparados e resolvidos manualmente abaixo. A edição offline de turmas e alunos está disponível na seção de dados locais abaixo.</p>
         </section>
 
+        <section id="offline-acesso" class="notificacoes-painel" data-user-id="{{ notification_user_id }}"
+                 data-user-email="{{ email }}">
+            <h3>🔐 Acesso local ao Espaço offline</h3>
+            <p class="notificacoes-descricao">Configure uma senha <strong>exclusiva deste dispositivo</strong> para abrir o Espaço offline mesmo depois de fechar o navegador ou o aplicativo. É necessário baixar a cópia local primeiro.</p>
+            <p id="offline-acesso-estado" role="status">Verificando acesso local...</p>
+            <form id="offline-acesso-form" autocomplete="off"
+                  style="background:transparent;border:0;padding:0;box-shadow:none;display:grid;gap:10px;max-width:440px">
+                <label>Senha local (10 a 128 caracteres)
+                    <input id="offline-acesso-senha" type="password" minlength="10" maxlength="128"
+                           autocomplete="new-password" required>
+                </label>
+                <label>Confirmar senha local
+                    <input id="offline-acesso-confirmar" type="password" minlength="10" maxlength="128"
+                           autocomplete="new-password" required>
+                </label>
+                <button type="submit" id="offline-acesso-salvar" class="notificacoes-atualizar">Ativar acesso offline</button>
+            </form>
+            <p class="notificacoes-descricao"><strong>Atenção:</strong> este bloqueio protege a entrada pela interface, mas <strong>não criptografa os dados do IndexedDB</strong>. Não use em aparelhos compartilhados. A senha local não é sua senha do Supabase e pode ser substituída aqui após fazer login online.</p>
+        </section>
+
         <section id="dados-offline" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
             <h3>📥 Dados locais e edição offline</h3>
             <p class="notificacoes-descricao">A <strong>cópia baixada</strong> é o ponto de partida. Suas <strong>edições pendentes</strong> ficam guardadas separadamente e não alteram a cópia original até um novo download. A comparação abaixo mostra ambas, para evitar confusão.</p>
@@ -250,6 +270,7 @@
     </style>
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/db.js', v=app_version) }}"></script>
+<script src="{{ url_for('static', filename='js/offline_access.js', v=app_version) }}"></script>
 <script src="{{ url_for('static', filename='js/notificacoes.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sincronizacao.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dados_offline.js') }}"></script>

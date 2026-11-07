@@ -31,10 +31,12 @@
     .report-table td:first-child{text-align:left;position:sticky;left:0;background:var(--panel);max-width:230px;overflow:hidden;text-overflow:ellipsis}
     #offline-relatorios label{display:grid;gap:7px;margin:10px 0;max-width:420px}
     #offline-relatorios select{width:100%;background:#101b2b;color:var(--fg);border:1px solid var(--line);border-radius:9px;padding:10px}
+    .unlock-form{display:grid;gap:10px;max-width:450px}.unlock-form label{display:grid;gap:6px;color:var(--muted)}.unlock-form input,.unlock-form select{background:#101b2b;color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:12px;width:100%}.unlock-form button{border:1px solid var(--accent);border-radius:10px;color:white;background:#276da8;padding:12px}.unlock-form button:disabled{opacity:.6;cursor:wait}
     .footer{color:var(--muted);font-size:.85rem;padding-top:10px}
     @media(max-width:580px){.app{padding:15px 12px 45px}.stats{grid-template-columns:repeat(3,1fr)}.stat{padding:9px}.stat strong{font-size:1.2rem}.items{grid-template-columns:1fr}header{margin-bottom:14px}}
   </style>
   <script src="/static/js/db.js" defer></script>
+  <script src="/static/js/offline_access.js" defer></script>
   <script src="/static/js/offline_academico.js" defer></script>
   <script src="/static/js/offline_relatorios.js" defer></script>
   <script src="/static/js/offline_workspace.js" defer></script>
@@ -43,8 +45,22 @@
 <div class="app">
   <header><div class="brand">ClasseApp <span class="tag">Espaço offline</span></div><a class="button" href="/">Voltar ao ClasseApp online</a></header>
   <h1>Seus dados disponíveis no dispositivo</h1>
-  <p class="muted">Navegue entre turmas, alunos e alterações locais sem precisar abrir páginas autenticadas. Esse espaço utiliza a cópia que você baixou anteriormente.</p>
+  <p class="muted">Navegue entre turmas, alunos e alterações locais sem precisar abrir páginas autenticadas. Ele utiliza a cópia baixada anteriormente e exige a senha local configurada no Perfil.</p>
   <p class="warning">Consulte e edite turmas, alunos, notas e diário sem conexão. A seção Relatórios gera uma prévia do Mapa Final e um Excel local, usando notas, recuperações e frequências do ano escolhido. Esses resultados podem incluir alterações pendentes e <strong>não substituem a exportação oficial online</strong>. Nenhuma edição é enviada sem sua confirmação.</p>
+  <section id="offline-desbloqueio" class="panel" aria-label="Desbloquear acesso offline">
+    <h2>Desbloquear dados deste dispositivo</h2>
+    <p class="muted">Escolha sua conta e use a senha local cadastrada anteriormente no Perfil, enquanto estava conectado.</p>
+    <form id="offline-desbloqueio-form" class="unlock-form" autocomplete="off">
+      <label>Conta com cópia offline
+        <select id="offline-desbloqueio-conta" required></select>
+      </label>
+      <label>Senha local offline
+        <input id="offline-desbloqueio-senha" type="password" autocomplete="off" required>
+      </label>
+      <button type="submit" id="offline-desbloqueio-botao">Desbloquear</button>
+    </form>
+    <p id="offline-desbloqueio-status" class="muted" role="status" aria-live="polite"></p>
+  </section>
   <section id="offline-erro" class="panel" hidden role="status"></section>
   <div id="offline-app" hidden>
     <section class="stats" aria-label="Resumo local"><div class="stat"><strong id="stat-turmas">0</strong><small>Turmas</small></div><div class="stat"><strong id="stat-alunos">0</strong><small>Alunos</small></div><div class="stat"><strong id="stat-edicoes">0</strong><small>Edições pendentes</small></div></section>
@@ -57,6 +73,7 @@
       <button type="button" data-view="relatorios" aria-pressed="false">Relatórios</button>
       <button type="button" data-view="pendencias" aria-pressed="false">Alterações pendentes</button>
       <button type="button" id="offline-refresh">Atualizar dados locais</button>
+      <button type="button" id="offline-bloquear">🔒 Bloquear</button>
     </nav>
     <section class="panel">
       <div class="filters"><h2 id="offline-title">Turmas</h2><input id="offline-filter" type="search" placeholder="Pesquisar nesta seção" aria-label="Pesquisar registros offline"></div>
@@ -65,7 +82,7 @@
       <div id="offline-relatorios" hidden></div>
     </section>
   </div>
-  <p class="footer">Para conferir o ano letivo, atualizar o histórico de frequência ou refletir operações já sincronizadas, conecte-se e use Meu Perfil → Baixar da nuvem novamente. Os dados locais permanecem neste navegador e ainda não possuem proteção adicional por PIN ou criptografia. Não utilize o espaço offline em dispositivos compartilhados. Para baixar uma cópia nova ou sincronizar, conecte-se e acesse Meu Perfil.</p>
+  <p class="footer">Para conferir o ano letivo, atualizar o histórico de frequência ou refletir operações já sincronizadas, conecte-se e use Meu Perfil → Baixar da nuvem novamente. A senha local bloqueia o acesso pela interface, mas os dados escolares ainda não estão criptografados no IndexedDB. Não utilize dispositivos compartilhados. Para baixar uma cópia nova ou sincronizar, conecte-se e acesse Meu Perfil.</p>
 </div>
 </body>
 </html>

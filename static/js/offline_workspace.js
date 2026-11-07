@@ -229,9 +229,19 @@
         if (!list.children.length) list.append(text('p', 'Nenhum registro encontrado nesta seção.', 'empty'));
     }
     async function reload() {
-        snapshot = await obterSnapshot(account);
-        drafts = await listarEdicoesOffline(account);
-        academicDrafts = await listarEdicoesAcademicas(account);
+        const contaConsultada = account;
+        if (!contaConsultada || !window.ClasseOfflineAccess?.estaDesbloqueado(contaConsultada)) return;
+        const [novaCopia, novasEdicoes, novasPendencias] = await Promise.all([
+            obterSnapshot(contaConsultada),
+            listarEdicoesOffline(contaConsultada),
+            listarEdicoesAcademicas(contaConsultada)
+        ]);
+        // O bloqueio ou a troca de conta pode ocorrer durante a leitura do IndexedDB.
+        if (account !== contaConsultada ||
+            !window.ClasseOfflineAccess?.estaDesbloqueado(contaConsultada)) return;
+        snapshot = novaCopia;
+        drafts = novasEdicoes;
+        academicDrafts = novasPendencias;
         if (!snapshot || !Array.isArray(snapshot.turmas) || !Array.isArray(snapshot.alunos)) {
             showError('Não existe uma cópia local desta conta. Conecte-se, faça login e use Meu Perfil → Baixar da nuvem antes de utilizar o espaço offline.');
             return;
@@ -243,19 +253,34 @@
             'Edições locais não são enviadas automaticamente.';
         draw();
     }
-    async function init() {
-        try { account = sessionStorage.getItem('classeapp:offline:conta-aba'); }
-        catch (_) { /* Nada */ }
-        if (!account) {
-            showError('Não há uma conta identificada nesta aba. Abra o ClasseApp com internet, faça login e baixe uma cópia no Perfil. Depois utilize o espaço offline na mesma aba do navegador.');
+    async function abrirContaOffline(usuarioId) {
+        if (!window.ClasseOfflineAccess?.estaDesbloqueado(usuarioId)) {
+            showError('Desbloqueie sua conta com a senha local antes de abrir os dados.');
             return;
         }
+        account = usuarioId;
         try { await reload(); }
         catch (error) {
             console.error(error);
             showError('Não foi possível abrir o banco local neste navegador. Nenhum dado foi alterado.');
         }
     }
+    // A identificação da conta na aba não autoriza mais leitura do conteúdo.
+    // Cada nova abertura da página requer senha local validada neste dispositivo.
+    document.addEventListener('classeapp:offline:desbloqueado', event => {
+        if (event.detail?.usuarioId) abrirContaOffline(event.detail.usuarioId);
+    });
+    document.addEventListener('classeapp:offline:bloqueado', () => {
+        account = null;
+        snapshot = null;
+        drafts = [];
+        academicDrafts = [];
+        root.hidden = true;
+        list.replaceChildren();
+        academic.replaceChildren();
+        reports?.replaceChildren();
+        errorBox.hidden = true;
+    });
     document.querySelectorAll('[data-view]').forEach(button => {
         button.addEventListener('click', () => enterView(button.dataset.view));
     });
@@ -267,8 +292,8 @@
             if (view === 'pendencias') draw();
         } catch (_) { info.textContent = 'Edição salva, mas não foi possível atualizar a contagem.'; }
     });
+    get('offline-bloquear').addEventListener('click', () => window.ClasseOfflineAccess?.bloquear());
     get('offline-refresh').addEventListener('click', async () => {
         try { await reload(); } catch (_) { info.textContent = 'Falha ao atualizar a visualização local.'; }
     });
-    init();
 })();

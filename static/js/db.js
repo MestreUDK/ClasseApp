@@ -1,12 +1,13 @@
 // Persistência local das frequências ainda não enviadas.
 // Não armazene credenciais ou tokens de autenticação neste banco.
 const CLASSE_DB_NAME = 'ClasseAppDB';
-const CLASSE_DB_VERSION = 5;
+const CLASSE_DB_VERSION = 6;
 const CLASSE_QUEUE = 'frequencia_pendente';
 const CLASSE_SNAPSHOTS = 'snapshots_consulta';
 const CLASSE_HISTORICO = 'snapshots_historico';
 const CLASSE_EDICOES = 'edicoes_offline';
 const CLASSE_ACADEMICO_EDICOES = 'edicoes_academicas';
+const CLASSE_ACESSOS_OFFLINE = 'acessos_offline';
 
 function openDB() {
     return new Promise((resolve, reject) => {
@@ -27,6 +28,9 @@ function openDB() {
             }
             if (!db.objectStoreNames.contains(CLASSE_HISTORICO)) {
                 db.createObjectStore(CLASSE_HISTORICO, { keyPath: 'usuario_id' });
+            }
+            if (!db.objectStoreNames.contains(CLASSE_ACESSOS_OFFLINE)) {
+                db.createObjectStore(CLASSE_ACESSOS_OFFLINE, {keyPath: 'usuario_id'});
             }
         };
         request.onsuccess = () => resolve(request.result);
@@ -120,6 +124,9 @@ function salvarSnapshotVersionado(snapshot) {
         };
         reqAtual.onsuccess = () => { anterior = reqAtual.result || null; persistir(); };
         reqHistorico.onsuccess = () => { versoes = reqHistorico.result || null; persistir(); };
+    }).then(resultado => {
+        document.dispatchEvent(new Event('classeapp:snapshot:atualizado'));
+        return resultado;
     });
 }
 
@@ -297,4 +304,30 @@ function alterarEdicaoAcademicaSeIgual(esperada, estado = null) {
         tx.onerror = () => { db.close(); reject(tx.error); };
         tx.onabort = () => { db.close(); reject(tx.error); };
     }));
+}
+
+// Verificadores de acesso offline, isolados dos dados escolares e da sessão web.
+// Não armazenam senha, token ou chave criptográfica persistente.
+function transacaoAcessosOffline(modo, operacao) {
+    return openDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(CLASSE_ACESSOS_OFFLINE, modo);
+        const req = operacao(tx.objectStore(CLASSE_ACESSOS_OFFLINE));
+        let resultado;
+        req.onsuccess = () => { resultado = req.result; };
+        tx.oncomplete = () => { db.close(); resolve(resultado); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+        tx.onabort = () => { db.close(); reject(tx.error || new Error('Falha no banco local')); };
+    }));
+}
+function listarAcessosOffline() {
+    return transacaoAcessosOffline('readonly', store => store.getAll());
+}
+function obterAcessoOffline(usuarioId) {
+    return transacaoAcessosOffline('readonly', store => store.get(usuarioId));
+}
+function salvarAcessoOffline(perfil) {
+    if (!perfil?.usuario_id || !perfil?.sal || !perfil?.iv || !perfil?.verificador) {
+        return Promise.reject(new Error('Configuração local inválida'));
+    }
+    return transacaoAcessosOffline('readwrite', store => store.put(perfil));
 }
