@@ -3,6 +3,8 @@
 const TURMA_ID = window.location.pathname.split('/')[2];
 
 let els = {};
+let avaliacaoEmEdicao = null;
+let avaliacoesCarregadas = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     els = {
@@ -18,7 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
         inputCategoria: document.getElementById('categoria'),
         inputPeso: document.getElementById('peso'),
 
-        lista: document.getElementById('lista-avaliacoes')
+        lista: document.getElementById('lista-avaliacoes'),
+        cancelar: document.getElementById('cancelar-edicao-avaliacao'),
+        tituloForm: document.getElementById('titulo-form-avaliacao')
     };
 
     els.linkVoltar.href = `/turma/${TURMA_ID}`;
@@ -27,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarAvaliacoes();
 
     els.form.addEventListener('submit', handleCriar);
+    els.cancelar.addEventListener('click', limparEdicao);
 });
 
 function escapeHTML(valor) {
@@ -101,6 +106,7 @@ async function carregarAvaliacoes() {
             return;
         }
 
+        avaliacoesCarregadas = avaliacoes;
         const grupos = agruparPorPeriodo(avaliacoes);
 
         Object.keys(grupos).forEach(chave => {
@@ -172,6 +178,7 @@ function criarCardAvaliacao(av) {
                 Lançar Notas
             </a>
 
+            <button type="button" onclick="editarAvaliacao('${av.id}')" class="botao-acao">Editar</button>
             <button onclick="deletarAvaliacao('${av.id}')" class="botao-delete">
                 Excluir
             </button>
@@ -201,10 +208,10 @@ async function handleCriar(e) {
     }
 
     try {
-        const res = await fetch('/api/avaliacoes', {
-            method: 'POST',
+        const res = await fetch(avaliacaoEmEdicao ? `/api/avaliacoes/${avaliacaoEmEdicao.id}` : '/api/avaliacoes', {
+            method: avaliacaoEmEdicao ? 'PUT' : 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dados)
+            body: JSON.stringify(avaliacaoEmEdicao ? {...dados, revision: avaliacaoEmEdicao.revision} : dados)
         });
 
         const resposta = await res.json();
@@ -213,10 +220,7 @@ async function handleCriar(e) {
             throw new Error(resposta.error || 'Erro ao criar avaliação.');
         }
 
-        els.form.reset();
-        els.inputMax.value = 10;
-        els.inputPeso.value = 1;
-        els.inputPeriodoNumero.value = 1;
+        limparEdicao();
 
         carregarAvaliacoes();
 
@@ -246,4 +250,33 @@ window.deletarAvaliacao = async function(id) {
     } catch (error) {
         alert(error.message);
     }
+};
+function limparEdicao() {
+    avaliacaoEmEdicao = null;
+    els.form.reset();
+    els.inputMax.value = 10;
+    els.inputPeso.value = 1;
+    els.inputPeriodoNumero.value = 1;
+    els.tituloForm.textContent = 'Nova Atividade Avaliativa';
+    els.form.querySelector('button[type="submit"]').textContent = 'Cadastrar Avaliação';
+    els.cancelar.hidden = true;
+    els.cancelar.style.display = 'none';
+}
+
+window.editarAvaliacao = function(id) {
+    const av = avaliacoesCarregadas.find(item => item.id === id);
+    if (!av) return;
+    avaliacaoEmEdicao = av;
+    els.inputNome.value = av.nome || '';
+    els.inputData.value = av.data || '';
+    els.inputMax.value = av.nota_maxima;
+    els.inputPeriodoTipo.value = av.periodo_tipo || 'avaliacao';
+    els.inputPeriodoNumero.value = av.periodo_numero || 1;
+    els.inputCategoria.value = av.categoria || 'atividade';
+    els.inputPeso.value = av.peso || 1;
+    els.tituloForm.textContent = 'Editar avaliação';
+    els.form.querySelector('button[type="submit"]').textContent = 'Salvar alterações';
+    els.cancelar.hidden = false;
+    els.cancelar.style.display = 'inline-block';
+    els.form.scrollIntoView({behavior: 'smooth', block: 'start'});
 };
