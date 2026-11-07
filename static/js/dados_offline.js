@@ -22,7 +22,7 @@
     async function atualizar() {
         const copia = await obterSnapshot(usuario);
         resumo.textContent = copia
-            ? `Cópia de ${new Date(copia.salvo_em).toLocaleString('pt-BR')}: ${copia.turmas.length} turma(s) e ${copia.alunos.length} aluno(s).`
+            ? `Cópia de ${new Date(copia.salvo_em).toLocaleString('pt-BR')}: ${copia.turmas.length} turma(s), ${copia.alunos.length} aluno(s), ${copia.avaliacoes?.length ?? 0} avaliação(ões) e ${copia.diario?.length ?? 0} registro(s) de diário.`
             : 'Nenhuma cópia local desta conta neste navegador.';
         return copia;
     }
@@ -69,12 +69,22 @@
         return dados;
     }
 
+    async function carregarObjetoApi(caminho) {
+        const resposta = await fetch(caminho, {credentials: 'same-origin', cache: 'no-store'});
+        if (!resposta.ok) throw new Error(`Falha HTTP ${resposta.status}`);
+        const dados = await resposta.json();
+        if (!dados || typeof dados !== 'object' || Array.isArray(dados)) {
+            throw new Error('Resposta inválida da API de notas.');
+        }
+        return dados;
+    }
+
     el('offline-baixar').addEventListener('click', async () => {
         if (ocupado) return;
         if (!navigator.onLine) { estado.textContent = 'Conecte-se à internet para baixar os dados.'; return; }
-        if (!confirm('Salvar turmas e alunos neste navegador? Dados pessoais poderão permanecer no dispositivo.')) return;
+        if (!confirm('Baixar turmas, alunos, notas e diário neste dispositivo? Esses dados escolares são sensíveis e permanecerão armazenados no navegador.')) return;
         bloquear(true);
-        estado.textContent = 'Baixando turmas e alunos...';
+        estado.textContent = 'Baixando turmas, alunos, avaliações, notas e diário. Esta operação pode levar algum tempo...';
         try {
             // Mantém também os vínculos turma↔aluno. O aluno pode participar de
             // mais de uma turma, e a tabela alunos não contém campo turma_id.
@@ -82,6 +92,9 @@
             const [turmas, alunos] = await Promise.all([
                 carregarApi('/api/turmas'), carregarApi('/api/alunos')
             ]);
+            if (turmas.length >= 1000 || alunos.length >= 1000) {
+                throw new Error('Limite de registros atingido. Cópia antiga preservada.');
+            }
             const vinculos = [];
             // Evita disparar dezenas de consultas simultâneas ao Supabase.
             for (let inicio = 0; inicio < turmas.length; inicio += 4) {
@@ -96,14 +109,53 @@
                     });
                 });
             }
+            // Carrega todos os módulos antes de substituir a cópia. Qualquer
+            // erro preserva o snapshot anterior; nunca salva uma cópia incompleta.
+            const [diario, grupos] = await Promise.all([
+                carregarApi('/api/diario'),
+                (async () => {
+                    const lista = [];
+                    for (let inicio = 0; inicio < turmas.length; inicio += 4) {
+                        const lote = await Promise.all(turmas.slice(inicio, inicio + 4).map(turma =>
+                            carregarApi(`/api/turma/${encodeURIComponent(turma.id)}/avaliacoes`)));
+                        lote.forEach(avaliacoes => lista.push(...avaliacoes));
+                    }
+                    return lista;
+                })()
+            ]);
+            if (diario.length >= 1000 || grupos.length >= 1000) {
+                throw new Error('Limite de avaliações ou diário atingido. Cópia antiga preservada.');
+            }
+            const notas = [];
+            for (let inicio = 0; inicio < grupos.length; inicio += 4) {
+                const respostas = await Promise.all(grupos.slice(inicio, inicio + 4).map(av =>
+                    carregarObjetoApi(`/api/avaliacao/${encodeURIComponent(av.id)}/diario`)));
+                respostas.forEach((dados, i) => {
+                    const av = grupos[inicio + i];
+                    // Esta API devolve objeto e não lista; valida para não salvar
+                    // dados parciais ou em formato inesperado.
+                    if (!dados || !Array.isArray(dados.alunos) || !dados.avaliacao) {
+                        throw new Error('Dados de notas incompletos.');
+                    }
+                    if (dados.alunos.length >= 1000) {
+                        throw new Error('Limite de alunos por avaliação atingido.');
+                    }
+                    for (const aluno of dados.alunos) {
+                        notas.push({avaliacao_id: av.id, aluno_id: aluno.id,
+                            valor: aluno.nota, revision: aluno.revision,
+                            recupera_periodo: aluno.recupera_periodo ?? null});
+                    }
+                });
+            }
             await salvarSnapshotVersionado({
-                usuario_id: usuario, salvo_em: new Date().toISOString(), turmas, alunos, vinculos
+                usuario_id: usuario, salvo_em: new Date().toISOString(),
+                turmas, alunos, vinculos, avaliacoes: grupos, notas, diario
             });
-            estado.textContent = 'Cópia de consulta salva neste dispositivo.';
+            estado.textContent = 'Cópia de turmas, alunos, notas e diário salva neste dispositivo.';
             await atualizar();
         } catch (erro) {
             console.error(erro);
-            estado.textContent = 'Não foi possível baixar todos os dados. Cópia anterior preservada.';
+            estado.textContent = `Não foi possível baixar todos os dados: ${erro.message}. Cópia anterior preservada.`;
         } finally { bloquear(false); }
     });
 
@@ -115,7 +167,8 @@
             area.replaceChildren();
             if (!copia) { estado.textContent = 'Baixe os dados primeiro.'; return; }
             for (const [titulo, itens, campo] of [
-                ['Turmas', copia.turmas, 'nome'], ['Alunos', copia.alunos, 'nome_completo']
+                ['Turmas', copia.turmas, 'nome'], ['Alunos', copia.alunos, 'nome_completo'],
+                ['Avaliações', copia.avaliacoes || [], 'nome'], ['Diário', copia.diario || [], 'titulo']
             ]) {
                 const cabecalho = document.createElement('h4');
                 cabecalho.textContent = `${titulo} (${itens.length})`;
@@ -140,7 +193,7 @@
         try {
             const copia = await obterSnapshot(usuario);
             if (!copia) { estado.textContent = 'Nenhuma cópia disponível para exportar.'; return; }
-            if (!confirm('Exportar arquivo JSON com dados pessoais de alunos? Guarde-o em local seguro.')) return;
+            if (!confirm('Exportar arquivo JSON com dados pessoais, notas e diário escolar? Guarde-o em local seguro.')) return;
             const blob = new Blob([JSON.stringify(copia, null, 2)], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');

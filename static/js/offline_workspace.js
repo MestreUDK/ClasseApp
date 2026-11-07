@@ -12,6 +12,7 @@
     const search = get('offline-filter');
     const title = get('offline-title');
     const info = get('offline-info');
+    const academic = get('offline-academico');
     const forms = {
         turmas: [['nome', 'Nome'], ['descricao', 'Descrição']],
         alunos: [['nome_completo', 'Nome completo'], ['matricula', 'Matrícula'],
@@ -21,6 +22,7 @@
     let account = null;
     let snapshot = null;
     let drafts = [];
+    let academicDrafts = [];
     let view = 'turmas';
     let classFilter = null;
 
@@ -156,11 +158,18 @@
     }
     function draw() {
         list.replaceChildren();
+        academic.hidden = true;
         get('stat-turmas').textContent = String(snapshot.turmas.length);
         get('stat-alunos').textContent = String(snapshot.alunos.length);
-        get('stat-edicoes').textContent = String(drafts.length);
+        get('stat-edicoes').textContent = String(drafts.length + academicDrafts.length);
         title.textContent = view === 'turmas' ? 'Turmas' : view === 'alunos' ?
-            (classFilter ? `Alunos — ${classNameById(classFilter)}` : 'Alunos') : 'Alterações pendentes';
+            (classFilter ? `Alunos — ${classNameById(classFilter)}` : 'Alunos') :
+            view === 'notas' ? 'Avaliações e notas' : view === 'diario' ? 'Diário de Bordo' : 'Alterações pendentes';
+        search.closest('.filters').querySelector('input').hidden = (view === 'notas' || view === 'diario');
+        if (view === 'notas' || view === 'diario') {
+            window.ClasseAcademicoOffline?.render(view, {snapshot, conta: account});
+            return;
+        }
         const term = search.value.trim().toLocaleLowerCase('pt-BR');
         if (view === 'pendencias') {
             const visible = drafts.filter(item => {
@@ -172,6 +181,17 @@
                 element.append(text('h3', item.dados?.nome_completo || item.dados?.nome || String(item.id)));
                 element.append(text('p', `${item.tipo === 'turmas' ? 'Turma' : 'Aluno'} • revisão base ${item.expected_revision}`, 'meta'));
                 element.append(text('p', item.estado === 'conflito' ? 'Conflito: resolver online' : 'Aguardando envio', 'pending'));
+                list.append(element);
+            }
+            for (const item of academicDrafts) {
+                const descricao = item.tipo === 'nota' ?
+                    `Nota · aluno ${item.aluno_id}` : `Diário · ${item.dados.titulo}`;
+                if (!descricao.toLocaleLowerCase('pt-BR').includes(term)) continue;
+                const element = text('article', '', 'item');
+                element.append(text('h3', descricao));
+                element.append(text('p', `Revisão base ${item.expected_revision}`, 'meta'));
+                element.append(text('p', item.estado === 'conflito' ?
+                    'Conflito: resolver no Perfil quando houver conexão' : 'Aguardando envio pelo Perfil', 'pending'));
                 list.append(element);
             }
         } else {
@@ -189,6 +209,7 @@
     async function reload() {
         snapshot = await obterSnapshot(account);
         drafts = await listarEdicoesOffline(account);
+        academicDrafts = await listarEdicoesAcademicas(account);
         if (!snapshot || !Array.isArray(snapshot.turmas) || !Array.isArray(snapshot.alunos)) {
             showError('Não existe uma cópia local desta conta. Conecte-se, faça login e use Meu Perfil → Baixar da nuvem antes de utilizar o espaço offline.');
             return;
@@ -217,6 +238,13 @@
         button.addEventListener('click', () => enterView(button.dataset.view));
     });
     search.addEventListener('input', draw);
+    document.addEventListener('academico-offline:gravado', async () => {
+        try {
+            academicDrafts = await listarEdicoesAcademicas(account);
+            get('stat-edicoes').textContent = String(drafts.length + academicDrafts.length);
+            if (view === 'pendencias') draw();
+        } catch (_) { info.textContent = 'Edição salva, mas não foi possível atualizar a contagem.'; }
+    });
     get('offline-refresh').addEventListener('click', async () => {
         try { await reload(); } catch (_) { info.textContent = 'Falha ao atualizar a visualização local.'; }
     });

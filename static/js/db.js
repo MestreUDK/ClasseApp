@@ -1,11 +1,12 @@
 // Persistência local das frequências ainda não enviadas.
 // Não armazene credenciais ou tokens de autenticação neste banco.
 const CLASSE_DB_NAME = 'ClasseAppDB';
-const CLASSE_DB_VERSION = 4;
+const CLASSE_DB_VERSION = 5;
 const CLASSE_QUEUE = 'frequencia_pendente';
 const CLASSE_SNAPSHOTS = 'snapshots_consulta';
 const CLASSE_HISTORICO = 'snapshots_historico';
 const CLASSE_EDICOES = 'edicoes_offline';
+const CLASSE_ACADEMICO_EDICOES = 'edicoes_academicas';
 
 function openDB() {
     return new Promise((resolve, reject) => {
@@ -20,6 +21,9 @@ function openDB() {
             }
             if (!db.objectStoreNames.contains(CLASSE_EDICOES)) {
                 db.createObjectStore(CLASSE_EDICOES, { keyPath: 'chave' });
+            }
+            if (!db.objectStoreNames.contains(CLASSE_ACADEMICO_EDICOES)) {
+                db.createObjectStore(CLASSE_ACADEMICO_EDICOES, {keyPath: 'chave'});
             }
             if (!db.objectStoreNames.contains(CLASSE_HISTORICO)) {
                 db.createObjectStore(CLASSE_HISTORICO, { keyPath: 'usuario_id' });
@@ -223,4 +227,51 @@ function marcarEdicaoOfflineSeIgual(esperado, estado) {
         return Promise.reject(new Error('Estado inválido.'));
     }
     return modificarEdicaoOfflineSeIgual(esperado, estado);
+}
+
+
+// Notas e diário: fila separada para não interferir em edições de turmas/alunos.
+// O timestamp é informativo; a revisão confirmada pelo servidor controla conflitos.
+function transacaoAcademica(modo, executar) {
+    return openDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(CLASSE_ACADEMICO_EDICOES, modo);
+        let resultado;
+        const req = executar(tx.objectStore(CLASSE_ACADEMICO_EDICOES));
+        if (req) req.onsuccess = () => { resultado = req.result; };
+        tx.oncomplete = () => { db.close(); resolve(resultado); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+        tx.onabort = () => { db.close(); reject(tx.error || new Error('Transação cancelada')); };
+    }));
+}
+function listarEdicoesAcademicas(usuarioId) {
+    return transacaoAcademica('readonly', store => store.getAll())
+        .then(lista => lista.filter(item => item.usuario_id === usuarioId));
+}
+function salvarEdicaoAcademica(item) {
+    if (!item?.usuario_id || !item?.chave || !['nota', 'diario'].includes(item.tipo)) {
+        return Promise.reject(new Error('Edição acadêmica inválida.'));
+    }
+    return transacaoAcademica('readwrite', store => store.put(item));
+}
+function mesmaEdicaoAcademica(a, b) {
+    return Boolean(a && b && a.usuario_id === b.usuario_id && a.chave === b.chave &&
+        a.edicao_id === b.edicao_id && a.estado === b.estado &&
+        JSON.stringify(a.dados) === JSON.stringify(b.dados));
+}
+function alterarEdicaoAcademicaSeIgual(esperada, estado = null) {
+    return openDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(CLASSE_ACADEMICO_EDICOES, 'readwrite');
+        const store = tx.objectStore(CLASSE_ACADEMICO_EDICOES);
+        let alterou = false;
+        const req = store.get(esperada.chave);
+        req.onsuccess = () => {
+            if (!mesmaEdicaoAcademica(req.result, esperada)) return;
+            if (estado === null) store.delete(esperada.chave);
+            else store.put({...req.result, estado});
+            alterou = true;
+        };
+        tx.oncomplete = () => { db.close(); resolve(alterou); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+        tx.onabort = () => { db.close(); reject(tx.error); };
+    }));
 }
