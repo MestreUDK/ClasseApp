@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-appearance-user="{{ current_user.id if current_user.is_authenticated else 'visitante' }}">
 <head>
     <meta charset="UTF-8">
 
@@ -10,10 +10,10 @@
 
     <title>{% block title %}Classe App{% endblock %}</title>
 
-    <link 
-        rel="stylesheet" 
-        href="{{ url_for('static', filename='styles.css') }}"
-    >
+    <!-- Define a aparência antes de carregar os estilos, evitando mudanças visuais ao abrir a página. -->
+    <script src="{{ url_for('static', filename='js/aparencia.js', v=app_version) }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=app_version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='aparencia.css', v=app_version) }}">
 
     <link 
         rel="manifest" 
@@ -195,6 +195,8 @@
                 </svg>
             </button>
 
+            <a href="/perfil#aparencia" class="btn-icon" title="Personalizar aparência" aria-label="Personalizar aparência" style="text-decoration:none; font-size:21px;">🎨</a>
+
             <a href="/perfil#notificacoes" class="btn-icon" title="Notificações" aria-label="Central de notificações" style="text-decoration:none; font-size:22px;">🔔</a>
 
             <a 
@@ -245,53 +247,8 @@
         }
 
 
-        // =========================
-        // DARK MODE
-        // =========================
-
-        const toggleBtn = document.getElementById('theme-toggle');
-
-        const html = document.documentElement;
-
-        const moonIcon = document.querySelector('.moon');
-        const sunIcon = document.querySelector('.sun');
-
-        const savedTheme = localStorage.getItem('theme');
-
-        const systemDark = window.matchMedia(
-            '(prefers-color-scheme: dark)'
-        ).matches;
-
-        if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
-            html.setAttribute('data-theme', 'dark');
-
-            moonIcon.style.display = 'none';
-            sunIcon.style.display = 'block';
-        }
-
-        toggleBtn.addEventListener('click', () => {
-
-            const currentTheme = html.getAttribute('data-theme');
-
-            if (currentTheme === 'dark') {
-
-                html.setAttribute('data-theme', 'light');
-
-                localStorage.setItem('theme', 'light');
-
-                moonIcon.style.display = 'block';
-                sunIcon.style.display = 'none';
-
-            } else {
-
-                html.setAttribute('data-theme', 'dark');
-
-                localStorage.setItem('theme', 'dark');
-
-                moonIcon.style.display = 'none';
-                sunIcon.style.display = 'block';
-            }
-        });
+        // A escolha de claro/escuro e a personalização são geridas em aparencia.js.
+        // O botão antigo da barra continua disponível e sincronizado com o Perfil.
 
     </script>
 

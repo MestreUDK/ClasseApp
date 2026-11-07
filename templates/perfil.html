@@ -16,6 +16,66 @@
 
         <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
 
+        <section id="aparencia" class="appearance-section" aria-labelledby="aparencia-titulo">
+            <div class="appearance-heading">
+                <span class="appearance-heading-icon" aria-hidden="true">🎨</span>
+                <div>
+                    <h3 id="aparencia-titulo">Aparência do ClasseApp</h3>
+                    <p>Personalize o layout e as cores. As mudanças aparecem imediatamente.</p>
+                </div>
+            </div>
+
+            <fieldset class="appearance-fieldset">
+                <legend>Modelo de layout</legend>
+                <div class="appearance-layouts">
+                    <label class="appearance-layout-option">
+                        <input type="radio" name="appearance-layout" value="classic" checked>
+                        <span class="appearance-layout-sample sample-classic" aria-hidden="true">
+                            <span class="sample-top"></span><span class="sample-content"><i></i><i></i></span>
+                        </span>
+                        <strong>Clássico</strong>
+                        <small>Visual atual do ClasseApp</small>
+                    </label>
+                    <label class="appearance-layout-option">
+                        <input type="radio" name="appearance-layout" value="studio">
+                        <span class="appearance-layout-sample sample-studio" aria-hidden="true">
+                            <span class="sample-side"></span><span class="sample-top"></span>
+                            <span class="sample-content"><i></i><i></i></span>
+                        </span>
+                        <strong>Estúdio</strong>
+                        <small>Inspirado na demonstração</small>
+                    </label>
+                </div>
+            </fieldset>
+
+            <fieldset class="appearance-fieldset">
+                <legend>Iluminação</legend>
+                <div class="appearance-mode-options">
+                    <label><input type="radio" name="appearance-mode" value="system" checked> Automático</label>
+                    <label><input type="radio" name="appearance-mode" value="light"> Claro</label>
+                    <label><input type="radio" name="appearance-mode" value="dark"> Escuro</label>
+                </div>
+            </fieldset>
+
+            <fieldset class="appearance-fieldset">
+                <legend>Cor de destaque</legend>
+                <div class="appearance-accents">
+                    <label><input type="radio" name="appearance-accent" value="blue" checked><span class="appearance-dot" style="--dot-color:#287bd2"></span> Azul</label>
+                    <label><input type="radio" name="appearance-accent" value="green"><span class="appearance-dot" style="--dot-color:#168153"></span> Verde</label>
+                    <label><input type="radio" name="appearance-accent" value="purple"><span class="appearance-dot" style="--dot-color:#8053c7"></span> Roxo</label>
+                    <label><input type="radio" name="appearance-accent" value="orange"><span class="appearance-dot" style="--dot-color:#bd721a"></span> Laranja</label>
+                    <label><input type="radio" name="appearance-accent" value="teal"><span class="appearance-dot" style="--dot-color:#0e8795"></span> Turquesa</label>
+                    <label><input type="radio" name="appearance-accent" value="rose"><span class="appearance-dot" style="--dot-color:#bc477b"></span> Rosa</label>
+                </div>
+            </fieldset>
+
+            <div class="appearance-actions">
+                <button type="button" id="appearance-reset" class="appearance-reset">Restaurar padrão</button>
+                <span id="appearance-status" role="status" aria-live="polite">Preferências salvas neste dispositivo.</span>
+            </div>
+            <p class="appearance-note">As opções ficam salvas neste navegador para sua conta, inclusive sem internet. Não modificam os dados das turmas nem a aparência de outros professores.</p>
+        </section>
+
         <section id="notificacoes" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
             <h3>🔔 Central de Notificações <span id="notificacoes-contador" class="notificacoes-contador" hidden></span></h3>
             <p class="notificacoes-descricao">Aniversários nos próximos 7 dias e frequências aguardando sincronização neste dispositivo.</p>
