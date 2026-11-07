@@ -41,6 +41,8 @@ app.secret_key = os.environ.get("SECRET_KEY", "minha_chave_secreta_super_segura"
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'auth_bp.login' 
+login_manager.login_message = 'Faça login para acessar esta página.'
+login_manager.login_message_category = 'info'
 
 @login_manager.user_loader
 def load_user(user_id):
