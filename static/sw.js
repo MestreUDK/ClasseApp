@@ -1,10 +1,12 @@
 // Cache exclusivamente para recursos públicos estáticos e tela genérica offline.
 // Respostas autenticadas e endpoints /api nunca são persistidos pelo Service Worker.
-const CACHE_NAME = 'classeapp-static-v2-2-23-2';
+const CACHE_NAME = 'classeapp-static-v2-2-23-3';
 const OFFLINE_PAGE = '/offline';
 const CORE_FILES = [
     OFFLINE_PAGE,
     '/static/styles.css',
+    '/static/password_visibility.css',
+    '/static/js/password_visibility.js',
     '/static/js/db.js',
     '/static/js/vault.js',
     '/static/js/offline_frequencia.js',

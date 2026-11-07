@@ -43,6 +43,7 @@
     <script src="{{ url_for('static', filename='js/aparencia.js', v=app_version) }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=app_version) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='aparencia.css', v=app_version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='password_visibility.css', v=app_version) }}">
 
     <link 
         rel="manifest" 
@@ -260,6 +261,7 @@
     </footer>
 
     {% block scripts %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/password_visibility.js', v=app_version) }}" defer></script>
 
     <script>
 

@@ -216,10 +216,15 @@
                 throw new Error(
                     'Cofre local bloqueado. Use “Desbloquear dados locais” no Perfil.');
             }
-            const senha=window.prompt('Informe a senha LOCAL para acessar os dados offline deste dispositivo:');
-            if (!senha) throw new Error('Dados locais bloqueados. Informe sua senha local para continuar.');
-            if (!await verificar(usuarioId,senha)) throw new Error('Senha local incorreta. Nenhum dado foi alterado.');
-            return obterChave(usuarioId);
+            // Use o formulário existente, com campo protegido e botão de olho.
+            // Prompts nativos não ocultam a senha nem oferecem esse controle.
+            const porta = document.getElementById('offline-desbloqueio');
+            if (porta) {
+                porta.hidden = false;
+                document.getElementById('offline-desbloqueio-senha')?.focus();
+                throw new Error('Informe a senha no formulário de desbloqueio do Espaço offline.');
+            }
+            throw new Error('Abra o Espaço offline para desbloquear os dados locais.');
         })();
         desbloqueiosEmCurso.set(usuarioId,promessa);
         try {return await promessa;} finally {desbloqueiosEmCurso.delete(usuarioId);}
