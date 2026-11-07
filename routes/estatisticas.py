@@ -112,7 +112,7 @@ def calcular_notas_modulares(turma_id, alunos):
     """Mostra médias por período com recuperações aplicadas sem peso extra."""
     avaliacoes = (supabase.table('avaliacoes')
                   .select('id, nome, data, nota_maxima, periodo_tipo, '
-                          'periodo_numero, categoria, peso')
+                          'periodo_numero, categoria, peso, recuperacao_modo')
                   .eq('turma_id', str(turma_id))
                   .eq('user_id', current_user.id)
                   .order('periodo_numero', desc=False)
@@ -122,14 +122,18 @@ def calcular_notas_modulares(turma_id, alunos):
         return {'periodos': [], 'total_avaliacoes': 0}
 
     registros = (supabase.table('notas')
-                 .select('aluno_id, avaliacao_id, valor')
+                 .select('aluno_id, avaliacao_id, valor, recupera_periodo')
                  .in_('avaliacao_id', [av['id'] for av in avaliacoes])
                  .eq('user_id', current_user.id)
                  .execute().data or [])
     notas = {}
+    destinos = {}
     for registro in registros:
         notas.setdefault(registro['aluno_id'], {})[
             registro['avaliacao_id']] = registro.get('valor')
+        if registro.get('recupera_periodo') is not None:
+            destinos.setdefault(registro['aluno_id'], {})[
+                registro['avaliacao_id']] = registro['recupera_periodo']
 
     grupos = {}
     for av in avaliacoes:
@@ -150,7 +154,7 @@ def calcular_notas_modulares(turma_id, alunos):
         grupos[chave]['avaliacoes'].append(av)
 
     rendimento_por_aluno = {
-        aluno['id']: calcular_rendimento(aluno['id'], avaliacoes, notas)
+        aluno['id']: calcular_rendimento(aluno['id'], avaliacoes, notas, destinos)
         for aluno in alunos
     }
     for grupo in grupos.values():

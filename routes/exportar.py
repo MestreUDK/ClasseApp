@@ -259,7 +259,7 @@ def buscar_dados_notas_modulares(turma_id):
     alunos = buscar_alunos_da_turma(turma_id)
     avaliacoes = (supabase.table('avaliacoes')
                   .select('id, nome, data, nota_maxima, periodo_tipo, '
-                          'periodo_numero, categoria, peso')
+                          'periodo_numero, categoria, peso, recuperacao_modo')
                   .eq('turma_id', str(turma_id))
                   .eq('user_id', current_user.id)
                   .order('periodo_numero', desc=False)
@@ -267,15 +267,19 @@ def buscar_dados_notas_modulares(turma_id):
                   .execute().data or [])
 
     notas_map = {}
+    destinos = {}
     if avaliacoes:
         registros = (supabase.table('notas')
-                     .select('aluno_id, avaliacao_id, valor')
+                     .select('aluno_id, avaliacao_id, valor, recupera_periodo')
                      .in_('avaliacao_id', [av['id'] for av in avaliacoes])
                      .eq('user_id', current_user.id)
                      .execute().data or [])
         for registro in registros:
             notas_map.setdefault(registro['aluno_id'], {})[
                 registro['avaliacao_id']] = registro.get('valor')
+            if registro.get('recupera_periodo') is not None:
+                destinos.setdefault(registro['aluno_id'], {})[
+                    registro['avaliacao_id']] = registro['recupera_periodo']
 
     grupos = {}
     for av in avaliacoes:
@@ -294,11 +298,11 @@ def buscar_dados_notas_modulares(turma_id):
     periodos = sorted(grupos.values(),
                       key=lambda grupo: (grupo['periodo_tipo'],
                                          grupo['periodo_numero']))
-    return alunos, periodos, notas_map, avaliacoes
+    return alunos, periodos, notas_map, avaliacoes, destinos
 
 
 def calcular_media_ponderada(aluno_id, avaliacoes, notas_map,
-                             todas_avaliacoes=None):
+                             todas_avaliacoes=None, destinos=None):
     """Retorna nota efetiva (com REC) e quantidade de lançamentos regulares."""
     original, lancadas, _ = media_atividades(
         avaliacoes, notas_map.get(aluno_id, {}))
@@ -309,7 +313,7 @@ def calcular_media_ponderada(aluno_id, avaliacoes, notas_map,
         if (primeiro.get('periodo_tipo') == 'avaliacao'
                 and numero in (1, 2, 3, 4)):
             media = calcular_rendimento(
-                aluno_id, todas_avaliacoes, notas_map)['periodos'][numero]['efetiva']
+                aluno_id, todas_avaliacoes, notas_map, destinos)['periodos'][numero]['efetiva']
     return round(media, 2) if media is not None else None, lancadas
 
 
@@ -330,7 +334,7 @@ def exportar_notas_excel(turma_id):
             return jsonify({'error': 'Acesso negado.'}), 403
 
         turma_nome = buscar_nome_turma(turma_id)
-        alunos, periodos, notas_map, avaliacoes = buscar_dados_notas_modulares(turma_id)
+        alunos, periodos, notas_map, avaliacoes, destinos = buscar_dados_notas_modulares(turma_id)
         wb = openpyxl.Workbook()
         resumo = wb.active
         resumo.title = 'Resumo de Notas'
@@ -340,7 +344,7 @@ def exportar_notas_excel(turma_id):
             'Média anual', 'Média parcial',
         ])
         for aluno in alunos:
-            rendimento = calcular_rendimento(aluno['id'], avaliacoes, notas_map)
+            rendimento = calcular_rendimento(aluno['id'], avaliacoes, notas_map, destinos)
             periodos_aluno = rendimento['periodos']
             recs = rendimento['recuperacoes']
             resumo.append([
@@ -375,7 +379,7 @@ def exportar_notas_excel(turma_id):
                 linha = [_celula_segura(aluno.get('nome_completo'))]
                 linha.extend(notas_map.get(aluno_id, {}).get(av['id']) for av in grupo)
                 media, lancadas = calcular_media_ponderada(
-                    aluno_id, grupo, notas_map, avaliacoes)
+                    aluno_id, grupo, notas_map, avaliacoes, destinos)
                 linha.extend([f'{lancadas}/{len(grupo)}', media])
                 ws.append(linha)
             ws.append([])
@@ -401,7 +405,7 @@ def exportar_notas_excel(turma_id):
             ws.append(['Aluno', 'REC 1', 'Alvo REC 1', 'REC 1 aplicada',
                        'REC 2', 'Alvo REC 2', 'REC 2 aplicada'])
             for aluno in alunos:
-                result = calcular_rendimento(aluno['id'], avaliacoes, notas_map)
+                result = calcular_rendimento(aluno['id'], avaliacoes, notas_map, destinos)
                 rec1, rec2 = result['recuperacoes'][1], result['recuperacoes'][2]
                 ws.append([
                     _celula_segura(aluno.get('nome_completo')),
