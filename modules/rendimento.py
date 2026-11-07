@@ -57,14 +57,18 @@ def media_atividades(avaliacoes, notas_do_aluno):
     return (soma / pesos if pesos else None, lancadas, len(regulares))
 
 
-def calcular_rendimento(aluno_id, avaliacoes, notas_por_aluno):
+def calcular_rendimento(aluno_id, avaliacoes, notas_por_aluno,
+                       destinos_por_aluno=None):
     """Calcula notas efetivas, recuperações e média anual de um aluno.
 
     1ª REC cobre 1ª/2ª; 2ª REC cobre 3ª/4ª. Se ambas vermelhas, escolhe
-    2ª/4ª (maior peso). A recuperação só atua se superar a nota escolhida.
-    Uma média anual é definitiva apenas com todos os quatro períodos completos.
+    2ª/4ª (maior peso). No modo manual, o professor define um destino
+    individual (por aluno), sempre dentro do par e com nota abaixo de 5.
+    A recuperação só atua se superar a nota escolhida. A média anual
+    é definitiva apenas com os quatro períodos completos.
     """
     notas = notas_por_aluno.get(aluno_id, {})
+    destinos = (destinos_por_aluno or {}).get(aluno_id, {})
     regulares = {numero: [] for numero in PESOS_ANUAIS}
     recuperacoes = {1: [], 2: []}
     avisos = []
@@ -103,18 +107,27 @@ def calcular_rendimento(aluno_id, avaliacoes, notas_por_aluno):
         rec_nota = None
         alvo = None
         aplicada = False
+        modo = ('manual' if candidatas and
+                candidatas[0].get('recuperacao_modo') == 'manual'
+                else 'automatico')
         if len(candidatas) > 1:
             avisos.append(
                 f'Existem {len(candidatas)} avaliações para a {rec_num}ª '
                 'recuperação; regularize os cadastros para utilizar as notas.'
             )
         elif candidatas:
-            rec_nota = nota_normalizada(notas.get(candidatas[0]['id']),
-                                         candidatas[0])
+            rec_av = candidatas[0]
+            rec_nota = nota_normalizada(notas.get(rec_av['id']), rec_av)
             vermelhas = [numero for numero in (primeiro, segundo)
                          if periodos[numero]['_valor'] is not None
                          and periodos[numero]['_valor'] < NOTA_VERMELHA]
-            if len(vermelhas) == 2:
+            if modo == 'manual':
+                destino = destinos.get(rec_av['id'])
+                # Um destino antigo pode deixar de ser elegível depois que o
+                # professor corrigir a avaliação regular. Não o aplicamos.
+                if destino in vermelhas:
+                    alvo = destino
+            elif len(vermelhas) == 2:
                 alvo = segundo
             elif vermelhas:
                 alvo = vermelhas[0]
@@ -129,6 +142,9 @@ def calcular_rendimento(aluno_id, avaliacoes, notas_por_aluno):
             'nota': _decimal_para_nota(rec_nota),
             'alvo': alvo,
             'aplicada': aplicada,
+            'modo': modo,
+            'pendente_alvo': (modo == 'manual' and rec_nota is not None
+                             and alvo is None),
             'cadastrada': bool(candidatas),
             'ambigua': len(candidatas) > 1,
         }
