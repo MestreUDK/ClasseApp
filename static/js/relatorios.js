@@ -30,6 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (els.freqAno) {
         els.freqAno.value = new Date().getFullYear();
     }
+    const mapaAno = document.getElementById('mapa-ano');
+    if (mapaAno) {
+        mapaAno.value = new Date().getFullYear();
+    }
 
     carregarTurmas();
 
@@ -318,11 +322,21 @@ window.baixarDiario = function() {
     baixarArquivo(`/api/exportar/turma/${turmaId}/frequencia?${params.toString()}`);
 };
 
-window.baixarNotas = function() {
+window.baixarNotas = function(formato = 'mapa') {
     const turmaId = obterTurmaSelecionadaObrigatoria();
     if (!turmaId) return;
 
-    baixarArquivo(`/api/exportar/turma/${turmaId}/notas`);
+    const tipo = formato === 'modular' ? 'modular' : 'mapa';
+    const parametros = new URLSearchParams({ formato: tipo });
+    if (tipo === 'mapa') {
+        const ano = Number(document.getElementById('mapa-ano')?.value);
+        if (!Number.isInteger(ano) || ano < 2000 || ano > 2100) {
+            alert('Informe um ano letivo válido (2000 a 2100).');
+            return;
+        }
+        parametros.set('ano', String(ano));
+    }
+    baixarArquivo(`/api/exportar/turma/${turmaId}/notas?${parametros.toString()}`);
 };
 
 window.baixarDiarioBordo = function() {
