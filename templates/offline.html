@@ -1,24 +1,57 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Alunos - Offline</title>
-    <style>
-        body { 
-            font-family: sans-serif; 
-            margin: 2em; 
-            background-color: #f4f4f4; 
-            text-align: center;
-            padding-top: 50px;
-        }
-        h1 { color: #333; }
-        p { color: #555; font-size: 1.1em; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101827">
+  <title>ClasseApp — Espaço offline</title>
+  <style>
+    :root{color-scheme:dark;--bg:#101827;--panel:#1b2a40;--panel2:#24374f;--line:#39516c;--fg:#eef5ff;--muted:#afc1d7;--accent:#69b0ff;--danger:#ffbdad}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(145deg,#172e4b,#101827 50%);color:var(--fg);font:16px/1.5 system-ui,-apple-system,sans-serif}
+    button,input{font:inherit}button{cursor:pointer}.app{width:min(1050px,100%);margin:auto;padding:22px 18px 60px}
+    header{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center;margin-bottom:26px}
+    .brand{font-size:1.4rem;font-weight:800;color:var(--accent)}.tag{font-size:.8rem;padding:4px 10px;border:1px solid var(--line);border-radius:99px;color:var(--muted)}
+    h1{font-size:clamp(1.5rem,4vw,2.2rem);line-height:1.2;margin:4px 0 12px}h2{font-size:1.15rem}p{margin:8px 0}small,.muted{color:var(--muted)}
+    .panel{background:var(--panel);padding:18px;border:1px solid var(--line);border-radius:16px;margin:16px 0;box-shadow:0 12px 30px #0002}
+    .warning{border-left:4px solid #e8b45d;padding:10px 12px;background:#3c3428;border-radius:7px;color:#f4dfbd}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.toolbar button,.button{border:1px solid var(--line);color:var(--fg);background:var(--panel2);padding:11px 15px;border-radius:10px;text-decoration:none;font-weight:600}
+    .toolbar button[aria-pressed="true"],.button-primary{background:#2c70ad!important;color:#fff!important;border-color:#3883bf!important}
+    button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #84c2ff;outline-offset:2px}
+    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.stat{background:var(--panel2);border-radius:10px;padding:13px}.stat strong{display:block;font-size:1.55rem}
+    .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.filters input{min-width:180px;flex:1;background:#121e30;color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:11px}
+    .items{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:15px}.item{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:15px;overflow-wrap:anywhere}
+    .item h3{font-size:1.02rem;margin:0 0 4px}.item .meta{font-size:.9rem;color:var(--muted)}.item button{margin-top:12px;padding:7px 12px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent)}
+    .pending{color:#f5d38a;font-weight:700;font-size:.83rem}.empty{color:var(--muted);padding:20px 0}.hidden,[hidden]{display:none!important}
+    .editor{border-top:1px solid var(--line);margin-top:15px;padding-top:15px}.editor form{display:grid;gap:10px}.editor label{display:grid;gap:3px;font-size:.9rem;color:var(--muted)}.editor input{width:100%;background:#101b2b;border:1px solid var(--line);padding:9px;color:var(--fg);border-radius:8px}
+    .editor .actions{display:flex;gap:8px;flex-wrap:wrap}.editor .actions button{background:#2c70ad;color:white}
+    .footer{color:var(--muted);font-size:.85rem;padding-top:10px}
+    @media(max-width:580px){.app{padding:15px 12px 45px}.stats{grid-template-columns:repeat(3,1fr)}.stat{padding:9px}.stat strong{font-size:1.2rem}.items{grid-template-columns:1fr}header{margin-bottom:14px}}
+  </style>
+  <script src="/static/js/db.js" defer></script>
+  <script src="/static/js/offline_workspace.js" defer></script>
 </head>
 <body>
-    <h1>Você está offline</h1>
-    <p>Não foi possível conectar à internet.</p>
-    <p>Verifique sua conexão e tente novamente. Esta página será carregada automaticamente quando a conexão voltar.</p>
+<div class="app">
+  <header><div class="brand">ClasseApp <span class="tag">Espaço offline</span></div><a class="button" href="/">Voltar ao ClasseApp online</a></header>
+  <h1>Seus dados disponíveis no dispositivo</h1>
+  <p class="muted">Navegue entre turmas, alunos e alterações locais sem precisar abrir páginas autenticadas. Esse espaço utiliza a cópia que você baixou anteriormente.</p>
+  <p class="warning">Somente turmas e alunos estão disponíveis nesta fase. Notas, avaliações, diário, relatórios e a navegação completa do aplicativo ainda precisam de implementação offline. Nenhuma edição é enviada sem sua confirmação quando a conexão voltar.</p>
+  <section id="offline-erro" class="panel" hidden role="status"></section>
+  <div id="offline-app" hidden>
+    <section class="stats" aria-label="Resumo local"><div class="stat"><strong id="stat-turmas">0</strong><small>Turmas</small></div><div class="stat"><strong id="stat-alunos">0</strong><small>Alunos</small></div><div class="stat"><strong id="stat-edicoes">0</strong><small>Edições pendentes</small></div></section>
+    <p id="offline-info" class="muted" role="status"></p>
+    <nav class="toolbar" aria-label="Navegação offline">
+      <button type="button" data-view="turmas" aria-pressed="true">Turmas</button>
+      <button type="button" data-view="alunos" aria-pressed="false">Alunos</button>
+      <button type="button" data-view="pendencias" aria-pressed="false">Alterações pendentes</button>
+      <button type="button" id="offline-refresh">Atualizar dados locais</button>
+    </nav>
+    <section class="panel">
+      <div class="filters"><h2 id="offline-title">Turmas</h2><input id="offline-filter" type="search" placeholder="Pesquisar nesta seção" aria-label="Pesquisar registros offline"></div>
+      <div id="offline-items" class="items" aria-live="polite"></div>
+    </section>
+  </div>
+  <p class="footer">Os dados locais permanecem neste navegador e ainda não possuem proteção adicional por PIN ou criptografia. Não utilize o espaço offline em dispositivos compartilhados. Para baixar uma cópia nova ou sincronizar, conecte-se e acesse Meu Perfil.</p>
+</div>
 </body>
 </html>

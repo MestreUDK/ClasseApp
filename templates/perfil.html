@@ -99,7 +99,10 @@
 
         <section id="dados-offline" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
             <h3>📥 Dados locais e edição offline</h3>
-            <p class="notificacoes-descricao">Baixe uma cópia local de suas turmas e alunos para consultar neste dispositivo sem conexão. Você pode editar dados básicos de turmas e alunos na cópia local e enviar as alterações manualmente após reconectar. Não substitui a sincronização de frequências.</p>
+            <p class="notificacoes-descricao">A <strong>cópia baixada</strong> é o ponto de partida. Suas <strong>edições pendentes</strong> ficam guardadas separadamente e não alteram a cópia original até um novo download. A comparação abaixo mostra ambas, para evitar confusão.</p>
+            <p id="offline-pendencias-resumo" class="notificacoes-descricao" role="status">Consultando alterações locais...</p>
+            <div id="offline-pendencias-lista" aria-live="polite"></div>
+            <p><a href="/offline" class="notificacoes-atualizar" style="display:inline-block;text-decoration:none">📱 Abrir espaço offline</a> <small>Turmas, alunos e edições locais, com uma cópia já baixada.</small></p>
             <p id="offline-estado" role="status">Verificando cópia local...</p>
             <div id="offline-resumo"></div>
             <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">
@@ -107,12 +110,12 @@
                 <button type="button" id="offline-consultar" class="notificacoes-atualizar">Consultar cópia</button>
                 <button type="button" id="offline-exportar" class="notificacoes-atualizar">Exportar JSON</button>
                 <button type="button" id="offline-versoes" class="notificacoes-atualizar">Versões anteriores</button>
-                <button type="button" id="offline-comparar" class="notificacoes-atualizar">Comparar com a nuvem</button>
+                <button type="button" id="offline-comparar" class="notificacoes-atualizar">Ver diferenças e edições pendentes</button>
                 <button type="button" id="offline-apagar" class="notificacoes-atualizar">Apagar cópia local</button>
             </div>
             <div id="offline-edicoes" style="margin-top:16px">
-                <h4>Edição offline de turmas e alunos</h4>
-                <p class="notificacoes-descricao">Selecione um registro da cópia baixada. Alterações ficam neste dispositivo até você enviar. O envio exige sessão ativa e revisão original ainda válida na nuvem.</p>
+                <h4>✏️ Editar turmas e alunos</h4>
+                <p class="notificacoes-descricao">As alterações ficam no dispositivo. Use <strong>Ver diferenças e edições pendentes</strong> acima para conferi-las sem enviar; use <strong>Enviar edições pendentes</strong> somente quando estiver conectado e quiser salvar na nuvem.</p>
                 <p class="notificacoes-descricao">Se houver conflito, clique em <strong>Comparar e resolver</strong> para escolher campo a campo entre sua edição e a versão da nuvem. Você também pode manter a nuvem ou decidir depois. Nenhuma versão é substituída automaticamente.</p>
                 <div style="display:flex;flex-wrap:wrap;gap:10px">
                     <button type="button" id="edicoes-listar" class="notificacoes-atualizar">Editar dados locais</button>
@@ -124,7 +127,7 @@
             <div id="offline-dados" hidden style="margin-top:12px"></div>
             <div id="offline-historico" hidden style="margin-top:12px"></div>
             <div id="offline-comparacao" hidden style="margin-top:12px" aria-live="polite"></div>
-            <p class="notificacoes-descricao">As últimas três cópias anteriores ficam disponíveis para restauração local. Restaurar não envia dados à nuvem. A comparação é somente leitura: não envia, apaga nem substitui registros. Diferenças não significam necessariamente conflitos de edição. Requer conexão e sessão ativa.</p>
+            <p class="notificacoes-descricao">As últimas três cópias anteriores podem ser restauradas localmente. <strong>Comparar</strong> não envia nada e exige internet; <strong>Editar</strong> salva uma pendência no navegador; <strong>Enviar</strong> tenta salvar a pendência na nuvem, verificando a revisão. Nem toda diferença é conflito.</p>
             <p class="notificacoes-descricao">Atenção: os dados ficam armazenados neste navegador sem criptografia adicional. Evite dispositivos compartilhados; apague a cópia ao terminar. Edições pendentes são armazenadas separadamente e não são apagadas com a cópia de consulta. Não inclui notas, diário ou frequências.</p>
         </section>
 

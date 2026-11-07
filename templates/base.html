@@ -9,6 +9,21 @@
     >
 
     <title>{% block title %}Classe App{% endblock %}</title>
+    <script>
+    // O identificador só permite selecionar a cópia local na aba já autenticada.
+    // Não é credencial e não substitui autenticação. Nunca guardar tokens aqui.
+    try {
+        const conta = document.documentElement.dataset.appearanceUser;
+        if (conta && conta !== 'visitante') {
+            sessionStorage.setItem('classeapp:offline:conta-aba', conta);
+        }
+    } catch (_) { /* Armazenamento indisponível: o hub exibirá instruções. */ }
+    document.addEventListener('click', event => {
+        if (event.target.closest('a[href="/logout"]')) {
+            try { sessionStorage.removeItem('classeapp:offline:conta-aba'); } catch (_) {}
+        }
+    });
+    </script>
 
     <!-- Define a aparência antes de carregar os estilos, evitando mudanças visuais ao abrir a página. -->
     <script src="{{ url_for('static', filename='js/aparencia.js', v=app_version) }}"></script>

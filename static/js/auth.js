@@ -1,6 +1,7 @@
 /* Controles de senha das telas públicas do ClasseApp. */
 (() => {
     'use strict';
+    try { sessionStorage.removeItem('classeapp:offline:conta-aba'); } catch (_) {}
 
     document.querySelectorAll('[data-toggle-password]').forEach((button) => {
         const field = document.getElementById(button.dataset.togglePassword);

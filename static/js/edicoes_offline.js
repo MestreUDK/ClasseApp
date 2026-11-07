@@ -24,6 +24,7 @@
 
     function chave(tipo, id) { return `${usuario}:${tipo}:${id}`; }
     function mensagem(texto) { estado.textContent = texto; }
+    function notificarEdicoes() { document.dispatchEvent(new Event('classeapp:edicoes-atualizadas')); }
     function bloqueio(valor) {
         ocupado = valor;
         listar.disabled = valor;
@@ -169,6 +170,7 @@
                 mensagem(ok ? 'Edição descartada; a nuvem não foi alterada.' :
                     'Esta edição mudou em outra aba e foi preservada. Atualize a lista.');
                 await desenhar();
+                notificarEdicoes();
             } catch (erro) { console.error(erro); mensagem('Falha ao descartar a edição local.'); }
             finally { bloqueio(false); }
         });
@@ -201,6 +203,7 @@
                     'A nuvem foi atualizada, mas existe outra edição local mais recente. ' +
                     'Ela foi preservada; atualize a lista antes de enviar.');
                 await desenhar();
+                notificarEdicoes();
             } catch (erro) {
                 if (erro.status === 409 || erro.status === 428) {
                     mensagem('A nuvem foi alterada novamente. Nada foi substituído. ' +
@@ -226,14 +229,14 @@
             bloco.append(linha(`${item.tipo === 'turmas' ? 'Turma' : 'Aluno'}: ` +
                 `${rotuloRegistro(item)} — ` +
                 `${item.estado === 'conflito' ? '⚠️ Conflito' : 'Aguardando envio'}`));
-            if (item.estado === 'conflito') {
-                const botao = document.createElement('button');
-                botao.type = 'button'; botao.className = 'notificacoes-atualizar';
-                botao.textContent = 'Comparar e resolver';
-                const detalhe = document.createElement('div');
-                botao.addEventListener('click', () => comparar(item, detalhe));
-                bloco.append(botao, detalhe);
-            }
+            // Qualquer edição pode ser pré-visualizada antes do envio, mesmo
+            // quando ainda não houve um erro HTTP 409.
+            const botao = document.createElement('button');
+            botao.type = 'button'; botao.className = 'notificacoes-atualizar';
+            botao.textContent = item.estado === 'conflito' ? 'Comparar e resolver' : 'Revisar antes de enviar';
+            const detalhe = document.createElement('div');
+            botao.addEventListener('click', () => comparar(item, detalhe));
+            bloco.append(botao, detalhe);
             area.append(bloco);
         }
         if (!copia) {
@@ -314,6 +317,7 @@
                     mensagem('Alteração salva neste dispositivo. Envie quando estiver conectado; ' +
                         'conflitos exigem comparação manual.');
                     await desenhar();
+                    notificarEdicoes();
                 } catch (erro) {
                     console.error(erro);
                     mensagem('Falha ao salvar a edição local.');
@@ -366,6 +370,7 @@
                 }
             }
             await desenhar();
+            notificarEdicoes();
             mensagem(`Enviadas: ${enviados}. Conflitos preservados: ${conflitos}. ` +
                 `Falhas ou edições alteradas em outra aba: ${falhas}. ` +
                 'Use Comparar e resolver para escolher o que manter.');

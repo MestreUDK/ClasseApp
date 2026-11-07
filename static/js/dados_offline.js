@@ -8,6 +8,8 @@
     const el = id => document.getElementById(id);
     const estado = el('offline-estado');
     const resumo = el('offline-resumo');
+    const pendenciasResumo = el('offline-pendencias-resumo');
+    const pendenciasLista = el('offline-pendencias-lista');
     const area = el('offline-dados');
     const botoes = ['offline-baixar', 'offline-consultar', 'offline-exportar', 'offline-apagar', 'offline-comparar', 'offline-versoes'].map(el);
     let ocupado = false;
@@ -25,6 +27,40 @@
         return copia;
     }
 
+
+    async function atualizarResumoPendencias() {
+        if (!pendenciasResumo) return;
+        try {
+            const pendentes = await listarEdicoesOffline(usuario);
+            const conflitos = pendentes.filter(item => item.estado === 'conflito').length;
+            pendenciasLista.replaceChildren();
+            if (pendentes.length) {
+                const lista = document.createElement('ul');
+                for (const item of pendentes) {
+                    const linha = document.createElement('li');
+                    const nome = item.dados?.nome_completo || item.dados?.nome || String(item.id);
+                    linha.textContent = `${item.tipo === 'turmas' ? 'Turma' : 'Aluno'}: ${nome} — ` +
+                        (item.estado === 'conflito' ? 'conflito a resolver' : 'alteração ainda não enviada');
+                    lista.append(linha);
+                }
+                pendenciasLista.append(lista);
+            }
+            pendenciasResumo.textContent = pendentes.length
+                ? `${pendentes.length} edição(ões) aguardando envio neste dispositivo` +
+                    (conflitos ? `, incluindo ${conflitos} conflito(s).` : '.')
+                : 'Não há edições de turmas ou alunos aguardando envio neste dispositivo.';
+        } catch (_) {
+            pendenciasResumo.textContent = 'Não foi possível consultar as edições locais.';
+        }
+    }
+    document.addEventListener('classeapp:edicoes-atualizadas', () => {
+        atualizarResumoPendencias();
+        const resultado = el('offline-comparacao');
+        if (resultado && !resultado.hidden) {
+            resultado.hidden = true;
+            estado.textContent = 'As edições locais mudaram. Clique em “Ver diferenças e edições pendentes” para atualizar.';
+        }
+    });
     async function carregarApi(caminho) {
         const resposta = await fetch(caminho, {credentials: 'same-origin', cache: 'no-store'});
         if (!resposta.ok) throw new Error(`Falha HTTP ${resposta.status}`);
@@ -40,11 +76,29 @@
         bloquear(true);
         estado.textContent = 'Baixando turmas e alunos...';
         try {
-            // Não substituir uma cópia válida se qualquer requisição falhar.
+            // Mantém também os vínculos turma↔aluno. O aluno pode participar de
+            // mais de uma turma, e a tabela alunos não contém campo turma_id.
+            // Uma falha em qualquer requisição preserva a cópia anterior.
             const [turmas, alunos] = await Promise.all([
                 carregarApi('/api/turmas'), carregarApi('/api/alunos')
             ]);
-            await salvarSnapshotVersionado({usuario_id: usuario, salvo_em: new Date().toISOString(), turmas, alunos});
+            const vinculos = [];
+            // Evita disparar dezenas de consultas simultâneas ao Supabase.
+            for (let inicio = 0; inicio < turmas.length; inicio += 4) {
+                const lote = turmas.slice(inicio, inicio + 4);
+                const registros = await Promise.all(lote.map(turma =>
+                    carregarApi(`/api/turmas/${encodeURIComponent(turma.id)}/alunos_vinculados`)));
+                registros.forEach((lista, indice) => {
+                    lista.forEach(item => {
+                        if (item?.alunos?.id) vinculos.push({
+                            turma_id: lote[indice].id, aluno_id: item.alunos.id
+                        });
+                    });
+                });
+            }
+            await salvarSnapshotVersionado({
+                usuario_id: usuario, salvo_em: new Date().toISOString(), turmas, alunos, vinculos
+            });
             estado.textContent = 'Cópia de consulta salva neste dispositivo.';
             await atualizar();
         } catch (erro) {
@@ -107,7 +161,7 @@
         if (valor && typeof valor === 'object') {
             const saida = {};
             Object.keys(valor).sort().forEach(chave => {
-                if (!['created_at', 'updated_at'].includes(chave)) {
+                if (!['created_at', 'updated_at', 'revision'].includes(chave)) {
                     saida[chave] = normalizar(valor[chave]);
                 }
             });
@@ -134,19 +188,23 @@
         return { apenasLocal, apenasNuvem, diferentes };
     }
 
+    // Uma única visão: diferenças entre a cópia baixada e a nuvem, além das
+    // alterações que estão aguardando envio e NÃO fazem parte da cópia base.
     el('offline-comparar').addEventListener('click', async () => {
         if (ocupado) return;
         const resultado = el('offline-comparacao');
         resultado.hidden = true;
         resultado.replaceChildren();
         if (!navigator.onLine) {
-            estado.textContent = 'É necessária conexão para comparar com a nuvem.';
+            estado.textContent = 'Para comparar com a nuvem, conecte-se. As edições locais seguem salvas.';
             return;
         }
         bloquear(true);
-        estado.textContent = 'Comparando cópia local com a nuvem...';
+        estado.textContent = 'Consultando cópia base, edições locais e nuvem...';
         try {
-            const copia = await obterSnapshot(usuario);
+            const [copia, pendentes] = await Promise.all([
+                obterSnapshot(usuario), listarEdicoesOffline(usuario)
+            ]);
             if (!copia) {
                 estado.textContent = 'Baixe uma cópia local antes de comparar.';
                 return;
@@ -155,22 +213,31 @@
                 carregarApi('/api/turmas'), carregarApi('/api/alunos')
             ]);
             const conjuntos = [
-                ['Turmas', copia.turmas, turmas],
-                ['Alunos', copia.alunos, alunos]
+                ['Turmas', 'turmas', copia.turmas, turmas],
+                ['Alunos', 'alunos', copia.alunos, alunos]
             ];
-            let total = 0;
-            for (const [nome, locais, remotos] of conjuntos) {
+            const cabecalho = document.createElement('h4');
+            cabecalho.textContent = 'Comparação em duas camadas';
+            resultado.append(cabecalho);
+            const orientacao = document.createElement('p');
+            orientacao.textContent = '1) A cópia baixada é uma referência antiga e não inclui automaticamente suas edições. ' +
+                '2) As edições pendentes são comparadas separadamente com a versão atual da nuvem. ' +
+                'Nenhum dado será enviado nesta tela.';
+            resultado.append(orientacao);
+            let totalBase = 0;
+            let totalPendencias = 0;
+            for (const [nome, tipo, locais, remotos] of conjuntos) {
                 const diferencas = compararColecao(locais, remotos);
                 const titulo = document.createElement('h4');
-                titulo.textContent = nome;
+                titulo.textContent = `${nome} — cópia baixada × nuvem`;
                 resultado.append(titulo);
                 const lista = document.createElement('ul');
                 for (const [rotulo, itens] of [
-                    ['Somente na cópia local', diferencas.apenasLocal],
+                    ['Somente na cópia baixada', diferencas.apenasLocal],
                     ['Somente na nuvem', diferencas.apenasNuvem],
-                    ['Mesmo ID com dados diferentes', diferencas.diferentes]
+                    ['Alterados desde o último download', diferencas.diferentes]
                 ]) {
-                    total += itens.length;
+                    totalBase += itens.length;
                     const linha = document.createElement('li');
                     linha.textContent = `${rotulo}: ${itens.length}`;
                     lista.append(linha);
@@ -190,20 +257,58 @@
                     }
                 }
                 resultado.append(lista);
+                const indiceRemoto = new Map(remotos.map(item => [String(item.id), item]));
+                const edicoes = pendentes.filter(item => item.tipo === tipo);
+                totalPendencias += edicoes.length;
+                const sub = document.createElement('h4');
+                sub.textContent = `${nome} — minhas edições ainda não enviadas (${edicoes.length})`;
+                resultado.append(sub);
+                if (!edicoes.length) {
+                    const nenhum = document.createElement('p');
+                    nenhum.textContent = 'Nenhuma edição pendente.';
+                    resultado.append(nenhum);
+                }
+                for (const edicao of edicoes) {
+                    const remoto = indiceRemoto.get(String(edicao.id));
+                    const detalhe = document.createElement('details');
+                    const tituloEdicao = document.createElement('summary');
+                    tituloEdicao.textContent = (edicao.dados?.nome_completo || edicao.dados?.nome || String(edicao.id)) +
+                        (edicao.estado === 'conflito' ? ' — ⚠ Conflito identificado' : ' — Aguardando envio');
+                    detalhe.append(tituloEdicao);
+                    const resumoRev = document.createElement('p');
+                    resumoRev.textContent = !remoto ? 'Registro não encontrado na nuvem. A edição local será preservada.' :
+                        `Base da edição: revisão ${edicao.expected_revision}; nuvem: revisão ${remoto.revision ?? '?'}${remoto.revision !== edicao.expected_revision ? ' — revisões diferentes' : ''}.`;
+                    detalhe.append(resumoRev);
+                    const comparacoes = document.createElement('ul');
+                    for (const [campo, valorLocal] of Object.entries(edicao.dados || {})) {
+                        if (campo === 'disciplina_id') continue;
+                        const valorRemoto = remoto?.[campo];
+                        if (JSON.stringify(valorLocal ?? null) === JSON.stringify(valorRemoto ?? null)) continue;
+                        const linha = document.createElement('li');
+                        const formato = valor => valor == null || valor === '' ? '(vazio)' : String(valor);
+                        linha.textContent = `${campo}: dispositivo “${formato(valorLocal)}” / nuvem “${formato(valorRemoto)}”`;
+                        comparacoes.append(linha);
+                    }
+                    if (!comparacoes.children.length) {
+                        const igual = document.createElement('li');
+                        igual.textContent = 'Os campos editáveis possuem os mesmos valores na nuvem.';
+                        comparacoes.append(igual);
+                    }
+                    detalhe.append(comparacoes);
+                    resultado.append(detalhe);
+                }
             }
-            const aviso = document.createElement('p');
-            aviso.textContent = 'Apenas comparação: nenhum dado foi modificado. Campos de data de criação/atualização são ignorados. Registros ausentes podem ter sido excluídos ou criados depois da cópia.';
-            resultado.append(aviso);
+            const rodape = document.createElement('p');
+            rodape.textContent = `Diferenças da cópia original: ${totalBase}. Edições pendentes separadas: ${totalPendencias}. ` +
+                'Para resolver conflitos ou enviar, use “Editar dados locais” e “Enviar edições pendentes” abaixo.';
+            resultado.append(rodape);
             resultado.hidden = false;
-            estado.textContent = total
-                ? `Comparação concluída: ${total} diferença(s) encontrada(s).`
-                : 'Comparação concluída: nenhum dado diferente encontrado.';
+            estado.textContent = 'Comparação concluída sem alterar os dados.';
+            await atualizarResumoPendencias();
         } catch (erro) {
             console.error(erro);
-            estado.textContent = 'Falha ao comparar. Verifique a conexão e a sessão; nenhum dado foi alterado.';
-        } finally {
-            bloquear(false);
-        }
+            estado.textContent = 'Falha ao comparar. Confirme sua conexão e sessão; nenhuma edição foi apagada.';
+        } finally { bloquear(false); }
     });
 
     el('offline-versoes').addEventListener('click', async () => {
@@ -274,4 +379,5 @@
     });
 
     atualizar().catch(() => { estado.textContent = 'Armazenamento local indisponível.'; });
+    atualizarResumoPendencias();
 })();
