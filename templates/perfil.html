@@ -113,6 +113,7 @@
             <div id="offline-edicoes" style="margin-top:16px">
                 <h4>Edição offline de turmas e alunos</h4>
                 <p class="notificacoes-descricao">Selecione um registro da cópia baixada. Alterações ficam neste dispositivo até você enviar. O envio exige sessão ativa e revisão original ainda válida na nuvem.</p>
+                <p class="notificacoes-descricao">Se houver conflito, clique em <strong>Comparar e resolver</strong> para escolher campo a campo entre sua edição e a versão da nuvem. Você também pode manter a nuvem ou decidir depois. Nenhuma versão é substituída automaticamente.</p>
                 <div style="display:flex;flex-wrap:wrap;gap:10px">
                     <button type="button" id="edicoes-listar" class="notificacoes-atualizar">Editar dados locais</button>
                     <button type="button" id="edicoes-enviar" class="notificacoes-atualizar">Enviar edições pendentes</button>
@@ -162,6 +163,26 @@
         .notificacoes-item p { margin: 6px 0; overflow-wrap: anywhere; }
         .notificacoes-item button, .notificacoes-atualizar { cursor: pointer; padding: 8px 12px; border-radius: 7px; border: 1px solid var(--border-color); background: var(--icon-bg); color: var(--text-main); }
         .notificacoes-contador { font-size: .8rem; padding: 2px 7px; border-radius: 10px; background: #b42318; color: white; }
+        .edicoes-pendente { border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin: 10px 0; overflow-wrap: anywhere; }
+        .edicoes-pendente > p { margin: 0 0 10px; }
+        .edicoes-formulario { margin: 10px 0; padding: 12px; box-shadow: none; }
+        .edicoes-formulario[hidden] { display: none !important; }
+        .edicoes-conflito { margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 10px; }
+        .edicoes-conflito h5 { font-size: 1rem; margin: 8px 0; }
+        .edicoes-conflito p { overflow-wrap: anywhere; }
+        .edicoes-campo { margin: 12px 0; padding: 12px; border: 1px solid var(--border-color); border-radius: 9px; }
+        .edicoes-campo > strong { display: block; margin-bottom: 8px; }
+        .edicoes-campo small { display: block; color: var(--text-sec); margin: 3px 0; }
+        .edicoes-valores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 9px; }
+        .edicoes-valores > div { background: var(--icon-bg); border-radius: 7px; padding: 10px; min-width: 0; }
+        .edicoes-valores p { margin: 3px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+        .edicoes-campo select { width: 100%; margin: 5px 0 0; }
+        .edicoes-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .edicoes-acoes button { background: var(--icon-bg); border: 1px solid var(--border-color); color: var(--text-main); }
+        .edicoes-acoes button:first-child { background: var(--primary); border-color: var(--primary); color: white; }
+        .edicoes-pendente button:disabled { cursor: wait; opacity: .55; }
+        @media (max-width: 440px) { .edicoes-valores { grid-template-columns: 1fr; } .edicoes-acoes button { width: 100%; } }
+
 
         /* Estilos específicos apenas para centralizar e ajustar layout */
         .perfil-card {
@@ -210,10 +231,10 @@
         .alert.error { background: #f8d7da; color: #721c24; }
     </style>
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/db.js') }}"></script>
+<script src="{{ url_for('static', filename='js/db.js', v=app_version) }}"></script>
 <script src="{{ url_for('static', filename='js/notificacoes.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sincronizacao.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dados_offline.js') }}"></script>
-<script src="{{ url_for('static', filename='js/edicoes_offline.js') }}"></script>
+<script src="{{ url_for('static', filename='js/edicoes_offline.js', v=app_version) }}"></script>
 {% endblock %}
 {% endblock %}
