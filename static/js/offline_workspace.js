@@ -185,8 +185,10 @@
             }
             for (const item of academicDrafts) {
                 const descricao = item.tipo === 'avaliacao_criar' ?
-                    `Nova avaliação · ${item.dados.nome}` : item.tipo === 'nota' ?
-                    `Nota · aluno ${item.aluno_id}` :
+                    `Nova avaliação · ${item.dados.nome}` : item.tipo === 'avaliacao_excluir' ?
+                    `Excluir avaliação · ${item.dados.nome}` : item.tipo === 'nota' ?
+                    `Nota · aluno ${item.aluno_id}` : item.tipo === 'nota_excluir' ?
+                    `Excluir nota · aluno ${item.aluno_id}` :
                     `${item.tipo === 'diario_criar' ? 'Criar' : item.tipo === 'diario_excluir' ? 'Excluir' : 'Editar'} diário · ${item.dados.titulo}`;
                 if (!descricao.toLocaleLowerCase('pt-BR').includes(term)) continue;
                 const element = text('article', '', 'item');

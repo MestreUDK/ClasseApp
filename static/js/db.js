@@ -248,7 +248,7 @@ function listarEdicoesAcademicas(usuarioId) {
         .then(lista => lista.filter(item => item.usuario_id === usuarioId));
 }
 function salvarEdicaoAcademica(item) {
-    if (!item?.usuario_id || !item?.chave || !['nota', 'avaliacao_criar', 'diario', 'diario_criar', 'diario_excluir'].includes(item.tipo)) {
+    if (!item?.usuario_id || !item?.chave || !['nota', 'nota_excluir', 'avaliacao_criar', 'avaliacao_excluir', 'diario', 'diario_criar', 'diario_excluir'].includes(item.tipo)) {
         return Promise.reject(new Error('Edição acadêmica inválida.'));
     }
     return transacaoAcademica('readwrite', store => store.put(item));

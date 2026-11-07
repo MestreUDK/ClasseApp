@@ -142,6 +142,7 @@
                     }
                     for (const aluno of dados.alunos) {
                         notas.push({avaliacao_id: av.id, aluno_id: aluno.id,
+                            nota_id: aluno.nota_id || null,
                             valor: aluno.nota, revision: aluno.revision,
                             recupera_periodo: aluno.recupera_periodo ?? null});
                     }

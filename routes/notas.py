@@ -319,6 +319,93 @@ def delete_avaliacao(avaliacao_id):
         return jsonify({"error": str(e)}), 500
 
 
+@notas_bp.route('/avaliacoes/<uuid:avaliacao_id>/exclusao-offline', methods=['DELETE'])
+@login_required
+def excluir_avaliacao_offline(avaliacao_id):
+    """Exclui uma avaliação vazia apenas na revisão confirmada pelo servidor.
+
+    Não substitui a exclusão online convencional: se houver qualquer lançamento
+    vinculado, a exclusão offline é bloqueada para proteger notas escolares.
+    """
+    try:
+        dados = request.get_json(silent=True) or {}
+        revisao = dados.get('revision')
+        if type(revisao) is not int or revisao < 1:
+            return jsonify({'error': 'Revisão obrigatória para excluir avaliação.'}), 428
+
+        avaliacao = (supabase.table('avaliacoes')
+                     .select('id, turma_id, revision')
+                     .eq('id', str(avaliacao_id))
+                     .eq('user_id', current_user.id)
+                     .limit(1).execute().data or [])
+        if not avaliacao or not verificar_dono_turma(avaliacao[0]['turma_id']):
+            return jsonify({'error': 'Avaliação não encontrada.'}), 404
+        if avaliacao[0]['revision'] != revisao:
+            return jsonify({'error': 'Conflito: a avaliação foi modificada na nuvem.'}), 409
+
+        notas = (supabase.table('notas').select('id')
+                 .eq('avaliacao_id', str(avaliacao_id))
+                 .limit(1).execute().data or [])
+        if notas:
+            return jsonify({'error': 'A avaliação possui notas vinculadas. '
+                            'Exclua os lançamentos, sincronize e baixe uma cópia '
+                            'atualizada antes de excluir a avaliação.'}), 409
+
+        removidos = (supabase.table('avaliacoes').delete()
+                     .eq('id', str(avaliacao_id))
+                     .eq('user_id', current_user.id)
+                     .eq('revision', revisao).execute().data or [])
+        if not removidos:
+            return jsonify({'error': 'Conflito: a avaliação mudou antes da exclusão.'}), 409
+        return jsonify({'message': 'Avaliação vazia excluída.', 'id': str(avaliacao_id)}), 200
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+
+
+@notas_bp.route('/notas', methods=['DELETE'])
+@login_required
+def excluir_nota():
+    """Exclui um lançamento individual com revisão otimista e verificação de dono."""
+    try:
+        dados = request.get_json(silent=True) or {}
+        revisao = dados.get('revision')
+        if type(revisao) is not int or revisao < 1:
+            return jsonify({'error': 'Revisão obrigatória para excluir a nota.'}), 428
+        try:
+            avaliacao_id = str(UUID(str(dados.get('avaliacao_id'))))
+            aluno_id = str(UUID(str(dados.get('aluno_id'))))
+        except (TypeError, ValueError, AttributeError):
+            return jsonify({'error': 'Avaliação ou aluno inválido.'}), 400
+        try:
+            nota_id = str(UUID(str(dados.get('nota_id'))))
+        except (TypeError, ValueError, AttributeError):
+            return jsonify({'error': 'Identificador da nota obrigatório. Compare as versões antes de excluir.'}), 428
+        if not verificar_dono_avaliacao(avaliacao_id):
+            return jsonify({'error': 'Acesso negado.'}), 403
+
+        existente = (supabase.table('notas').select('id, revision')
+                     .eq('avaliacao_id', avaliacao_id)
+                     .eq('aluno_id', aluno_id)
+                     .eq('user_id', current_user.id)
+                     .limit(1).execute().data or [])
+        if not existente:
+            return jsonify({'error': 'Lançamento não encontrado na nuvem.'}), 404
+        if existente[0]['revision'] != revisao or str(existente[0]['id']) != nota_id:
+            return jsonify({'error': 'Conflito: a nota foi modificada ou recriada na nuvem.'}), 409
+        removidos = (supabase.table('notas').delete()
+                     .eq('id', existente[0]['id'])
+                     .eq('avaliacao_id', avaliacao_id)
+                     .eq('aluno_id', aluno_id)
+                     .eq('user_id', current_user.id)
+                     .eq('revision', revisao).execute().data or [])
+        if not removidos:
+            return jsonify({'error': 'Conflito: nota alterada durante a exclusão.'}), 409
+        return jsonify({'message': 'Lançamento excluído.', 'avaliacao_id': avaliacao_id,
+                        'aluno_id': aluno_id}), 200
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+
+
 @notas_bp.route('/avaliacao/<uuid:avaliacao_id>/diario', methods=['GET'])
 @login_required
 def get_notas_avaliacao(avaliacao_id):
@@ -345,7 +432,7 @@ def get_notas_avaliacao(avaliacao_id):
             .execute()
 
         notas_res, _ = supabase.table('notas') \
-            .select('aluno_id, valor, revision, updated_at, recupera_periodo') \
+            .select('id, aluno_id, valor, revision, updated_at, recupera_periodo') \
             .eq('avaliacao_id', str(avaliacao_id)) \
             .eq('user_id', current_user.id) \
             .execute()
@@ -366,6 +453,7 @@ def get_notas_avaliacao(avaliacao_id):
                     'nome': aluno['nome_completo'],
                     'matricula': aluno.get('matricula'),
                     'nota': (notas_map.get(aluno['id']) or {}).get('valor'),
+                    'nota_id': (notas_map.get(aluno['id']) or {}).get('id'),
                     'revision': (notas_map.get(aluno['id']) or {}).get('revision', 0),
                     'nota_maxima': avaliacao['nota_maxima']
                 })

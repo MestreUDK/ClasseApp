@@ -39,10 +39,13 @@
             return;
         }
         const criacoes = fila.filter(item => item.tipo === 'avaliacao_criar');
+        const exclusoes = fila.filter(item => item.tipo === 'avaliacao_excluir');
+        const idsExcluidos = new Set(exclusoes.map(item => String(item.id)));
         const idsOriginais = new Set(copias.map(av => String(av.id)));
         const avaliacoes = [...copias, ...criacoes
             .filter(item => !idsOriginais.has(String(item.id)))
-            .map(item => ({...item.dados, id:item.id, revision:0, _local:true}))];
+            .map(item => ({...item.dados, id:item.id, revision:0, _local:true}))]
+            .filter(av => !idsExcluidos.has(String(av.id)));
 
         const criacao = elemento('div', '', 'academico-selecao');
         const btnNova = elemento('button', 'Nova avaliação offline');
@@ -132,8 +135,33 @@
             editor.append(form);criacao.append(editor);
         });
 
+        if (exclusoes.length) {
+            const painel = elemento('div', '', 'academico-selecao');
+            painel.append(elemento('h3', 'Avaliações com exclusão pendente'));
+            for (const pendencia of exclusoes) {
+                const card = elemento('article', '', 'item');
+                card.append(elemento('strong', pendencia.dados.nome || pendencia.id));
+                card.append(elemento('p', pendencia.estado === 'conflito' ?
+                    'Conflito: resolva quando estiver online.' :
+                    'Aguardando exclusão na nuvem.', 'pending'));
+                const desfazer = elemento('button', 'Desfazer exclusão da avaliação');
+                desfazer.type = 'button';
+                desfazer.addEventListener('click', async () => {
+                    desfazer.disabled = true;
+                    try {
+                        const ok = await restaurarEdicaoAcademicaSeIgual(
+                            pendencia, pendencia.restaurar_pendencia || null);
+                        if (!ok) throw new Error('A operação foi modificada em outra aba.');
+                        area.dispatchEvent(new CustomEvent('academico-offline:gravado', {bubbles:true}));
+                        await window.ClasseAcademicoOffline.render('notas', {snapshot, conta});
+                    } catch (erro) { alert(erro.message); desfazer.disabled = false; }
+                });
+                card.append(desfazer); painel.append(card);
+            }
+            area.append(painel);
+        }
         if(!avaliacoes.length){
-            area.append(elemento('p','Não há avaliações. Você pode criar uma acima, mesmo sem conexão.'));
+            area.append(elemento('p','Não há avaliações disponíveis. Você pode criar uma acima, mesmo sem conexão.'));
             return;
         }
         const escolha=elemento('div','','academico-selecao');
@@ -145,7 +173,52 @@
         }
         if(avaliacoes.some(a=>String(a.id)===String(escolhaAvaliacao)))select.value=escolhaAvaliacao;
         escolhaAvaliacao=select.value;
-        escolha.append(select);area.append(escolha);
+        escolha.append(select);
+        const excluirAvaliacao = elemento('button', 'Marcar avaliação para exclusão');
+        excluirAvaliacao.type = 'button';
+        escolha.append(excluirAvaliacao);
+        excluirAvaliacao.addEventListener('click', async () => {
+            const av = avaliacoes.find(item => String(item.id) === String(select.value));
+            if (!av) return;
+            const novas = await listarEdicoesAcademicas(conta);
+            const vinculadas = novas.filter(item =>
+                ['nota', 'nota_excluir'].includes(item.tipo) &&
+                String(item.avaliacao_id) === String(av.id));
+            // Uma cópia pode trazer alunos sem lançamento (revision=0).
+            // Só existem notas remotas quando a revisão é positiva ou há valor.
+            const notasExistentes = snapshot.notas.filter(n =>
+                String(n.avaliacao_id) === String(av.id) &&
+                (Number(n.revision) > 0 || n.valor !== null && n.valor !== undefined));
+            if (vinculadas.length || notasExistentes.length) {
+                alert('Esta avaliação possui notas lançadas ou pendentes. Para proteger os dados, ' +
+                    'exclua e sincronize os lançamentos primeiro; depois baixe a cópia atualizada.');
+                return;
+            }
+            const anterior = novas.find(item =>
+                item.tipo === 'avaliacao_criar' && String(item.id) === String(av.id));
+            const local = Boolean(av._local);
+            if (!local && (!Number.isInteger(av.revision) || av.revision < 1)) {
+                alert('Avaliação sem revisão válida. Baixe uma cópia atualizada.'); return;
+            }
+            if (!confirm(`Excluir a avaliação "${av.nome}" quando sincronizar?`)) return;
+            excluirAvaliacao.disabled = true;
+            try {
+                await salvarEdicaoAcademica({
+                    chave: `${conta}:avaliacao:${av.id}`, usuario_id: conta,
+                    tipo: 'avaliacao_excluir', id: av.id,
+                    expected_revision: local ? 1 : av.revision,
+                    origem_local: local,
+                    restaurar_pendencia: anterior || null,
+                    dados: {nome: av.nome, turma_id: av.turma_id},
+                    edicao_id: idDeEdicao(), alterado_localmente_em: new Date().toISOString(),
+                    estado: anterior?.estado === 'conflito' ? 'conflito' : 'pendente'
+                });
+                area.dispatchEvent(new CustomEvent('academico-offline:gravado', {bubbles:true}));
+                await window.ClasseAcademicoOffline.render('notas', {snapshot, conta});
+            } catch (erro) { console.error(erro); alert('Falha ao marcar exclusão local.');
+                excluirAvaliacao.disabled = false; }
+        });
+        area.append(escolha);
         const lista=elemento('div','','items');area.append(lista);
         const atualizarLista=()=>{
             escolhaAvaliacao=select.value;lista.replaceChildren();
@@ -167,9 +240,28 @@
             }).sort((a,b)=>nomeAluno(snapshot,a.aluno_id).localeCompare(nomeAluno(snapshot,b.aluno_id),'pt-BR'));
             for(const nota of alunos){
                 const pendencia=fila.find(item=>item.chave===chaveNota(conta,av.id,nota.aluno_id));
-                const valor=pendencia?pendencia.dados.valor:nota.valor;
+                const valor=pendencia && pendencia.tipo === 'nota' ?
+                    pendencia.dados.valor : nota.valor;
                 const card=elemento('article','','item');
                 card.append(elemento('h3',nomeAluno(snapshot,nota.aluno_id)));
+                if (pendencia?.tipo === 'nota_excluir') {
+                    card.append(elemento('p', pendencia.estado === 'conflito' ?
+                        'Exclusão com conflito: resolver no Perfil.' :
+                        'Exclusão da nota pendente de sincronização.', 'pending'));
+                    const desfazer = elemento('button', 'Desfazer exclusão da nota');
+                    desfazer.type = 'button';
+                    desfazer.addEventListener('click', async () => {
+                        desfazer.disabled = true;
+                        try {
+                            const ok = await restaurarEdicaoAcademicaSeIgual(
+                                pendencia, pendencia.restaurar_pendencia || null);
+                            if (!ok) throw new Error('Esta operação mudou em outra aba.');
+                            area.dispatchEvent(new CustomEvent('academico-offline:gravado', {bubbles:true}));
+                            await window.ClasseAcademicoOffline.render('notas', {snapshot, conta});
+                        } catch (erro) { alert(erro.message); desfazer.disabled = false; }
+                    });
+                    card.append(desfazer); lista.append(card); continue;
+                }
                 card.append(elemento('p',`Nota: ${valor==null?'Não lançada':valor} / ${av.nota_maxima} · Revisão base: ${nota.revision??0}`,'meta'));
                 if(pendencia)card.append(elemento('p',pendencia.estado==='conflito'?
                     'Conflito: resolver online no Perfil.':'Alteração ainda não enviada','pending'));
@@ -217,7 +309,40 @@
                     });
                     editor.append(form);card.append(editor);
                 });
-                card.append(editar);lista.append(card);
+                card.append(editar);
+                if (Number(nota.revision) >= 1 || pendencia?.tipo === 'nota') {
+                    const excluir = elemento('button', 'Marcar nota para exclusão');
+                    excluir.type = 'button';
+                    excluir.addEventListener('click', async () => {
+                        if (!confirm(`Marcar a nota de ${nomeAluno(snapshot, nota.aluno_id)} ` +
+                            'para exclusão quando sincronizar?')) return;
+                        excluir.disabled = true;
+                        try {
+                            const anteriores = await listarEdicoesAcademicas(conta);
+                            const anterior = anteriores.find(item => item.chave ===
+                                chaveNota(conta, av.id, nota.aluno_id));
+                            const origemLocal = Number(nota.revision || 0) === 0;
+                            await salvarEdicaoAcademica({
+                                chave: chaveNota(conta, av.id, nota.aluno_id), usuario_id: conta,
+                                tipo: 'nota_excluir', avaliacao_id: av.id, aluno_id: nota.aluno_id,
+                                nota_id: nota.nota_id || null,
+                                expected_revision: origemLocal ? 1 :
+                                    (anterior?.expected_revision ?? nota.revision),
+                                origem_local: origemLocal,
+                                restaurar_pendencia: anterior || null,
+                                dados: {valor: valor},
+                                edicao_id: idDeEdicao(),
+                                alterado_localmente_em: new Date().toISOString(),
+                                estado: anterior?.estado === 'conflito' ? 'conflito' : 'pendente'
+                            });
+                            area.dispatchEvent(new CustomEvent('academico-offline:gravado', {bubbles:true}));
+                            await window.ClasseAcademicoOffline.render('notas', {snapshot, conta});
+                        } catch (erro) { console.error(erro);
+                            alert('Falha ao marcar exclusão da nota.'); excluir.disabled = false; }
+                    });
+                    card.append(excluir);
+                }
+                lista.append(card);
             }
             if(!alunos.length)lista.append(elemento('p','Nenhum aluno vinculado a esta turma na cópia local. Baixe uma cópia nova quando estiver online.'));
         };

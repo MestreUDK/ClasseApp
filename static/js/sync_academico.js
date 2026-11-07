@@ -48,8 +48,22 @@
             throw new Error('Esta edição foi modificada em outra aba. Atualize a lista.');
         }
     }
-    async function salvar(item, revision) {
+    async function salvar(item, revision, notaIdConfirmado = null) {
         await verificarPendente(item);
+        if (item.tipo === 'avaliacao_excluir') {
+            return api(`/api/avaliacoes/${encodeURIComponent(item.id)}/exclusao-offline`, {
+                method: 'DELETE', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({revision})
+            });
+        }
+        if (item.tipo === 'nota_excluir') {
+            return api('/api/notas', {
+                method: 'DELETE', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({avaliacao_id: item.avaliacao_id,
+                    aluno_id: item.aluno_id, revision,
+                    nota_id: notaIdConfirmado || item.nota_id})
+            });
+        }
         if (item.tipo === 'avaliacao_criar') {
             if (Number.isInteger(revision) && revision >= 1) {
                 // Caso o registro já exista, só atualizar após escolha expressa
@@ -106,16 +120,27 @@
         });
     }
     async function remoto(item) {
-        if (item.tipo === 'avaliacao_criar') {
+        if (['avaliacao_criar', 'avaliacao_excluir'].includes(item.tipo)) {
             const lista = await api(`/api/turma/${encodeURIComponent(item.dados.turma_id)}/avaliacoes`);
             if (!Array.isArray(lista)) throw new Error('Resposta de avaliações inválida.');
             return lista.find(av => String(av.id) === String(item.id)) || null;
         }
-        if (item.tipo === 'nota') {
-            const dados = await api(`/api/avaliacao/${encodeURIComponent(item.avaliacao_id)}/diario`);
+        if (item.tipo === 'nota' || item.tipo === 'nota_excluir') {
+            let dados;
+            try {
+                dados = await api(`/api/avaliacao/${encodeURIComponent(item.avaliacao_id)}/diario`);
+            } catch (erro) {
+                // Nota criada somente no dispositivo, vinculada a uma avaliação
+                // que nunca existiu na nuvem: não há lançamento para excluir.
+                if (item.tipo === 'nota_excluir' && item.origem_local && erro.status === 404) {
+                    return {revision: 0, nota_id: null, valor: null};
+                }
+                throw erro;
+            }
             const aluno = dados.alunos?.find(a => String(a.id) === String(item.aluno_id));
             if (!aluno) throw new Error('Aluno não encontrado na avaliação atual.');
             return {revision:aluno.revision ?? 0,valor:aluno.nota,
+                nota_id: aluno.nota_id || null,
                 recupera_periodo:aluno.recupera_periodo ?? null};
         }
         const diarios = await api('/api/diario');
@@ -142,7 +167,11 @@
         alvo.replaceChildren();
         alvo.append(texto('p',`Revisão local: ${item.expected_revision}; ` +
             (atual ? `revisão atual na nuvem: ${atual.revision}.` : 'registro não encontrado na nuvem.')));
-        if (item.tipo === 'avaliacao_criar') {
+        if (item.tipo === 'avaliacao_excluir') {
+            alvo.append(texto('p', 'Operação local: excluir avaliação sem notas vinculadas. A API bloqueia se houver lançamentos na nuvem.'));
+        } else if (item.tipo === 'nota_excluir') {
+            alvo.append(texto('p', 'Operação local: excluir lançamento individual, sem alterar as demais notas.'));
+        } else if (item.tipo === 'avaliacao_criar') {
             alvo.append(texto('p', 'Operação local: criar avaliação. As notas vinculadas só podem ser enviadas depois da criação.'));
         } else if (item.tipo === 'diario_criar') {
             alvo.append(texto('p', 'Operação local: criar uma nova anotação.'));
@@ -150,6 +179,8 @@
             alvo.append(texto('p', 'Operação local: excluir a anotação.'));
         }
         const campos = item.tipo === 'nota' ? ['valor',...(Object.hasOwn(item.dados,'recupera_periodo')?['recupera_periodo']:[])] :
+            item.tipo === 'nota_excluir' ? ['valor'] :
+            item.tipo === 'avaliacao_excluir' ? ['nome'] :
             item.tipo === 'avaliacao_criar' ? ['nome','periodo_tipo','periodo_numero','categoria',
                 'nota_maxima','peso','data','recuperacao_modo'] :
             (item.tipo === 'diario_excluir' ? ['titulo'] : ['titulo','conteudo','data_referencia']);
@@ -173,7 +204,7 @@
             if (ocupado) return;
             if (item.tipo === 'avaliacao_criar' && !atual) {
                 const dependentes = (await listarEdicoesAcademicas(conta)).filter(p =>
-                    p.tipo === 'nota' && String(p.avaliacao_id) === String(item.id));
+                    ['nota', 'nota_excluir'].includes(p.tipo) && String(p.avaliacao_id) === String(item.id));
                 if (dependentes.length) {
                     mostrar(`Esta avaliação possui ${dependentes.length} nota(s) local(is). ` +
                         'Para não perder os vínculos, a criação foi mantida. ' +
@@ -195,6 +226,36 @@
         });
         local.addEventListener('click', async () => {
             if (ocupado || !navigator.onLine) return;
+            if (item.tipo === 'avaliacao_excluir') {
+                const pendentes = await listarEdicoesAcademicas(conta);
+                const notasPendentes = pendentes.filter(p =>
+                    ['nota', 'nota_excluir'].includes(p.tipo) &&
+                    String(p.avaliacao_id) === String(item.id));
+                if (notasPendentes.length) {
+                    mostrar('Há lançamentos locais vinculados a esta avaliação. ' +
+                        'Sincronize ou resolva primeiro essas notas.');
+                    return;
+                }
+            }
+            if (item.tipo === 'nota_excluir' && (!atual || Number(atual.revision) === 0)) {
+                // Se a nota nunca existiu na nuvem, a marca de exclusão já
+                // cumpriu seu papel. Uma nova edição posterior fica protegida
+                // pela comparação de edicao_id no IndexedDB.
+                if (confirm('Não há lançamento na nuvem. Descartar esta exclusão local?') &&
+                    await alterarEdicaoAcademicaSeIgual(item)) {
+                    mostrar('Não havia lançamento na nuvem; pendência removida.');
+                    await desenhar();
+                }
+                return;
+            }
+            if (!atual && item.tipo === 'avaliacao_excluir' && item.origem_local) {
+                if (confirm('A avaliação ainda não existe na nuvem. Descartar a exclusão local?') &&
+                    await alterarEdicaoAcademicaSeIgual(item)) {
+                    mostrar('Avaliação não existia na nuvem; pendência removida.');
+                    await desenhar();
+                }
+                return;
+            }
             if (!atual && item.tipo === 'diario_excluir' && item.origem_local) {
                 if (await alterarEdicaoAcademicaSeIgual(item)) {
                     mostrar('Anotação não existe na nuvem; exclusão local concluída.');
@@ -203,7 +264,7 @@
                 return;
             }
             if (!atual && item.tipo !== 'diario_criar' && item.tipo !== 'avaliacao_criar') {
-                mostrar('Anotação ausente na nuvem. Mantenha a nuvem para descartar a operação local.');
+                mostrar('Registro ausente na nuvem. Use Manter nuvem para descartar a pendência.');
                 return;
             }
             if (atual && (!Number.isInteger(atual.revision) || atual.revision < 0)) {
@@ -216,7 +277,7 @@
                 'Se outra pessoa alterou o registro enquanto você decidia, o servidor impedirá a substituição.')) return;
             bloquear(true);
             try {
-                await salvar(item, atual?.revision ?? 0);
+                await salvar(item, atual?.revision ?? 0, atual?.nota_id ?? null);
                 const ok = await alterarEdicaoAcademicaSeIgual(item);
                 mostrar(ok ? 'Dados aplicados na nuvem. Atualize sua cópia local.' :
                     'A nuvem recebeu os dados, mas uma edição local mais recente foi preservada.');
@@ -239,13 +300,15 @@
         for (const item of pendentes) {
             const bloco = texto('div','', 'edicoes-pendente');
             const categoria = item.tipo === 'avaliacao_criar' ? 'Criar avaliação' :
+                item.tipo === 'avaliacao_excluir' ? 'Excluir avaliação' :
+                item.tipo === 'nota_excluir' ? 'Excluir lançamento de nota' :
                 item.tipo === 'nota' ? 'Nota de aluno' :
                 item.tipo === 'diario_criar' ? 'Criar anotação' :
                 item.tipo === 'diario_excluir' ? 'Excluir anotação' : 'Editar anotação';
             bloco.append(texto('strong', categoria));
-            bloco.append(texto('p',item.tipo === 'avaliacao_criar' ?
+            bloco.append(texto('p',['avaliacao_criar', 'avaliacao_excluir'].includes(item.tipo) ?
                 `Avaliação: ${item.dados.nome} · turma ${item.dados.turma_id}` :
-                item.tipo === 'nota' ?
+                ['nota', 'nota_excluir'].includes(item.tipo) ?
                 `Avaliação: ${item.avaliacao_id} · Aluno: ${item.aluno_id}` :
                 `Anotação: ${item.dados.titulo || item.id}`));
             bloco.append(texto('p',item.estado === 'conflito' ?
@@ -269,34 +332,70 @@
         try {fila=(await listarEdicoesAcademicas(conta)).filter(p=>p.estado!=='conflito');}
         catch(e){mostrar('Não foi possível abrir a fila local.');return;}
         if (!fila.length){mostrar('Não há edições para enviar; resolva os conflitos individualmente.');return;}
-        if (!confirm(`Enviar ${fila.length} operação(ões) de avaliações, notas e diário? Avaliações novas serão criadas primeiro.`)) return;
-        // Referências de notas novas dependem do UUID da avaliação.
-        fila.sort((a,b) => Number(b.tipo === 'avaliacao_criar') - Number(a.tipo === 'avaliacao_criar'));
+        if (!confirm(`Enviar ${fila.length} operação(ões) de avaliações, notas e diário? Exclusões também serão executadas na nuvem quando permitidas.`)) return;
+        // Ordem: criar avaliações, salvar/remover notas e, por último,
+        // excluir avaliações vazias. Nunca excluir um pai antes dos filhos.
+        const prioridade = {avaliacao_criar: 0, nota: 1, nota_excluir: 1,
+            diario_criar: 2, diario: 2, diario_excluir: 2, avaliacao_excluir: 3};
+        fila.sort((a, b) => (prioridade[a.tipo] ?? 2) - (prioridade[b.tipo] ?? 2));
         bloquear(true);
         let ok=0,conflitos=0,falhas=0,bloqueadas=0;
         for (const item of fila) {
             try {
                 // Se a avaliação associada continua pendente (erro, conflito ou
                 // edição em outra aba), nunca enviar sua nota antecipadamente.
-                if (item.tipo === 'nota') {
+                if (item.tipo === 'avaliacao_excluir') {
+                    const atuais = await listarEdicoesAcademicas(conta);
+                    if (atuais.some(p => ['nota', 'nota_excluir'].includes(p.tipo) &&
+                        String(p.avaliacao_id) === String(item.id))) {
+                        bloqueadas++; continue;
+                    }
+                }
+                if (item.tipo === 'nota' || item.tipo === 'nota_excluir') {
                     const atuais = await listarEdicoesAcademicas(conta);
                     if (atuais.some(p => p.tipo === 'avaliacao_criar' &&
                         String(p.id) === String(item.avaliacao_id))) {
                         bloqueadas++; continue;
                     }
                 }
+                // Sem ID da nota confirmado na cópia, uma exclusão automática
+                // poderia apagar uma nota recriada por outro dispositivo.
+                // Exigir comparação e confirmação manual nesse caso.
+                if (item.tipo === 'nota_excluir' && !item.nota_id) {
+                    const atual = await remoto(item);
+                    if (!atual || Number(atual.revision) === 0) {
+                        if (await alterarEdicaoAcademicaSeIgual(item)) ok++;
+                        else falhas++;
+                    } else {
+                        await alterarEdicaoAcademicaSeIgual(item, 'conflito');
+                        conflitos++;
+                    }
+                    continue;
+                }
                 await salvar(item,item.expected_revision);
                 if(await alterarEdicaoAcademicaSeIgual(item)) ok++; else falhas++;
             } catch (e) {
                 // Exclusão de anotação criada localmente que nunca chegou ao
                 // servidor: nenhum registro remoto existe para remover.
+                if (item.origem_local &&
+                    ['avaliacao_excluir', 'nota_excluir'].includes(item.tipo) &&
+                    (e.status === 404 || e.status === 409)) {
+                    try {
+                        const atual = await remoto(item);
+                        const ausente = item.tipo === 'nota_excluir' ?
+                            (!atual || Number(atual.revision) === 0) : !atual;
+                        if (ausente && await alterarEdicaoAcademicaSeIgual(item)) {
+                            ok++; continue;
+                        }
+                    } catch (_) { /* Preservar pendência se a consulta falhar. */ }
+                }
                 if (item.tipo === 'diario_excluir' && item.origem_local && e.status === 409) {
                     try {
                         const atual = await remoto(item);
                         if (!atual && await alterarEdicaoAcademicaSeIgual(item)) {ok++; continue;}
                     } catch (_) { /* Preservar pendência em caso de falha. */ }
                 }
-                if (e.status===409||e.status===428) {
+                if (e.status===409||e.status===428||e.status===404) {
                     await alterarEdicaoAcademicaSeIgual(item,'conflito'); conflitos++;
                 } else {console.error(e);falhas++;}
             }
