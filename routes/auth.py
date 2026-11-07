@@ -11,7 +11,10 @@ from flask import (
     request, session, url_for,
 )
 from flask_login import login_user, logout_user, login_required
-from utils import supabase, SUPABASE_KEY, SUPABASE_URL
+from utils import (
+    cliente_supabase_requisicao, novo_cliente_supabase,
+    SUPABASE_KEY, SUPABASE_URL,
+)
 from models import User
 
 auth_bp = Blueprint('auth_bp', __name__)
@@ -24,19 +27,22 @@ def login():
 
         try:
             # Tenta logar no Supabase
-            response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+            response = novo_cliente_supabase().auth.sign_in_with_password({"email": email, "password": password})
             
-            if response.user:
+            if response.user and response.session:
+                # A sessão Supabase pertence exclusivamente a esta conta/aba.
+                # Limpar a sessão anterior evita misturar tokens após trocar usuário.
+                session.clear()
                 user = User(id=response.user.id, email=response.user.email)
                 login_user(user)
-                
-                # --- CORREÇÃO: Salva o email na sessão ---
-                session['user_email'] = response.user.email 
-                
+                session['user_email'] = response.user.email
+                session['supabase_access_token'] = response.session.access_token
+                session['supabase_refresh_token'] = response.session.refresh_token
                 return redirect(url_for('pages_bp.home'))
+            flash('Não foi possível iniciar a sessão. Verifique seu e-mail.', 'error')
             
-        except Exception as e:
-            flash(f"Erro ao entrar: {str(e)}", "error")
+        except Exception:
+            flash("Não foi possível entrar. Confira os dados e tente novamente.", "error")
             
     return render_template('login.html')
 
@@ -47,23 +53,29 @@ def register():
         password = request.form.get('password')
 
         try:
-            response = supabase.auth.sign_up({"email": email, "password": password})
+            response = novo_cliente_supabase().auth.sign_up({"email": email, "password": password})
             
             if response.user:
                 flash("Conta criada com sucesso! Faça login.", "success")
                 return redirect(url_for('auth_bp.login'))
                 
-        except Exception as e:
-            flash(f"Erro ao criar conta: {str(e)}", "error")
+        except Exception:
+            flash("Não foi possível criar a conta neste momento.", "error")
 
     return render_template('register.html')
 
 @auth_bp.route('/logout')
 @login_required
 def logout():
-    supabase.auth.sign_out()
-    logout_user()
-    session.pop('user_email', None) # Limpa o email da sessão ao sair
+    try:
+        # Revoga apenas esta sessão: não encerra dispositivos diferentes.
+        cliente_supabase_requisicao().auth.sign_out({'scope': 'local'})
+    except Exception:
+        # Mesmo sem rede, o logout local deve limpar o cookie do Flask.
+        pass
+    finally:
+        logout_user()
+        session.clear()
     return redirect(url_for('auth_bp.login'))
 
 @auth_bp.route('/esqueci-senha', methods=['GET', 'POST'])
@@ -90,7 +102,7 @@ def forgot_password():
 
         reset_url = f'{base_url}{url_for("auth_bp.reset_password")}'
         try:
-            supabase.auth.reset_password_for_email(
+            novo_cliente_supabase().auth.reset_password_for_email(
                 email, {'redirect_to': reset_url}
             )
         except Exception as exc:

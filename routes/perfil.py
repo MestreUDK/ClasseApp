@@ -1,11 +1,13 @@
 """Página de perfil e resumo de alertas do professor autenticado."""
 
 from datetime import date, datetime
+from hmac import compare_digest
+from secrets import token_urlsafe
 
-from flask import Blueprint, flash, jsonify, render_template, request
-from flask_login import current_user, login_required
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
+from flask_login import current_user, login_required, logout_user
 
-from utils import supabase
+from utils import novo_cliente_supabase, supabase
 
 perfil_bp = Blueprint('perfil_bp', __name__)
 
@@ -63,16 +65,45 @@ def resumo_notificacoes():
 @perfil_bp.route('/perfil', methods=['GET', 'POST'])
 @login_required
 def perfil():
-    """Exibe o perfil e mantém o formulário de alteração de senha existente."""
+    """Mostra o Perfil e atualiza a senha somente após reautenticação."""
+    csrf = session.get('perfil_csrf_token')
+    if not csrf:
+        csrf = token_urlsafe(32)
+        session['perfil_csrf_token'] = csrf
+
     if request.method == 'POST':
-        nova_senha = request.form.get('password')
-        if nova_senha:
-            try:
-                supabase.auth.update_user({'password': nova_senha})
-                flash('Senha alterada com sucesso!', 'success')
-            except Exception as exc:
-                flash(f'Erro ao alterar senha: {exc}', 'error')
-        else:
-            flash('Digite uma nova senha para alterar.', 'error')
+        token_recebido = request.form.get('csrf_token', '')
+        if not compare_digest(token_recebido, csrf):
+            flash('Solicitação inválida. Atualize a página e tente novamente.', 'error')
+            return redirect(url_for('perfil_bp.perfil')), 303
+
+        senha_atual = request.form.get('senha_atual') or ''
+        nova_senha = request.form.get('password') or ''
+        if not senha_atual or not 8 <= len(nova_senha) <= 256:
+            flash('Informe sua senha atual e uma nova senha de 8 a 256 caracteres.', 'error')
+            return redirect(url_for('perfil_bp.perfil')), 303
+
+        try:
+            # Cliente separado: validar senha nunca modifica uma sessão alheia.
+            cliente = novo_cliente_supabase()
+            resposta = cliente.auth.sign_in_with_password({
+                'email': current_user.email, 'password': senha_atual,
+            })
+            if not resposta.user or str(resposta.user.id) != str(current_user.id):
+                flash('Senha atual inválida. Nenhuma alteração foi feita.', 'error')
+                return redirect(url_for('perfil_bp.perfil')), 303
+
+            cliente.auth.update_user({'password': nova_senha})
+        except Exception:
+            flash('Não foi possível alterar a senha. Confira a senha atual e tente novamente.', 'error')
+            return redirect(url_for('perfil_bp.perfil')), 303
+
+        # Depois de trocar a senha, exigir uma nova autenticação do professor.
+        logout_user()
+        session.clear()
+        flash('Senha alterada! Faça login novamente com a nova senha.', 'success')
+        return redirect(url_for('auth_bp.login')), 303
+
     return render_template('perfil.html', email=current_user.email,
-                           notification_user_id=str(current_user.id))
+                           notification_user_id=str(current_user.id),
+                           perfil_csrf_token=csrf)

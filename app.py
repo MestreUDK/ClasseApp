@@ -5,8 +5,8 @@ import secrets
 import warnings
 from datetime import datetime
 from urllib.parse import urlparse
-from flask import Flask, session # <-- IMPORTAR SESSION
-from flask_login import LoginManager
+from flask import Flask, flash, jsonify, redirect, request, session, url_for
+from flask_login import LoginManager, current_user, logout_user
 
 # Importa os blueprints
 from routes.pages import pages_bp
@@ -23,14 +23,15 @@ from routes.disciplinas import disciplinas_bp
 from routes.compartilhamentos import compartilhamentos_bp
 from routes.perfil import perfil_bp 
 from routes.notas import notas_bp
-from models import User 
+from models import User
+from utils import ErroSessaoSupabase, cliente_supabase_requisicao
 
 app = Flask(__name__)
 
 # ==========================================
 # --- NOVO: CONFIGURAÇÃO DE VERSÃO ---
 # ==========================================
-app.config['VERSION'] = '2.2.24'
+app.config['VERSION'] = '2.2.25'
 
 # Context Processor para injetar a variável em todos os templates HTML
 @app.context_processor
@@ -70,9 +71,42 @@ login_manager.login_message_category = 'info'
 
 @login_manager.user_loader
 def load_user(user_id):
-    # --- CORREÇÃO: Tenta pegar o email da sessão ---
-    user_email = session.get('user_email') 
-    return User(id=user_id, email=user_email)
+    # Cookies antigos sem credenciais Supabase devem efetuar novo login.
+    if not session.get('supabase_access_token') or not session.get('supabase_refresh_token'):
+        return None
+    return User(id=user_id, email=session.get('user_email'))
+
+# Restaurar Auth por requisição impede que contas diferentes compartilhem
+# o estado mutável de uma única instância do SDK Supabase.
+@app.before_request
+def verificar_sessao_supabase():
+    if not current_user.is_authenticated:
+        return None
+
+    # O logout e as páginas públicas não dependem da disponibilidade do Auth.
+    if request.endpoint in {
+        'auth_bp.login', 'auth_bp.register', 'auth_bp.forgot_password',
+        'auth_bp.reset_password', 'auth_bp.logout',
+        'pages_bp.page_offline', 'pages_bp.page_demonstracao',
+        'pages_bp.serve_sw', 'pages_bp.health_check',
+    } or request.path.startswith('/static/'):
+        return None
+
+    try:
+        cliente_supabase_requisicao()
+    except ErroSessaoSupabase as exc:
+        if exc.invalida:
+            logout_user()
+            session.clear()
+            if request.path.startswith('/api/'):
+                return jsonify({'error': 'Sessão expirada. Faça login novamente.'}), 401
+            flash('Sua sessão expirou. Entre novamente.', 'warning')
+            return redirect(url_for('auth_bp.login'))
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Autenticação temporariamente indisponível. Tente novamente.'}), 503
+        return 'Autenticação temporariamente indisponível. Tente novamente.', 503
+    return None
+
 
 # Registra Blueprints
 app.register_blueprint(pages_bp) 

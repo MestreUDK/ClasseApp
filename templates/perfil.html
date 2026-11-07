@@ -202,12 +202,20 @@
             {% endif %}
         {% endwith %}
 
-        <form method="POST" style="background: none; padding: 0; box-shadow: none; border: none;">
-            <label for="password">Nova Senha:</label>
-            <div style="display: flex; gap: 10px;">
-                <input type="password" id="password" name="password" placeholder="Digite a nova senha" required>
-                <button type="submit" style="width: auto; background-color: #ffc107; color: black;">Atualizar</button>
-            </div>
+        <form method="POST" autocomplete="off"
+              style="background:none;padding:0;box-shadow:none;border:none;display:grid;gap:10px;max-width:440px;">
+            <input type="hidden" name="csrf_token" value="{{ perfil_csrf_token }}">
+            <label for="senha_atual">Senha atual</label>
+            <input type="password" id="senha_atual" name="senha_atual"
+                   autocomplete="current-password" required>
+            <label for="password">Nova senha (mínimo de 8 caracteres)</label>
+            <input type="password" id="password" name="password"
+                   minlength="8" maxlength="256" autocomplete="new-password" required>
+            <button type="submit" style="background-color:#ffc107;color:#151515;">
+                Alterar senha da conta
+            </button>
+            <p class="notificacoes-descricao">Para sua segurança, confirme a senha atual.
+                Após a alteração, você precisará entrar novamente.</p>
         </form>
 
         <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
