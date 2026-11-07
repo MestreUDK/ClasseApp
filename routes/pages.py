@@ -1,6 +1,6 @@
 # routes/pages.py
 
-from flask import Blueprint, render_template, request, send_from_directory, jsonify
+from flask import Blueprint, render_template, request, send_from_directory, jsonify, make_response
 from flask_login import login_required # <-- IMPORTAR
 import os
 
@@ -63,6 +63,15 @@ def page_visualizar_compartilhado(codigo):
     return render_template('visualizar_compartilhado.html', codigo=codigo)
 
 # --- ROTAS PÚBLICAS ---
+
+@pages_bp.route('/demonstracao')
+def page_demonstracao():
+    """Apresenta um ambiente público isolado com dados inteiramente fictícios."""
+    response = make_response(render_template('demonstracao.html'))
+    response.headers['Cache-Control'] = 'no-store, private'
+    response.headers['X-Robots-Tag'] = 'noindex, nofollow'
+    return response
+
 
 @pages_bp.route('/offline')
 def page_offline():
