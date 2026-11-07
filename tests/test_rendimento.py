@@ -92,6 +92,63 @@ class TestarRecuperacoes(unittest.TestCase):
         self.assertEqual(r['periodos'][1]['efetiva'], 6)
         self.assertEqual(r['media_anual'], 6)
 
+    def test_modo_manual_pode_escolher_primeira_com_duas_vermelhas(self):
+        self.avs[4]['recuperacao_modo'] = 'manual'
+        valores = {'a1': 4, 'a2': 3, 'a3': 7, 'a4': 8, 'r1': 9}
+        resultado = calcular_rendimento(
+            'aluno', self.avs, {'aluno': valores},
+            {'aluno': {'r1': 1}})
+        self.assertEqual(resultado['recuperacoes'][1]['alvo'], 1)
+        self.assertTrue(resultado['recuperacoes'][1]['aplicada'])
+        self.assertEqual(resultado['periodos'][1]['original'], 4)
+        self.assertEqual(resultado['periodos'][1]['efetiva'], 9)
+        self.assertEqual(resultado['periodos'][2]['efetiva'], 3)
+
+    def test_manual_sem_destino_nao_aplica(self):
+        self.avs[4]['recuperacao_modo'] = 'manual'
+        valores = {'a1': 4, 'a2': 3, 'a3': 7, 'a4': 8, 'r1': 9}
+        resultado = calcular_rendimento('aluno', self.avs, {'aluno': valores})
+        self.assertFalse(resultado['recuperacoes'][1]['aplicada'])
+        self.assertTrue(resultado['recuperacoes'][1]['pendente_alvo'])
+        self.assertEqual(resultado['periodos'][2]['efetiva'], 3)
+
+    def test_manual_nao_aplica_em_destino_sem_nota_vermelha(self):
+        self.avs[4]['recuperacao_modo'] = 'manual'
+        valores = {'a1': 7, 'a2': 3, 'a3': 7, 'a4': 8, 'r1': 9}
+        resultado = calcular_rendimento(
+            'aluno', self.avs, {'aluno': valores},
+            {'aluno': {'r1': 1}})
+        self.assertFalse(resultado['recuperacoes'][1]['aplicada'])
+        self.assertIsNone(resultado['recuperacoes'][1]['alvo'])
+        self.assertEqual(resultado['periodos'][1]['efetiva'], 7)
+
+    def test_modo_automatico_ignora_destino_manual_antigo(self):
+        valores = {'a1': 4, 'a2': 3, 'a3': 7, 'a4': 8, 'r1': 9}
+        resultado = calcular_rendimento(
+            'aluno', self.avs, {'aluno': valores},
+            {'aluno': {'r1': 1}})
+        self.assertEqual(resultado['recuperacoes'][1]['alvo'], 2)
+        self.assertEqual(resultado['periodos'][2]['efetiva'], 9)
+
+    def test_segunda_recuperacao_manual_pode_escolher_terceira(self):
+        self.avs[5]['recuperacao_modo'] = 'manual'
+        valores = {'a1': 7, 'a2': 8, 'a3': 2, 'a4': 4, 'r2': 9}
+        resultado = calcular_rendimento(
+            'aluno', self.avs, {'aluno': valores},
+            {'aluno': {'r2': 3}})
+        self.assertEqual(resultado['recuperacoes'][2]['alvo'], 3)
+        self.assertEqual(resultado['periodos'][3]['efetiva'], 9)
+        self.assertEqual(resultado['periodos'][4]['efetiva'], 4)
+
+    def test_manual_nao_reduz_nota(self):
+        self.avs[4]['recuperacao_modo'] = 'manual'
+        valores = {'a1': 4, 'a2': 3, 'a3': 7, 'a4': 8, 'r1': 2}
+        resultado = calcular_rendimento(
+            'aluno', self.avs, {'aluno': valores},
+            {'aluno': {'r1': 1}})
+        self.assertEqual(resultado['periodos'][1]['efetiva'], 4)
+        self.assertFalse(resultado['recuperacoes'][1]['aplicada'])
+
     def test_sem_registro_de_nota_nao_e_zero(self):
         r = self.calcular(a1=4, a3=6, a4=8, r1=9)
         self.assertIsNone(r['periodos'][2]['original'])
