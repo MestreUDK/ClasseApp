@@ -210,8 +210,12 @@
             // Não interromper páginas online com prompts ao carregar os painéis.
             // A chave é necessária para ler o cofre: o usuário pode desbloquear
             // explicitamente no Perfil. Já no modo offline, o portão pede a senha.
-            if (navigator.onLine) throw new Error(
-                'Cofre local bloqueado. Use “Desbloquear dados locais” no Perfil.');
+            // No Perfil, só o botão explícito pode pedir a senha. Evita que
+            // leituras simultâneas de cópias/filas abram um segundo prompt.
+            if (document.getElementById('offline-acesso') || navigator.onLine) {
+                throw new Error(
+                    'Cofre local bloqueado. Use “Desbloquear dados locais” no Perfil.');
+            }
             const senha=window.prompt('Informe a senha LOCAL para acessar os dados offline deste dispositivo:');
             if (!senha) throw new Error('Dados locais bloqueados. Informe sua senha local para continuar.');
             if (!await verificar(usuarioId,senha)) throw new Error('Senha local incorreta. Nenhum dado foi alterado.');
@@ -260,7 +264,9 @@
         const atualBox = document.getElementById('offline-acesso-atual-box');
         const botao = document.getElementById('offline-acesso-salvar');
         const botaoDesbloquear = document.getElementById('offline-acesso-desbloquear');
+        const senhaDesbloqueio = document.getElementById('offline-acesso-desbloqueio-senha');
         const botaoBloquear = document.getElementById('offline-acesso-bloquear');
+        let desbloqueioEmAndamento = false;
         const prazoSelect = document.getElementById('offline-acesso-prazo');
         const estadoSessao = document.getElementById('offline-acesso-sessao');
         if (prazoSelect) {
@@ -276,20 +282,42 @@
                 'Dados locais desbloqueados nesta aba por tempo limitado.' :
                 'Dados locais bloqueados. Isso não interfere no seu login online.';
             if (botaoBloquear) botaoBloquear.disabled = !disponivel;
+            if (botaoDesbloquear) botaoDesbloquear.disabled = disponivel || desbloqueioEmAndamento;
+            if (senhaDesbloqueio) {
+                if (disponivel) senhaDesbloqueio.value = '';
+                senhaDesbloqueio.disabled = disponivel || desbloqueioEmAndamento;
+            }
         }
         botaoDesbloquear?.addEventListener('click', async () => {
-            const tentativa = window.prompt('Digite sua senha local para desbloquear os dados deste dispositivo:');
-            if (!tentativa) return;
-            botaoDesbloquear.disabled = true;
+            // Uma única solicitação explícita por clique; leituras de outras
+            // seções não devem abrir janelas de senha no Perfil.
+            if (desbloqueioEmAndamento) return;
+            desbloqueioEmAndamento = true;
+            estadoDaSessao();
             try {
+                if (obterChave(usuario) || await restaurarSessao(usuario)) {
+                    estado.textContent = 'Os dados locais já estão desbloqueados nesta aba.';
+                    return;
+                }
+                const tentativa = senhaDesbloqueio?.value || '';
+                if (!tentativa) {
+                    estado.textContent = 'Digite sua senha local no campo acima e clique em Desbloquear dados locais.';
+                    senhaDesbloqueio?.focus();
+                    return;
+                }
+                // Limpa o campo imediatamente; não armazenar a senha digitada.
+                senhaDesbloqueio.value = '';
                 if (!await verificar(usuario, tentativa)) throw new Error('Senha local incorreta.');
-                estadoDaSessao();
-                estado.textContent = 'Cofre desbloqueado. Agora pode usar cópias e sincronização sem repetir a senha nesta aba, até vencer o prazo.';
+                estado.textContent = 'Cofre desbloqueado. Você pode utilizar os dados locais até vencer o prazo escolhido.';
                 document.dispatchEvent(new Event('classeapp:cofre:liberado'));
-                // Atualiza todos os painéis sem deixar erros antigos de cofre bloqueado.
+                // Atualiza os painéis que iniciaram bloqueados sem abrir prompts.
                 window.location.reload();
-            } catch (erro) { estado.textContent = erro.message; }
-            finally { botaoDesbloquear.disabled = false; }
+            } catch (erro) {
+                estado.textContent = erro?.message || 'Não foi possível desbloquear os dados locais.';
+            } finally {
+                desbloqueioEmAndamento = false;
+                estadoDaSessao();
+            }
         });
         botaoBloquear?.addEventListener('click', () => { bloquear(); estadoDaSessao(); });
         async function atualizar() {
