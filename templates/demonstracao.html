@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101827">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Modo demonstração · ClasseApp</title>
+    <link rel="icon" href="{{ url_for('static', filename='icon/icon-192.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='demo.css') }}">
+    <script src="{{ url_for('static', filename='js/demo.js') }}" defer></script>
+</head>
+<body class="demo-page">
+    <header class="demo-header">
+        <div class="demo-header-inner">
+            <a class="demo-logo" href="{{ url_for('auth_bp.login') }}" aria-label="ClasseApp — voltar ao login">
+                <img src="{{ url_for('static', filename='icon/icon-192.png') }}" alt="" width="38" height="38">
+                <span><strong>ClasseApp</strong><small>Modo demonstração</small></span>
+            </a>
+            <div class="demo-header-actions">
+                <span class="demo-chip">Dados fictícios</span>
+                <a class="demo-enter" href="{{ url_for('auth_bp.login') }}">Entrar na minha conta</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="demo-layout">
+        <nav class="demo-nav" aria-label="Funcionalidades da demonstração">
+            <button type="button" class="demo-nav-btn is-active" data-view="inicio" aria-current="page"><span aria-hidden="true">⌂</span> Visão geral</button>
+            <button type="button" class="demo-nav-btn" data-view="turmas"><span aria-hidden="true">▦</span> Turmas</button>
+            <button type="button" class="demo-nav-btn" data-view="alunos"><span aria-hidden="true">♙</span> Alunos</button>
+            <button type="button" class="demo-nav-btn" data-view="frequencia"><span aria-hidden="true">✓</span> Frequência</button>
+            <button type="button" class="demo-nav-btn" data-view="notas"><span aria-hidden="true">▥</span> Notas</button>
+            <button type="button" class="demo-nav-btn" data-view="diario"><span aria-hidden="true">▤</span> Diário</button>
+            <button type="button" class="demo-nav-btn" data-view="relatorios"><span aria-hidden="true">↧</span> Relatórios</button>
+            <div class="demo-nav-bottom">
+                <button type="button" id="demo-reiniciar" class="demo-reset">↻ Reiniciar demonstração</button>
+                <p>Os dados desta demonstração nunca são enviados para a nuvem.</p>
+            </div>
+        </nav>
+
+        <main id="demo-main" class="demo-main">
+            <aside class="demo-banner" aria-label="Aviso sobre a demonstração">
+                <span class="demo-banner-symbol" aria-hidden="true">ⓘ</span>
+                <div><strong>Você está explorando um ambiente de exemplo.</strong>
+                    <p>Os alunos, turmas e notas são fictícios. Suas alterações ficam apenas nesta página e desaparecem ao recarregar.</p>
+                </div>
+            </aside>
+            <p id="demo-feedback" class="demo-feedback" role="status" aria-live="polite" hidden></p>
+
+            <section id="view-inicio" class="demo-view" aria-labelledby="titulo-inicio">
+                <div class="demo-section-heading"><div><p class="demo-eyebrow">Painel inicial</p><h1 id="titulo-inicio">Visão geral</h1><p>Um exemplo de como o ClasseApp ajuda a organizar suas turmas.</p></div></div>
+                <div class="demo-stats">
+                    <article class="demo-stat"><span>Turmas</span><strong id="stat-turmas">0</strong><small>Cadastradas na demonstração</small></article>
+                    <article class="demo-stat"><span>Alunos</span><strong id="stat-alunos">0</strong><small>Distribuídos entre as turmas</small></article>
+                    <article class="demo-stat"><span>Frequência</span><strong id="stat-frequencia">—</strong><small>Chamadas simuladas</small></article>
+                </div>
+                <div class="demo-two-cols">
+                    <article class="demo-panel"><h2>Minhas turmas</h2><div id="resumo-turmas" class="demo-stack"></div></article>
+                    <article class="demo-panel"><h2>Conheça as funcionalidades</h2><div class="demo-feature-list">
+                        <p><strong>📋 Frequência</strong><span>Marque presenças e faltas de exemplo.</span></p>
+                        <p><strong>📝 Notas</strong><span>Simule avaliações e médias ponderadas.</span></p>
+                        <p><strong>📚 Diário</strong><span>Crie anotações sem afetar alunos reais.</span></p>
+                        <p><strong>📊 Relatórios</strong><span>Visualize e exporte um CSV fictício.</span></p>
+                    </div></article>
+                </div>
+            </section>
+
+            <section id="view-turmas" class="demo-view" aria-labelledby="titulo-turmas" hidden>
+                <div class="demo-section-heading"><div><p class="demo-eyebrow">Organização escolar</p><h1 id="titulo-turmas">Turmas</h1><p>Explore ou crie uma turma fictícia para testar.</p></div></div>
+                <div class="demo-two-cols">
+                    <article class="demo-panel"><h2>Turmas de exemplo</h2><div id="lista-turmas" class="demo-stack"></div></article>
+                    <article class="demo-panel"><h2>Nova turma (simulação)</h2>
+                        <form id="form-turma" class="demo-form">
+                            <label for="nova-turma-nome">Nome da turma</label><input id="nova-turma-nome" name="nome" maxlength="40" placeholder="Ex.: 5º A" required>
+                            <label for="nova-turma-disciplina">Disciplina</label><input id="nova-turma-disciplina" name="disciplina" maxlength="50" value="Matemática" required>
+                            <button class="demo-primary" type="submit">Adicionar turma fictícia</button>
+                        </form>
+                    </article>
+                </div>
+            </section>
+
+            <section id="view-alunos" class="demo-view" aria-labelledby="titulo-alunos" hidden>
+                <div class="demo-section-heading"><div><p class="demo-eyebrow">Cadastro</p><h1 id="titulo-alunos">Alunos</h1><p>Consulte e acrescente alunos fictícios.</p></div></div>
+                <div class="demo-panel">
+                    <div class="demo-filters"><div><label for="alunos-turma">Turma</label><select id="alunos-turma" data-turma-select></select></div><div><label for="buscar-aluno">Buscar por nome</label><input id="buscar-aluno" type="search" placeholder="Pesquisar na turma..."></div></div>
+                    <div id="lista-alunos" class="demo-stack"></div>
+                </div>
+                <div class="demo-panel"><h2>Adicionar aluno (simulação)</h2>
+                    <form id="form-aluno" class="demo-inline-form"><div><label for="novo-aluno">Nome fictício</label><input id="novo-aluno" maxlength="65" placeholder="Nome do aluno" required></div><button class="demo-primary" type="submit">Adicionar à turma selecionada</button></form>
+                </div>
+            </section>
+
+            <section id="view-frequencia" class="demo-view" aria-labelledby="titulo-frequencia" hidden>
+                <div class="demo-section-heading"><div><p class="demo-eyebrow">Chamada escolar</p><h1 id="titulo-frequencia">Frequência</h1><p>Registre uma chamada fictícia e consulte seu resumo.</p></div></div>
+                <div class="demo-panel">
+                    <div class="demo-filters"><div><label for="frequencia-turma">Turma</label><select id="frequencia-turma" data-turma-select></select></div><div><label for="frequencia-data">Data</label><input id="frequencia-data" type="date" required></div></div>
+                    <div class="demo-call-header"><span id="frequencia-resumo">Nenhuma presença registrada</span><button type="button" class="demo-soft" id="frequencia-todos">Marcar todos presentes</button></div>
+                    <div id="frequencia-lista" class="demo-stack"></div>
+                    <button type="button" id="frequencia-salvar" class="demo-primary demo-save">Concluir chamada de exemplo</button>
+                </div>
+            </section>
+
+            <section id="view-notas" class="demo-view" aria-labelledby="titulo-notas" hidden>
+                <div class="demo-section-heading"><div><p class="demo-eyebrow">Avaliações bimestrais</p><h1 id="titulo-notas">Notas e recuperação</h1><p>Simule lançamentos com pesos 2, 3, 2 e 3.</p></div></div>
+                <div class="demo-panel"><div class="demo-filters"><div><label for="notas-turma">Turma</label><select id="notas-turma" data-turma-select></select></div></div>
+                    <p class="demo-helper">Altere as notas (0 a 10). A prévia calcula a média ponderada; REC1 e REC2 recuperam uma avaliação abaixo de 5,0, priorizando a de maior peso.</p>
+                    <div class="demo-table-scroll"><table class="demo-table"><thead><tr><th>Aluno</th><th>1ª (×2)</th><th>2ª (×3)</th><th>REC 1</th><th>3ª (×2)</th><th>4ª (×3)</th><th>REC 2</th><th>Média</th></tr></thead><tbody id="notas-tabela"></tbody></table></div>
+                    <p class="demo-footnote">Demonstração simplificada do modo automático. As notas originais não são substituídas.</p>
+                </div>
+            </section>
+
+            <section id="view-diario" class="demo-view" aria-labelledby="titulo-diario" hidden>
+                <div class="demo-section-heading"><div><p class="demo-eyebrow">Registros escolares</p><h1 id="titulo-diario">Diário de Bordo</h1><p>Adicione um registro fictício para conhecer a organização das anotações.</p></div></div>
+                <div class="demo-two-cols">
+                    <article class="demo-panel"><h2>Novo registro (simulação)</h2><form id="form-diario" class="demo-form">
+                        <label for="diario-titulo">Título</label><input id="diario-titulo" maxlength="80" placeholder="Ex.: Revisão de frações" required>
+                        <label for="diario-data">Data</label><input id="diario-data" type="date" required>
+                        <label for="diario-texto">Descrição</label><textarea id="diario-texto" maxlength="800" rows="5" required></textarea>
+                        <button class="demo-primary" type="submit">Guardar anotação fictícia</button>
+                    </form></article>
+                    <article class="demo-panel"><h2>Anotações demonstrativas</h2><div id="diario-lista" class="demo-stack"></div></article>
+                </div>
+            </section>
+
+            <section id="view-relatorios" class="demo-view" aria-labelledby="titulo-relatorios" hidden>
+                <div class="demo-section-heading"><div><p class="demo-eyebrow">Resultados e exportação</p><h1 id="titulo-relatorios">Relatórios</h1><p>Confira uma prévia do rendimento e exporte dados fictícios.</p></div></div>
+                <div class="demo-panel"><div class="demo-filters"><div><label for="relatorios-turma">Turma</label><select id="relatorios-turma" data-turma-select></select></div><div class="demo-report-action"><button type="button" class="demo-primary" id="relatorios-exportar">Baixar CSV demonstrativo</button></div></div>
+                    <p class="demo-helper">Este CSV simplificado não substitui o Mapa Final do Rendimento Escolar completo, disponível somente na conta autenticada.</p>
+                    <div class="demo-table-scroll"><table class="demo-table"><thead><tr><th>Aluno</th><th>1ª AV</th><th>2ª AV</th><th>3ª AV</th><th>4ª AV</th><th>Média ponderada</th></tr></thead><tbody id="relatorios-tabela"></tbody></table></div>
+                </div>
+            </section>
+
+            <footer class="demo-footer">ClasseApp &copy; {{ current_year }} · Versão {{ app_version }} · Ambiente de demonstração</footer>
+        </main>
+    </div>
+</body>
+</html>

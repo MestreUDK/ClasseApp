@@ -40,6 +40,14 @@
             <a href="/register">Criar nova conta</a>
             <a href="{{ url_for('auth_bp.forgot_password') }}">Esqueci minha senha</a>
         </div>
+
+        <div class="auth-guest">
+            <p>Quer conhecer o ClasseApp antes de criar uma conta?</p>
+            <a class="auth-demo-link" href="{{ url_for('pages_bp.page_demonstracao') }}">
+                Explorar demonstração
+            </a>
+            <small>Ambiente de teste com dados fictícios, sem acessar informações reais.</small>
+        </div>
     </main>
     <script src="{{ url_for('static', filename='js/auth.js') }}" defer></script>
 </body>
