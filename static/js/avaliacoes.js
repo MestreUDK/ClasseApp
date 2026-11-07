@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
         inputCategoria: document.getElementById('categoria'),
         inputPeso: document.getElementById('peso'),
         boxPeso: document.getElementById('box-peso'),
+        boxModoRecuperacao: document.getElementById('box-modo-recuperacao'),
+        inputModoRecuperacao: document.getElementById('recuperacao_modo'),
         avisoRecuperacao: document.getElementById('aviso-recuperacao'),
         quadro: document.getElementById('quadro-rendimento'),
         atualizarRendimento: document.getElementById('atualizar-rendimento'),
@@ -191,7 +193,7 @@ function criarCardAvaliacao(av) {
                     <span class="tag-av">${escapeHTML(nomeCategoria(av.categoria))}</span>
                     <span class="tag-av">Data: ${escapeHTML(formatarData(av.data))}</span>
                     <span class="tag-av">Nota máx.: ${escapeHTML(av.nota_maxima)}</span>
-                    ${av.categoria === 'recuperacao' ? '<span class="tag-av">Sem peso próprio</span>' : `<span class="tag-av">Peso: ${escapeHTML(av.peso)}</span>`}
+                    ${av.categoria === 'recuperacao' ? `<span class="tag-av">Sem peso próprio · ${av.recuperacao_modo === 'manual' ? 'Manual' : 'Automático'}</span>` : `<span class="tag-av">Peso: ${escapeHTML(av.peso)}</span>`}
                     <span class="tag-av">Média: ${av.media_turma ?? '-'}</span>
                     <span class="tag-av">Notas: ${av.total_notas_lancadas || 0}</span>
                 </div>
@@ -225,7 +227,9 @@ async function handleCriar(e) {
         periodo_numero: Number(els.inputPeriodoNumero.value || 1),
         categoria: els.inputCategoria.value || 'atividade',
         peso: els.inputCategoria.value === 'recuperacao'
-            ? 1 : Number(els.inputPeso.value || 1)
+            ? 1 : Number(els.inputPeso.value || 1),
+        recuperacao_modo: els.inputCategoria.value === 'recuperacao'
+            ? els.inputModoRecuperacao.value : 'automatico'
     };
 
     if (!dados.nome) {
@@ -283,6 +287,7 @@ function limparEdicao() {
     els.inputMax.value = 10;
     els.inputPeso.value = 2;
     els.inputPeriodoNumero.value = 1;
+    els.inputModoRecuperacao.value = 'automatico';
     atualizarCamposCategoria();
     els.tituloForm.textContent = 'Nova Atividade Avaliativa';
     els.form.querySelector('button[type="submit"]').textContent = 'Cadastrar Avaliação';
@@ -301,6 +306,7 @@ window.editarAvaliacao = function(id) {
     els.inputPeriodoNumero.value = av.periodo_numero || 1;
     els.inputCategoria.value = av.categoria || 'atividade';
     els.inputPeso.value = av.peso || 1;
+    els.inputModoRecuperacao.value = av.recuperacao_modo || 'automatico';
     atualizarCamposCategoria();
     els.tituloForm.textContent = 'Editar avaliação';
     els.form.querySelector('button[type="submit"]').textContent = 'Salvar alterações';
@@ -323,6 +329,7 @@ function atualizarCamposCategoria() {
     els.boxPeso.hidden = recuperacao;
     els.boxPeso.style.display = recuperacao ? 'none' : '';
     els.avisoRecuperacao.hidden = !recuperacao;
+    els.boxModoRecuperacao.hidden = !recuperacao;
     if (recuperacao) {
         els.inputPeriodoTipo.value = 'avaliacao';
         els.inputPeriodoTipo.disabled = true;
