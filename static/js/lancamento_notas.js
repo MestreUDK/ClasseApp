@@ -80,7 +80,9 @@ async function carregarDados() {
                 </span>
 
                 <span class="tag-av">
-                    Peso: ${escapeHTML(avaliacaoAtual.peso)}
+                    ${avaliacaoAtual.categoria === 'recuperacao'
+                        ? 'Sem peso próprio · substituição automática quando vantajosa'
+                        : `Peso: ${escapeHTML(avaliacaoAtual.peso)}`}
                 </span>
             </div>
         `;

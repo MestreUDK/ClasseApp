@@ -333,6 +333,9 @@ function renderizarNotas(notas) {
 
 function criarLinhaNota(aluno) {
     const media = aluno.media_periodo;
+    const detalheRecuperacao = aluno.recuperada
+        ? `<small title="Nota original antes da recuperação" style="display:block; color:var(--text-sec);">Original: ${escapeHTML(aluno.nota_original)} · REC aplicada</small>`
+        : '';
 
     let corMedia = '';
 
@@ -357,7 +360,7 @@ function criarLinhaNota(aluno) {
             </td>
 
             <td class="center media-nota" style="${corMedia}">
-                ${media ?? '-'}
+                ${media ?? '-'}${detalheRecuperacao}
             </td>
         </tr>
     `;

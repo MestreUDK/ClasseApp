@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
         inputPeriodoNumero: document.getElementById('periodo_numero'),
         inputCategoria: document.getElementById('categoria'),
         inputPeso: document.getElementById('peso'),
+        boxPeso: document.getElementById('box-peso'),
+        avisoRecuperacao: document.getElementById('aviso-recuperacao'),
+        quadro: document.getElementById('quadro-rendimento'),
+        atualizarRendimento: document.getElementById('atualizar-rendimento'),
 
         lista: document.getElementById('lista-avaliacoes'),
         cancelar: document.getElementById('cancelar-edicao-avaliacao'),
@@ -32,6 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     els.form.addEventListener('submit', handleCriar);
     els.cancelar.addEventListener('click', limparEdicao);
+    els.inputCategoria.addEventListener('change', atualizarCamposCategoria);
+    els.inputPeriodoNumero.addEventListener('change', atualizarPesoSugerido);
+    els.inputPeriodoTipo.addEventListener('change', atualizarPesoSugerido);
+    els.atualizarRendimento.addEventListener('click', carregarRendimento);
+    atualizarPesoSugerido();
+    atualizarCamposCategoria();
 });
 
 function escapeHTML(valor) {
@@ -103,13 +113,23 @@ async function carregarAvaliacoes() {
 
         if (!Array.isArray(avaliacoes) || avaliacoes.length === 0) {
             els.lista.innerHTML = '<p style="color: #777;">Nenhuma avaliação cadastrada.</p>';
+            await carregarRendimento();
             return;
         }
 
         avaliacoesCarregadas = avaliacoes;
         const grupos = agruparPorPeriodo(avaliacoes);
 
-        Object.keys(grupos).forEach(chave => {
+        const ordemGrupo = grupo => {
+            const av = grupo[0];
+            const numero = Number(av.periodo_numero) || 1;
+            if (av.categoria === 'recuperacao') return numero === 1 ? 2.5 : 4.5;
+            if (av.periodo_tipo === 'avaliacao') return numero;
+            return 100 + numero;
+        };
+        Object.keys(grupos)
+            .sort((a, b) => ordemGrupo(grupos[a]) - ordemGrupo(grupos[b]))
+            .forEach(chave => {
             const grupo = grupos[chave];
             const primeira = grupo[0];
 
@@ -118,7 +138,9 @@ async function carregarAvaliacoes() {
 
             section.innerHTML = `
                 <h3 class="periodo-titulo">
-                    ${escapeHTML(nomePeriodo(primeira.periodo_tipo, primeira.periodo_numero))}
+                    ${primeira.categoria === 'recuperacao'
+                        ? `${escapeHTML(primeira.periodo_numero)}ª Recuperação · ${primeira.periodo_numero === 1 ? '1ª e 2ª' : '3ª e 4ª'} avaliações`
+                        : escapeHTML(nomePeriodo(primeira.periodo_tipo, primeira.periodo_numero))}
                 </h3>
             `;
 
@@ -128,6 +150,7 @@ async function carregarAvaliacoes() {
 
             els.lista.appendChild(section);
         });
+        await carregarRendimento();
 
     } catch (error) {
         console.error(error);
@@ -139,7 +162,9 @@ function agruparPorPeriodo(avaliacoes) {
     const grupos = {};
 
     avaliacoes.forEach(av => {
-        const chave = `${av.periodo_tipo || 'avaliacao'}_${av.periodo_numero || 1}`;
+        const chave = av.categoria === 'recuperacao'
+            ? `recuperacao_${av.periodo_numero}`
+            : `${av.periodo_tipo || 'avaliacao'}_${av.periodo_numero || 1}`;
 
         if (!grupos[chave]) {
             grupos[chave] = [];
@@ -166,7 +191,7 @@ function criarCardAvaliacao(av) {
                     <span class="tag-av">${escapeHTML(nomeCategoria(av.categoria))}</span>
                     <span class="tag-av">Data: ${escapeHTML(formatarData(av.data))}</span>
                     <span class="tag-av">Nota máx.: ${escapeHTML(av.nota_maxima)}</span>
-                    <span class="tag-av">Peso: ${escapeHTML(av.peso)}</span>
+                    ${av.categoria === 'recuperacao' ? '<span class="tag-av">Sem peso próprio</span>' : `<span class="tag-av">Peso: ${escapeHTML(av.peso)}</span>`}
                     <span class="tag-av">Média: ${av.media_turma ?? '-'}</span>
                     <span class="tag-av">Notas: ${av.total_notas_lancadas || 0}</span>
                 </div>
@@ -199,7 +224,8 @@ async function handleCriar(e) {
         periodo_tipo: els.inputPeriodoTipo.value || 'avaliacao',
         periodo_numero: Number(els.inputPeriodoNumero.value || 1),
         categoria: els.inputCategoria.value || 'atividade',
-        peso: Number(els.inputPeso.value || 1)
+        peso: els.inputCategoria.value === 'recuperacao'
+            ? 1 : Number(els.inputPeso.value || 1)
     };
 
     if (!dados.nome) {
@@ -255,8 +281,9 @@ function limparEdicao() {
     avaliacaoEmEdicao = null;
     els.form.reset();
     els.inputMax.value = 10;
-    els.inputPeso.value = 1;
+    els.inputPeso.value = 2;
     els.inputPeriodoNumero.value = 1;
+    atualizarCamposCategoria();
     els.tituloForm.textContent = 'Nova Atividade Avaliativa';
     els.form.querySelector('button[type="submit"]').textContent = 'Cadastrar Avaliação';
     els.cancelar.hidden = true;
@@ -274,9 +301,94 @@ window.editarAvaliacao = function(id) {
     els.inputPeriodoNumero.value = av.periodo_numero || 1;
     els.inputCategoria.value = av.categoria || 'atividade';
     els.inputPeso.value = av.peso || 1;
+    atualizarCamposCategoria();
     els.tituloForm.textContent = 'Editar avaliação';
     els.form.querySelector('button[type="submit"]').textContent = 'Salvar alterações';
     els.cancelar.hidden = false;
     els.cancelar.style.display = 'inline-block';
     els.form.scrollIntoView({behavior: 'smooth', block: 'start'});
 };
+
+
+function atualizarPesoSugerido() {
+    if (avaliacaoEmEdicao || els.inputCategoria.value === 'recuperacao') return;
+    if (els.inputPeriodoTipo.value !== 'avaliacao') return;
+    const pesos = {1: 2, 2: 3, 3: 2, 4: 3};
+    const n = Number(els.inputPeriodoNumero.value);
+    if (pesos[n]) els.inputPeso.value = pesos[n];
+}
+
+function atualizarCamposCategoria() {
+    const recuperacao = els.inputCategoria.value === 'recuperacao';
+    els.boxPeso.hidden = recuperacao;
+    els.boxPeso.style.display = recuperacao ? 'none' : '';
+    els.avisoRecuperacao.hidden = !recuperacao;
+    if (recuperacao) {
+        els.inputPeriodoTipo.value = 'avaliacao';
+        els.inputPeriodoTipo.disabled = true;
+        els.inputPeriodoNumero.min = 1;
+        els.inputPeriodoNumero.max = 2;
+        if (Number(els.inputPeriodoNumero.value) > 2) {
+            els.inputPeriodoNumero.value = 1;
+        }
+    } else {
+        els.inputPeriodoTipo.disabled = false;
+        els.inputPeriodoNumero.max = 12;
+        atualizarPesoSugerido();
+    }
+}
+
+function mostrarNota(numero) {
+    return numero === null || numero === undefined
+        ? '—' : Number(numero).toLocaleString('pt-BR', {maximumFractionDigits: 2});
+}
+
+async function carregarRendimento() {
+    els.quadro.innerHTML = '<p>Calculando rendimento...</p>';
+    try {
+        const res = await fetch(`/api/turma/${TURMA_ID}/rendimento`);
+        const dados = await res.json();
+        if (!res.ok) throw new Error(dados.error || 'Erro ao consultar rendimento.');
+        const alunos = dados.alunos || [];
+        if (!alunos.length) {
+            els.quadro.textContent = 'Não há alunos vinculados à turma.';
+            return;
+        }
+        const linhas = alunos.map(({nome, rendimento: r}) => {
+            const avaliacoes = [1, 2, 3, 4].map(n => {
+                const p = r.periodos[n];
+                const principal = mostrarNota(p.efetiva);
+                return `<td class="${p.recuperada ? 'rec-aplicada' : ''}">
+                    ${principal}
+                    ${p.recuperada ? `<span class="rec-origem">Antes: ${mostrarNota(p.original)}</span>` : ''}
+                </td>`;
+            });
+            const recs = [1, 2].map(n => {
+                const rec = r.recuperacoes[n];
+                return `<td title="${rec.aplicada ? `Aplicada à ${rec.alvo}ª avaliação` : 'Sem substituição'}">
+                    ${mostrarNota(rec.nota)}
+                    ${rec.aplicada ? `<span class="rec-origem">→ ${rec.alvo}ª AV.</span>` : ''}
+                </td>`;
+            });
+            const media = r.completo ? mostrarNota(r.media_anual)
+                : `${mostrarNota(r.media_parcial)} <span class="rec-origem">Parcial</span>`;
+            return `<tr><td>${escapeHTML(nome || '')}</td>${avaliacoes.join('')}${recs.join('')}
+                <td>${media}</td></tr>`;
+        });
+        els.quadro.innerHTML = `
+            <table><thead><tr>
+                <th>Aluno</th><th>1ª AV. ×2</th><th>2ª AV. ×3</th>
+                <th>3ª AV. ×2</th><th>4ª AV. ×3</th>
+                <th>1ª REC</th><th>2ª REC</th><th>Média</th>
+            </tr></thead><tbody>${linhas.join('')}</tbody></table>`;
+        const avisos = [...new Set(alunos.flatMap(item => item.rendimento.avisos || []))];
+        if (avisos.length) {
+            const div = document.createElement('p');
+            div.style.color = '#f59e0b';
+            div.textContent = avisos.join(' ');
+            els.quadro.prepend(div);
+        }
+    } catch (error) {
+        els.quadro.textContent = error.message;
+    }
+}
