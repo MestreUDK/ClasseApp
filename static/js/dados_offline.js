@@ -453,6 +453,6 @@
         finally { bloquear(false); }
     });
 
-    atualizar().catch(() => { estado.textContent = 'Armazenamento local indisponível.'; });
+    atualizar().catch(() => { estado.textContent = 'Dados locais protegidos. Clique em “Desbloquear dados locais” acima para consultá-los; o login online continua funcionando.'; });
     atualizarResumoPendencias();
 })();

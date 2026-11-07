@@ -333,6 +333,9 @@
             if (view === 'pendencias') draw();
         } catch (_) { info.textContent = 'Edição salva, mas não foi possível atualizar a contagem.'; }
     });
+    // Uma restauração de sessão muito rápida pode acontecer antes do listener.
+    const contaRestaurada = window.ClasseOfflineAccess?.usuarioDesbloqueado?.();
+    if (contaRestaurada) abrirContaOffline(contaRestaurada);
     get('offline-bloquear').addEventListener('click', () => window.ClasseOfflineAccess?.bloquear());
     get('offline-refresh').addEventListener('click', async () => {
         try { await reload(); } catch (_) { info.textContent = 'Falha ao atualizar a visualização local.'; }

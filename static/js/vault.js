@@ -1,6 +1,7 @@
 /* ClasseApp - cofre local. Cifra snapshots, histórico e filas por conta com AES-GCM.
- * A chave deriva da senha local (PBKDF2) e permanece somente na memória da página.
- * Nunca usa tokens Supabase; uma aba bloqueada não abre o conteúdo armazenado.
+ * A chave deriva da senha local (PBKDF2). A janela pode conservar seu material
+ * derivado por prazo limitado na sessionStorage para não exigir nova senha a
+ * cada navegação. Nunca usa tokens do Supabase para desbloquear dados.
  */
 (() => {
     'use strict';

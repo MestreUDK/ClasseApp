@@ -117,7 +117,22 @@
                 </label>
                 <button type="submit" id="offline-acesso-salvar" class="notificacoes-atualizar">Ativar acesso offline</button>
             </form>
-            <p class="notificacoes-descricao"><strong>Atenção:</strong> o cofre criptografa cópias e alterações locais por conta com AES-GCM; a chave só fica na memória enquanto desbloqueada. Uma senha local perdida não pode ser recuperada pelo Supabase. Para trocar a senha, informe a senha anterior. Não use aparelhos compartilhados ou comprometidos.</p>
+            <div style="margin:14px 0;display:grid;gap:10px;max-width:440px">
+                <label for="offline-acesso-prazo">Manter o Espaço offline desbloqueado nesta aba por:</label>
+                <select id="offline-acesso-prazo" class="notificacoes-atualizar" style="max-width:260px">
+                    <option value="0">Sempre solicitar senha</option>
+                    <option value="5">5 minutos</option>
+                    <option value="15">15 minutos</option>
+                    <option value="30" selected>30 minutos (padrão)</option>
+                    <option value="60">60 minutos</option>
+                </select>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <button id="offline-acesso-desbloquear" type="button" class="notificacoes-atualizar">🔓 Desbloquear dados locais</button>
+                    <button id="offline-acesso-bloquear" type="button" class="notificacoes-atualizar">🔒 Bloquear agora</button>
+                </div>
+                <p id="offline-acesso-sessao" class="notificacoes-descricao" role="status"></p>
+            </div>
+            <p class="notificacoes-descricao"><strong>Segurança:</strong> sua senha não é salva. Para evitar pedidos repetidos, ao escolher um prazo o material da chave de criptografia fica temporariamente na sessão desta aba e é apagado ao bloquear, sair da conta ou vencer o prazo. Não use esta conveniência em dispositivos compartilhados. A autenticação online continua independente da senha local.</p>
         </section>
 
         <section id="dados-offline" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">

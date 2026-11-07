@@ -15,12 +15,26 @@
     try {
         const conta = document.documentElement.dataset.appearanceUser;
         if (conta && conta !== 'visitante') {
+            // Não reutilizar material de desbloqueio da conta anterior.
+            const chaveDeSessao = 'classeapp:cofre:temporario:v1';
+            const anterior = sessionStorage.getItem(chaveDeSessao);
+            if (anterior) {
+                try {
+                    if (JSON.parse(anterior).usuario_id !== conta) {
+                        sessionStorage.removeItem(chaveDeSessao);
+                    }
+                } catch (_) { sessionStorage.removeItem(chaveDeSessao); }
+            }
             sessionStorage.setItem('classeapp:offline:conta-aba', conta);
         }
     } catch (_) { /* Armazenamento indisponível: o hub exibirá instruções. */ }
     document.addEventListener('click', event => {
         if (event.target.closest('a[href="/logout"]')) {
-            try { sessionStorage.removeItem('classeapp:offline:conta-aba'); } catch (_) {}
+            try {
+                sessionStorage.removeItem('classeapp:offline:conta-aba');
+                sessionStorage.removeItem('classeapp:cofre:temporario:v1');
+                window.ClasseOfflineAccess?.bloquear?.();
+            } catch (_) {}
         }
     });
     </script>

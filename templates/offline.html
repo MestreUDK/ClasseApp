@@ -53,11 +53,11 @@
 <div class="app">
   <header><div class="brand">ClasseApp <span class="tag">Espaço offline</span></div><a class="button" href="/">Voltar ao ClasseApp online</a></header>
   <h1>Seus dados disponíveis no dispositivo</h1>
-  <p class="muted">Navegue entre turmas, alunos e alterações locais sem precisar abrir páginas autenticadas. Ele utiliza a cópia baixada anteriormente e exige a senha local configurada no Perfil.</p>
+  <p class="muted">Navegue entre turmas, alunos e alterações locais sem precisar abrir páginas autenticadas. Ele utiliza a cópia baixada anteriormente e utiliza a senha local configurada no Perfil. Se o desbloqueio desta aba ainda estiver válido, não será necessário digitá-la novamente.</p>
   <p class="warning">Consulte e edite turmas, alunos, notas, diário e faça a chamada de frequência sem conexão. A seção Relatórios gera uma prévia do Mapa Final e um Excel local, usando notas, recuperações e frequências do ano escolhido. Esses resultados podem incluir alterações pendentes e <strong>não substituem a exportação oficial online</strong>. Nenhuma edição é enviada sem sua confirmação.</p>
   <section id="offline-desbloqueio" class="panel" aria-label="Desbloquear acesso offline">
     <h2>Desbloquear dados deste dispositivo</h2>
-    <p class="muted">Escolha sua conta e use a senha local cadastrada anteriormente no Perfil, enquanto estava conectado.</p>
+    <p class="muted">Escolha sua conta e informe a senha local. O acesso poderá continuar desbloqueado pelo período escolhido no Perfil.</p>
     <form id="offline-desbloqueio-form" class="unlock-form" autocomplete="off">
       <label>Conta com cópia offline
         <select id="offline-desbloqueio-conta" required></select>
@@ -92,7 +92,7 @@
       <div id="offline-relatorios" hidden></div>
     </section>
   </div>
-  <p class="footer">Para conferir o ano letivo, atualizar o histórico de frequência ou refletir operações já sincronizadas, conecte-se e use Meu Perfil → Baixar da nuvem novamente. As cópias e pendências das contas com senha local configurada são criptografadas no IndexedDB após o primeiro desbloqueio desta atualização. A chave permanece apenas na memória da página. Não use aparelhos compartilhados ou com acesso não confiável. Para baixar uma cópia nova ou sincronizar, conecte-se e acesse Meu Perfil.</p>
+  <p class="footer">Para conferir o ano letivo, atualizar o histórico de frequência ou refletir operações já sincronizadas, conecte-se e use Meu Perfil → Baixar da nuvem novamente. As cópias e pendências das contas com senha local configurada são criptografadas no IndexedDB após o primeiro desbloqueio desta atualização. A chave fica na memória e, se você ativou um prazo, seu material derivado fica temporariamente na sessão desta aba até vencer ou ser bloqueado. Não use aparelhos compartilhados ou com acesso não confiável. Para baixar uma cópia nova ou sincronizar, conecte-se e acesse Meu Perfil.</p>
 </div>
 </body>
 </html>
