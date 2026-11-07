@@ -1,6 +1,7 @@
 # routes/notas.py
 
 from flask import Blueprint, jsonify, request
+from uuid import UUID
 from flask_login import login_required, current_user
 from utils import supabase
 from modules.revisoes import salvar_versionado
@@ -139,13 +140,43 @@ def create_avaliacao():
             return jsonify({'error': 'Tipo de período inválido.'}), 400
         if categoria not in ('atividade', 'trabalho', 'prova', 'participacao', 'recuperacao', 'outro'):
             return jsonify({'error': 'Categoria inválida.'}), 400
+        # O identificador enviado pelo cliente permite repetir um POST após uma
+        # queda de rede sem criar outra avaliação. Nunca confiar no user_id recebido.
+        client_id = dados.get('client_id')
+        if client_id is not None:
+            try:
+                client_id = str(UUID(str(client_id)))
+            except (TypeError, ValueError, AttributeError):
+                return jsonify({'error': 'Identificador local inválido.'}), 400
+            encontrados = (supabase.table('avaliacoes').select('*')
+                           .eq('id', client_id).eq('user_id', current_user.id)
+                           .limit(1).execute().data or [])
+            if encontrados:
+                existente = encontrados[0]
+                esperado = {
+                    'nome': nome, 'data': dados.get('data') or None,
+                    'nota_maxima': nota_maxima, 'periodo_tipo': tipo,
+                    'periodo_numero': periodo_numero, 'categoria': categoria,
+                    'recuperacao_modo': modo, 'peso': peso,
+                    'turma_id': str(turma_id),
+                }
+                iguais = all(
+                    float(existente.get(k)) == float(v)
+                    if k in ('nota_maxima', 'peso') else
+                    str(existente.get(k)) == str(v)
+                    for k, v in esperado.items()
+                )
+                if iguais:
+                    return jsonify(existente), 200
+                return jsonify({'error': 'Conflito: avaliação já cadastrada com outros dados.'}), 409
+
         erro = validar_recuperacao(turma_id, tipo, periodo_numero, categoria)
         if erro:
             return jsonify({'error': erro}), 400
         # O banco pode exigir peso não nulo: 1 é neutro e IGNORADO nas médias.
         if categoria == 'recuperacao':
             peso = 1
-        data, _ = supabase.table('avaliacoes').insert({
+        registro = {
             'nome': nome,
             'data': dados.get('data') or None,
             'nota_maxima': nota_maxima,
@@ -156,9 +187,19 @@ def create_avaliacao():
             'peso': peso,
             'turma_id': turma_id,
             'user_id': current_user.id
-        }).execute()
-
-        return jsonify(data[1][0]), 201
+        }
+        if client_id:
+            registro['id'] = client_id
+        try:
+            criados = (supabase.table('avaliacoes').insert(registro)
+                       .execute().data or [])
+        except Exception as exc:
+            if '23505' in str(exc) or 'duplicate key' in str(exc).lower():
+                return jsonify({'error': 'Conflito: avaliação já cadastrada.'}), 409
+            raise
+        if not criados:
+            return jsonify({'error': 'Não foi possível criar avaliação.'}), 500
+        return jsonify(criados[0]), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

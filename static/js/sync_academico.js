@@ -50,6 +50,24 @@
     }
     async function salvar(item, revision) {
         await verificarPendente(item);
+        if (item.tipo === 'avaliacao_criar') {
+            if (Number.isInteger(revision) && revision >= 1) {
+                // Caso o registro já exista, só atualizar após escolha expressa
+                // do professor e conferência da revisão mais recente.
+                return api(`/api/avaliacoes/${encodeURIComponent(item.id)}`, {
+                    method:'PUT', headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({...item.dados,revision})
+                });
+            }
+            const criada = await api('/api/avaliacoes', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({...item.dados,client_id:item.id})
+            });
+            if (String(criada.id) !== String(item.id)) {
+                throw new Error('Identificador da avaliação inconsistente; pendência preservada.');
+            }
+            return criada;
+        }
         if (item.tipo === 'nota') {
             return api('/api/notas', {
                 method:'POST', headers:{'Content-Type':'application/json'},
@@ -88,6 +106,11 @@
         });
     }
     async function remoto(item) {
+        if (item.tipo === 'avaliacao_criar') {
+            const lista = await api(`/api/turma/${encodeURIComponent(item.dados.turma_id)}/avaliacoes`);
+            if (!Array.isArray(lista)) throw new Error('Resposta de avaliações inválida.');
+            return lista.find(av => String(av.id) === String(item.id)) || null;
+        }
         if (item.tipo === 'nota') {
             const dados = await api(`/api/avaliacao/${encodeURIComponent(item.avaliacao_id)}/diario`);
             const aluno = dados.alunos?.find(a => String(a.id) === String(item.aluno_id));
@@ -119,12 +142,16 @@
         alvo.replaceChildren();
         alvo.append(texto('p',`Revisão local: ${item.expected_revision}; ` +
             (atual ? `revisão atual na nuvem: ${atual.revision}.` : 'registro não encontrado na nuvem.')));
-        if (item.tipo === 'diario_criar') {
+        if (item.tipo === 'avaliacao_criar') {
+            alvo.append(texto('p', 'Operação local: criar avaliação. As notas vinculadas só podem ser enviadas depois da criação.'));
+        } else if (item.tipo === 'diario_criar') {
             alvo.append(texto('p', 'Operação local: criar uma nova anotação.'));
         } else if (item.tipo === 'diario_excluir') {
             alvo.append(texto('p', 'Operação local: excluir a anotação.'));
         }
         const campos = item.tipo === 'nota' ? ['valor',...(Object.hasOwn(item.dados,'recupera_periodo')?['recupera_periodo']:[])] :
+            item.tipo === 'avaliacao_criar' ? ['nome','periodo_tipo','periodo_numero','categoria',
+                'nota_maxima','peso','data','recuperacao_modo'] :
             (item.tipo === 'diario_excluir' ? ['titulo'] : ['titulo','conteudo','data_referencia']);
         for (const campo of campos) {
             const caixa = texto('div','', 'edicoes-campo');
@@ -143,7 +170,20 @@
             alvo.replaceChildren(texto('p','Edição preservada. Resolva quando desejar.'));
         });
         nuvem.addEventListener('click', async () => {
-            if (ocupado || !confirm('Descartar a alteração local? A nuvem não será modificada.')) return;
+            if (ocupado) return;
+            if (item.tipo === 'avaliacao_criar' && !atual) {
+                const dependentes = (await listarEdicoesAcademicas(conta)).filter(p =>
+                    p.tipo === 'nota' && String(p.avaliacao_id) === String(item.id));
+                if (dependentes.length) {
+                    mostrar(`Esta avaliação possui ${dependentes.length} nota(s) local(is). ` +
+                        'Para não perder os vínculos, a criação foi mantida. ' +
+                        'Resolva a avaliação antes de descartar esses lançamentos.');
+                    return;
+                }
+            }
+            if (!confirm(item.tipo === 'avaliacao_criar' && !atual ?
+                'Descartar avaliação criada offline? Ela não existe na nuvem.' :
+                'Descartar a alteração local? A nuvem não será modificada.')) return;
             bloquear(true);
             try {
                 const ok = await alterarEdicaoAcademicaSeIgual(item);
@@ -162,7 +202,7 @@
                 }
                 return;
             }
-            if (!atual && item.tipo !== 'diario_criar') {
+            if (!atual && item.tipo !== 'diario_criar' && item.tipo !== 'avaliacao_criar') {
                 mostrar('Anotação ausente na nuvem. Mantenha a nuvem para descartar a operação local.');
                 return;
             }
@@ -194,15 +234,18 @@
         const pendentes = await listarEdicoesAcademicas(conta);
         lista.replaceChildren();
         const conflitos = pendentes.filter(p=>p.estado==='conflito').length;
-        mostrar(`${pendentes.length} edição(ões) de notas/diário pendente(s). `+
+        mostrar(`${pendentes.length} operação(ões) de avaliações/notas/diário pendente(s). `+
             (conflitos ? `${conflitos} com conflito.` : ''));
         for (const item of pendentes) {
             const bloco = texto('div','', 'edicoes-pendente');
-            const categoria = item.tipo === 'nota' ? 'Nota de aluno' :
+            const categoria = item.tipo === 'avaliacao_criar' ? 'Criar avaliação' :
+                item.tipo === 'nota' ? 'Nota de aluno' :
                 item.tipo === 'diario_criar' ? 'Criar anotação' :
                 item.tipo === 'diario_excluir' ? 'Excluir anotação' : 'Editar anotação';
             bloco.append(texto('strong', categoria));
-            bloco.append(texto('p',item.tipo === 'nota' ?
+            bloco.append(texto('p',item.tipo === 'avaliacao_criar' ?
+                `Avaliação: ${item.dados.nome} · turma ${item.dados.turma_id}` :
+                item.tipo === 'nota' ?
                 `Avaliação: ${item.avaliacao_id} · Aluno: ${item.aluno_id}` :
                 `Anotação: ${item.dados.titulo || item.id}`));
             bloco.append(texto('p',item.estado === 'conflito' ?
@@ -226,11 +269,22 @@
         try {fila=(await listarEdicoesAcademicas(conta)).filter(p=>p.estado!=='conflito');}
         catch(e){mostrar('Não foi possível abrir a fila local.');return;}
         if (!fila.length){mostrar('Não há edições para enviar; resolva os conflitos individualmente.');return;}
-        if (!confirm(`Enviar ${fila.length} alteração(ões) de notas e diário? O servidor vai verificar as revisões.`)) return;
+        if (!confirm(`Enviar ${fila.length} operação(ões) de avaliações, notas e diário? Avaliações novas serão criadas primeiro.`)) return;
+        // Referências de notas novas dependem do UUID da avaliação.
+        fila.sort((a,b) => Number(b.tipo === 'avaliacao_criar') - Number(a.tipo === 'avaliacao_criar'));
         bloquear(true);
-        let ok=0,conflitos=0,falhas=0;
+        let ok=0,conflitos=0,falhas=0,bloqueadas=0;
         for (const item of fila) {
             try {
+                // Se a avaliação associada continua pendente (erro, conflito ou
+                // edição em outra aba), nunca enviar sua nota antecipadamente.
+                if (item.tipo === 'nota') {
+                    const atuais = await listarEdicoesAcademicas(conta);
+                    if (atuais.some(p => p.tipo === 'avaliacao_criar' &&
+                        String(p.id) === String(item.avaliacao_id))) {
+                        bloqueadas++; continue;
+                    }
+                }
                 await salvar(item,item.expected_revision);
                 if(await alterarEdicaoAcademicaSeIgual(item)) ok++; else falhas++;
             } catch (e) {
@@ -248,9 +302,10 @@
             }
         }
         try {await desenhar();} catch(e){console.error(e);}
-        mostrar(`Operações confirmadas: ${ok}. Conflitos preservados: ${conflitos}. Falhas: ${falhas}. `+
+        mostrar(`Operações confirmadas: ${ok}. Conflitos preservados: ${conflitos}. `+
+            `Falhas: ${falhas}. Aguardando avaliação vinculada: ${bloqueadas}. `+
             'Para visualizar os dados confirmados, baixe uma cópia atualizada da nuvem.');
         bloquear(false);
     });
-    desenhar().catch(()=>mostrar('Não foi possível ler as pendências de notas e diário.'));
+    desenhar().catch(()=>mostrar('Não foi possível ler as pendências de avaliações, notas e diário.'));
 })();
