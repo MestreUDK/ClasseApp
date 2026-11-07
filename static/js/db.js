@@ -181,3 +181,46 @@ function salvarEdicaoOffline(item) {
 function removerEdicaoOffline(chave) {
     return transacaoEdicoes('readwrite', store => store.delete(chave));
 }
+
+// Operações condicionais impedem que o resultado de uma aba apague ou substitua
+// uma edição posterior feita em outra aba do mesmo navegador.
+function mesmaEdicaoOffline(atual, esperado) {
+    return Boolean(atual && esperado && atual.chave === esperado.chave &&
+        atual.usuario_id === esperado.usuario_id && atual.tipo === esperado.tipo &&
+        String(atual.id) === String(esperado.id) &&
+        atual.expected_revision === esperado.expected_revision &&
+        atual.alterado_localmente_em === esperado.alterado_localmente_em &&
+        atual.estado === esperado.estado &&
+        JSON.stringify(atual.dados) === JSON.stringify(esperado.dados) &&
+        JSON.stringify(atual.base_dados ?? null) === JSON.stringify(esperado.base_dados ?? null));
+}
+
+function modificarEdicaoOfflineSeIgual(esperado, novoEstado = null) {
+    if (!esperado?.chave) return Promise.reject(new Error('Edição inválida.'));
+    return openDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(CLASSE_EDICOES, 'readwrite');
+        const store = tx.objectStore(CLASSE_EDICOES);
+        let modificou = false;
+        const req = store.get(esperado.chave);
+        req.onsuccess = () => {
+            if (!mesmaEdicaoOffline(req.result, esperado)) return;
+            if (novoEstado === null) store.delete(esperado.chave);
+            else store.put({...req.result, estado: novoEstado});
+            modificou = true;
+        };
+        tx.oncomplete = () => { db.close(); resolve(modificou); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+        tx.onabort = () => { db.close(); reject(tx.error || new Error('Transação cancelada.')); };
+    }));
+}
+
+function removerEdicaoOfflineSeIgual(esperado) {
+    return modificarEdicaoOfflineSeIgual(esperado);
+}
+
+function marcarEdicaoOfflineSeIgual(esperado, estado) {
+    if (!['conflito', 'pendente'].includes(estado)) {
+        return Promise.reject(new Error('Estado inválido.'));
+    }
+    return modificarEdicaoOfflineSeIgual(esperado, estado);
+}
