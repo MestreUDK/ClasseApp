@@ -45,3 +45,13 @@ body.auth-page {
 .auth-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 22px; }
 .auth-card [hidden] { display: none !important; }
 .auth-card button:disabled { opacity: .65; cursor: wait; }
+
+/* Entrada pública na demonstração, isolada da autenticação real. */
+.auth-guest { margin-top: 24px; padding-top: 20px; border-top: 1px solid #344962; text-align: center; }
+.auth-guest p { margin: 0 0 12px; color: #ccd9ec; font-size: .9rem; line-height: 1.4; }
+.auth-guest .auth-demo-link { display: block; padding: 12px; border-radius: 9px;
+  border: 1px solid #679dcb; color: #cae5ff; background: #223b54;
+  text-decoration: none; font-weight: 700; }
+.auth-guest .auth-demo-link:hover { background: #2e506f; }
+.auth-guest .auth-demo-link:focus-visible { outline: 2px solid #9bcfff; outline-offset: 3px; }
+.auth-guest small { display: block; margin-top: 9px; color: #a9bbce; line-height: 1.4; }
