@@ -93,10 +93,15 @@ def forgot_password():
             supabase.auth.reset_password_for_email(
                 email, {'redirect_to': reset_url}
             )
-        except Exception:
-            # Não revelar se um e-mail está cadastrado ou não.
-            # O provedor controla os limites e o envio de mensagens.
-            pass
+        except Exception as exc:
+            # A resposta continua neutra quanto à existência da conta.
+            # Mas um limite atingido precisa ser explicado ao usuário.
+            details = str(exc).lower()
+            if '429' in details or 'rate limit' in details or 'rate_limit' in details:
+                flash('Limite de envio de e-mails atingido. Aguarde antes de tentar novamente.', 'warning')
+                return redirect(url_for('auth_bp.forgot_password'))
+            flash('Não foi possível solicitar a recuperação no momento. Tente mais tarde.', 'error')
+            return redirect(url_for('auth_bp.forgot_password'))
 
         flash(
             'Se houver uma conta com esse e-mail, você receberá um link de recuperação. '
@@ -121,36 +126,81 @@ def reset_password():
         return jsonify({'error': 'Envie os dados em JSON.'}), 415
 
     data = request.get_json(silent=True) or {}
+    token_hash = data.get('token_hash')
     token = data.get('access_token')
     password = data.get('password')
-    if not isinstance(token, str) or not (20 <= len(token) <= 8192):
-        return jsonify({'error': 'Link inválido ou expirado. Solicite outro.'}), 400
+
+    # Um único tipo de credencial, sempre obtida de um link de recuperação.
+    if bool(token_hash) == bool(token):
+        return jsonify({'error': 'Link de recuperação inválido. Solicite outro.'}), 400
+    if token_hash is not None and (
+        not isinstance(token_hash, str) or not (20 <= len(token_hash) <= 2048)
+    ):
+        return jsonify({'error': 'Link de recuperação inválido. Solicite outro.'}), 400
+    if token is not None and (
+        not isinstance(token, str) or not (20 <= len(token) <= 8192)
+    ):
+        return jsonify({'error': 'Link de recuperação inválido. Solicite outro.'}), 400
     if not isinstance(password, str) or not (8 <= len(password) <= 256):
-        return jsonify({'error': 'A senha deve conter ao menos 8 caracteres.'}), 400
+        return jsonify({'error': 'A senha deve ter entre 8 e 256 caracteres.'}), 400
     if not SUPABASE_URL or not SUPABASE_KEY:
         return jsonify({'error': 'Autenticação indisponível.'}), 503
 
-    # Autentica *somente esta operação* com o token de recuperação recebido.
-    # Não use supabase.auth.update_user() no cliente global, pois seu estado
-    # de sessão é compartilhado entre requisições do servidor Flask.
-    endpoint = SUPABASE_URL.rstrip('/') + '/auth/v1/user'
-    req = Request(
-        endpoint,
+    base_endpoint = SUPABASE_URL.rstrip('/') + '/auth/v1'
+    common_headers = {
+        'apikey': SUPABASE_KEY,
+        'Content-Type': 'application/json',
+    }
+
+    if token_hash:
+        # O modelo customizado envia diretamente o hash do OTP. A verificação
+        # consome o token apenas quando o usuário confirma a nova senha,
+        # evitando que scanners de e-mail consumam links ao pré-visualizá-los.
+        verify_request = Request(
+            base_endpoint + '/verify',
+            data=json.dumps({
+                'token_hash': token_hash,
+                'type': 'recovery',
+            }).encode('utf-8'),
+            headers=common_headers,
+            method='POST',
+        )
+        try:
+            with urlopen(verify_request, timeout=12) as verify_response:
+                verified = json.load(verify_response)
+                token = verified.get('access_token') or (
+                    verified.get('session') or {}
+                ).get('access_token')
+                if not token:
+                    return jsonify({'error': 'Não foi possível confirmar o link de recuperação.'}), 502
+        except HTTPError as exc:
+            if exc.code in (400, 401, 403, 404, 422):
+                return jsonify({'error': 'Link inválido, expirado ou já utilizado. Solicite outro.'}), 400
+            if exc.code == 429:
+                return jsonify({'error': 'Muitas tentativas. Aguarde antes de tentar novamente.'}), 429
+            return jsonify({'error': 'Falha temporária na validação do link.'}), 503
+        except (URLError, TimeoutError, OSError, ValueError, TypeError):
+            return jsonify({'error': 'Não foi possível validar o link no Supabase.'}), 503
+
+    # Altera a senha usando SOMENTE a sessão recém-validada (ou token de
+    # recuperação legado); nunca usa o cliente Supabase global do Flask.
+    update_request = Request(
+        base_endpoint + '/user',
         data=json.dumps({'password': password}).encode('utf-8'),
-        headers={
-            'apikey': SUPABASE_KEY,
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json',
-        },
+        headers={**common_headers, 'Authorization': f'Bearer {token}'},
         method='PUT',
     )
     try:
-        with urlopen(req, timeout=12) as response:
-            if not (200 <= response.status < 300):
+        with urlopen(update_request, timeout=12) as update_response:
+            if not (200 <= update_response.status < 300):
                 return jsonify({'error': 'Não foi possível atualizar a senha.'}), 502
     except HTTPError as exc:
-        if exc.code in (400, 401, 403, 422):
-            return jsonify({'error': 'Link inválido, expirado ou senha não aceita. Solicite um novo link.'}), 400
+        if exc.code == 422:
+            return jsonify({'error': 'O Supabase rejeitou a senha. Verifique os requisitos e solicite um novo link de recuperação.'}), 422
+        if exc.code in (400, 401, 403):
+            return jsonify({'error': 'Sessão de recuperação inválida ou expirada. Solicite outro link.'}), 400
+        if exc.code == 429:
+            return jsonify({'error': 'Muitas tentativas. Aguarde antes de tentar novamente.'}), 429
         return jsonify({'error': 'Falha temporária no serviço de autenticação.'}), 503
     except (URLError, TimeoutError, OSError):
         return jsonify({'error': 'Não foi possível contatar o serviço de autenticação.'}), 503
