@@ -1,11 +1,10 @@
 {
-    "name": "Gerenciador de Classe",
-    "short_name": "ClasseApp", 
-    "version": "2.0",
+    "name": "ClasseApp",
+    "short_name": "ClasseApp",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#f4f4f4",
-    "theme_color": "#007bff",
+    "background_color": "#101827",
+    "theme_color": "#101827",
     "description": "Aplicativo para controle de frequência de alunos.",
     "icons": [
         {

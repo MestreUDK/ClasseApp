@@ -30,3 +30,18 @@ body.auth-page {
 .auth-alert.warning { background: #4b3d21; border: 1px solid #9c7d39; color: #ffe8b1; }
 .auth-alert.info, .auth-alert.message { background: #223b54; border: 1px solid #4c779c; color: #deefff; }
 @media (max-width: 440px) { .auth-card { padding: 25px 22px; } }
+
+/* Campos com ação de visualização de senha. */
+.auth-password-wrap { position: relative; }
+.auth-password-wrap input { padding-right: 58px; }
+.auth-card .auth-eye { position: absolute; right: 4px; top: 4px; width: 42px;
+  height: 40px; padding: 0; display: grid; place-items: center; background: transparent;
+  color: #bdd9f5; border: 1px solid transparent; border-radius: 7px; }
+.auth-card .auth-eye:hover { background: #263b56; color: #fff; }
+.auth-card .auth-eye:focus-visible { outline: 2px solid #80bfff; outline-offset: 1px; }
+.auth-eye-slash { opacity: 1; }
+.auth-eye.is-visible .auth-eye-slash { opacity: 0; }
+.auth-hint { font-size: .94rem; color: #cbd9e9; line-height: 1.5; margin: -8px 0 20px; }
+.auth-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 22px; }
+.auth-card [hidden] { display: none !important; }
+.auth-card button:disabled { opacity: .65; cursor: wait; }
