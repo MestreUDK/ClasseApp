@@ -1,6 +1,6 @@
 // Cache exclusivamente para recursos públicos estáticos e tela genérica offline.
 // Respostas autenticadas e endpoints /api nunca são persistidos pelo Service Worker.
-const CACHE_NAME = 'classeapp-static-v2-2-20';
+const CACHE_NAME = 'classeapp-static-v2-2-21';
 const OFFLINE_PAGE = '/offline';
 const CORE_FILES = [
     OFFLINE_PAGE,
@@ -8,7 +8,8 @@ const CORE_FILES = [
     '/static/js/db.js',
     '/static/js/frequencia.js',
     '/static/js/offline_workspace.js',
-    '/static/js/offline_academico.js'
+    '/static/js/offline_academico.js',
+    '/static/js/offline_relatorios.js'
 ];
 
 self.addEventListener('install', event => {

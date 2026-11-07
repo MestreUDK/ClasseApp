@@ -13,6 +13,7 @@
     const title = get('offline-title');
     const info = get('offline-info');
     const academic = get('offline-academico');
+    const reports = get('offline-relatorios');
     const forms = {
         turmas: [['nome', 'Nome'], ['descricao', 'Descrição']],
         alunos: [['nome_completo', 'Nome completo'], ['matricula', 'Matrícula'],
@@ -159,13 +160,30 @@
     function draw() {
         list.replaceChildren();
         academic.hidden = true;
+        if (reports) reports.hidden = true;
         get('stat-turmas').textContent = String(snapshot.turmas.length);
         get('stat-alunos').textContent = String(snapshot.alunos.length);
         get('stat-edicoes').textContent = String(drafts.length + academicDrafts.length);
         title.textContent = view === 'turmas' ? 'Turmas' : view === 'alunos' ?
             (classFilter ? `Alunos — ${classNameById(classFilter)}` : 'Alunos') :
-            view === 'notas' ? 'Avaliações e notas' : view === 'diario' ? 'Diário de Bordo' : 'Alterações pendentes';
-        search.closest('.filters').querySelector('input').hidden = (view === 'notas' || view === 'diario');
+            view === 'notas' ? 'Avaliações e notas' : view === 'diario' ? 'Diário de Bordo' :
+            view === 'relatorios' ? 'Relatórios e rendimento escolar' : 'Alterações pendentes';
+        search.closest('.filters').querySelector('input').hidden =
+            (view === 'notas' || view === 'diario' || view === 'relatorios');
+        if (view === 'relatorios') {
+            if (reports) {
+                reports.hidden = false;
+                if (window.ClasseRelatoriosOffline?.render) {
+                    window.ClasseRelatoriosOffline.render({snapshot, conta: account}).catch(erro => {
+                        console.error(erro);
+                        reports.textContent = 'Não foi possível calcular os relatórios locais. Nenhum dado foi alterado.';
+                    });
+                } else {
+                    reports.textContent = 'O módulo de relatórios não está disponível neste cache. Reabra o ClasseApp com internet para atualizá-lo.';
+                }
+            }
+            return;
+        }
         if (view === 'notas' || view === 'diario') {
             window.ClasseAcademicoOffline?.render(view, {snapshot, conta: account});
             return;

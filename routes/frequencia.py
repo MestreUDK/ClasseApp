@@ -95,3 +95,37 @@ def delete_frequencia_dia():
         return jsonify({"message": "Frequência apagada com sucesso."}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@frequencia_bp.route('/turma/<uuid:turma_id>/frequencias_ano', methods=['GET'])
+@login_required
+def get_frequencias_ano(turma_id):
+    """Exporta chamadas do ano para consulta offline, somente ao dono da turma.
+
+    Paginamos para não perder registros quando o ano ultrapassar 1.000 chamadas.
+    A resposta nunca é armazenada em cache pelo Service Worker.
+    """
+    try:
+        ano = int(request.args.get('ano', '0'))
+        if not 2000 <= ano <= 2100:
+            return jsonify({'error': 'Ano letivo inválido.'}), 400
+        if not verificar_dono_turma(turma_id):
+            return jsonify({'error': 'Acesso negado.'}), 403
+        consulta = (supabase.table('frequencia')
+                    .select('turma_id, aluno_id, data, presente, updated_at')
+                    .eq('turma_id', str(turma_id))
+                    .gte('data', f'{ano}-01-01')
+                    .lte('data', f'{ano}-12-31')
+                    .order('data', desc=False)
+                    .order('aluno_id', desc=False))
+        registros = []
+        pagina = 1000
+        for inicio in range(0, 100001, pagina):
+            parte = consulta.range(inicio, inicio + pagina - 1).execute().data or []
+            registros.extend(parte)
+            if len(parte) < pagina:
+                return jsonify(registros)
+        return jsonify({'error': 'Número de chamadas excedeu o limite de exportação.'}), 413
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Ano letivo inválido.'}), 400
+    except Exception:
+        return jsonify({'error': 'Não foi possível carregar a frequência anual.'}), 500

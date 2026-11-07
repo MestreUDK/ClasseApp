@@ -1,4 +1,4 @@
-/* Cópia local SOMENTE LEITURA de turmas e alunos da conta atual. */
+/* Download versionado da cópia acadêmica local, incluindo chamadas anuais. */
 (() => {
     'use strict';
     const painel = document.getElementById('dados-offline');
@@ -22,7 +22,7 @@
     async function atualizar() {
         const copia = await obterSnapshot(usuario);
         resumo.textContent = copia
-            ? `Cópia de ${new Date(copia.salvo_em).toLocaleString('pt-BR')}: ${copia.turmas.length} turma(s), ${copia.alunos.length} aluno(s), ${copia.avaliacoes?.length ?? 0} avaliação(ões) e ${copia.diario?.length ?? 0} registro(s) de diário.`
+            ? `Cópia de ${new Date(copia.salvo_em).toLocaleString('pt-BR')}: ${copia.turmas.length} turma(s), ${copia.alunos.length} aluno(s), ${copia.avaliacoes?.length ?? 0} avaliação(ões), ${copia.diario?.length ?? 0} registro(s) de diário e ${copia.frequencias?.length ?? 0} chamada(s) de ${copia.ano_letivo ?? 'ano não definido'}.`
             : 'Nenhuma cópia local desta conta neste navegador.';
         return copia;
     }
@@ -84,7 +84,13 @@
         if (!navigator.onLine) { estado.textContent = 'Conecte-se à internet para baixar os dados.'; return; }
         if (!confirm('Baixar turmas, alunos, notas e diário neste dispositivo? Esses dados escolares são sensíveis e permanecerão armazenados no navegador.')) return;
         bloquear(true);
-        estado.textContent = 'Baixando turmas, alunos, avaliações, notas e diário. Esta operação pode levar algum tempo...';
+        const anoLetivo = Number(el('offline-ano')?.value);
+        if (!Number.isInteger(anoLetivo) || anoLetivo < 2000 || anoLetivo > 2100) {
+            bloquear(false);
+            estado.textContent = 'Informe um ano letivo válido entre 2000 e 2100.';
+            return;
+        }
+        estado.textContent = `Baixando turmas, alunos, notas, diário e frequências de ${anoLetivo}...`;
         try {
             // Mantém também os vínculos turma↔aluno. O aluno pode participar de
             // mais de uma turma, e a tabela alunos não contém campo turma_id.
@@ -148,11 +154,22 @@
                     }
                 });
             }
+            // Frequência é coletada por ano e turma, com permissão validada no servidor.
+            // Se alguma chamada falhar, não substituímos a cópia existente.
+            const frequencias = [];
+            for (let inicio = 0; inicio < turmas.length; inicio += 3) {
+                const lote = await Promise.all(turmas.slice(inicio, inicio + 3).map(turma =>
+                    carregarApi(`/api/turma/${encodeURIComponent(turma.id)}/frequencias_ano?ano=${anoLetivo}`)));
+                lote.forEach(registros => frequencias.push(...registros));
+                if (frequencias.length > 100000) {
+                    throw new Error('Limite de frequência excedido. Cópia anterior preservada.');
+                }
+            }
             await salvarSnapshotVersionado({
-                usuario_id: usuario, salvo_em: new Date().toISOString(),
-                turmas, alunos, vinculos, avaliacoes: grupos, notas, diario
+                usuario_id: usuario, salvo_em: new Date().toISOString(), ano_letivo: anoLetivo,
+                turmas, alunos, vinculos, avaliacoes: grupos, notas, diario, frequencias
             });
-            estado.textContent = 'Cópia de turmas, alunos, notas e diário salva neste dispositivo.';
+            estado.textContent = `Cópia completa salva, incluindo frequências de ${anoLetivo}.`;
             await atualizar();
         } catch (erro) {
             console.error(erro);

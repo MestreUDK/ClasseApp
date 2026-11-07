@@ -105,6 +105,9 @@
             <p><a href="/offline" class="notificacoes-atualizar" style="display:inline-block;text-decoration:none">📱 Abrir espaço offline</a> <small>Turmas, alunos, notas e diário, com uma cópia já baixada.</small></p>
             <p id="offline-estado" role="status">Verificando cópia local...</p>
             <div id="offline-resumo"></div>
+            <label for="offline-ano" class="notificacoes-descricao">Ano letivo da frequência para os relatórios offline:
+                <input id="offline-ano" type="number" min="2000" max="2100" step="1" value="{{ current_year }}" style="max-width:120px;padding:7px;margin-left:6px">
+            </label>
             <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">
                 <button type="button" id="offline-baixar" class="notificacoes-atualizar">Baixar da nuvem</button>
                 <button type="button" id="offline-consultar" class="notificacoes-atualizar">Consultar cópia</button>

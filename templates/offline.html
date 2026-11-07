@@ -24,11 +24,19 @@
     .pending{color:#f5d38a;font-weight:700;font-size:.83rem}.empty{color:var(--muted);padding:20px 0}.hidden,[hidden]{display:none!important}
     .editor{border-top:1px solid var(--line);margin-top:15px;padding-top:15px}.editor form{display:grid;gap:10px}.editor label{display:grid;gap:3px;font-size:.9rem;color:var(--muted)}.editor input{width:100%;background:#101b2b;border:1px solid var(--line);padding:9px;color:var(--fg);border-radius:8px}
     .academico-selecao{display:grid;gap:9px;margin:12px 0}.academico-selecao>button{justify-self:start;border:1px solid var(--accent);color:var(--accent);background:var(--panel2);padding:9px 14px;border-radius:9px;font-weight:700}.academico-selecao select{width:100%;background:#101b2b;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px}.editor textarea,.editor select{width:100%;min-height:40px;background:#101b2b;color:var(--fg);border:1px solid var(--line);padding:9px;border-radius:8px}.editor textarea{min-height:100px} .editor .actions{display:flex;gap:8px;flex-wrap:wrap}.editor .actions button{background:#2c70ad;color:white}
+    .report-table-wrap{overflow-x:auto;max-width:100%;margin:12px 0}
+    .report-table{border-collapse:collapse;white-space:nowrap;font-size:.88rem;min-width:900px}
+    .report-table th,.report-table td{padding:9px 11px;border:1px solid var(--line);text-align:center}
+    .report-table th{background:var(--panel2);color:var(--fg);position:sticky;top:0}
+    .report-table td:first-child{text-align:left;position:sticky;left:0;background:var(--panel);max-width:230px;overflow:hidden;text-overflow:ellipsis}
+    #offline-relatorios label{display:grid;gap:7px;margin:10px 0;max-width:420px}
+    #offline-relatorios select{width:100%;background:#101b2b;color:var(--fg);border:1px solid var(--line);border-radius:9px;padding:10px}
     .footer{color:var(--muted);font-size:.85rem;padding-top:10px}
     @media(max-width:580px){.app{padding:15px 12px 45px}.stats{grid-template-columns:repeat(3,1fr)}.stat{padding:9px}.stat strong{font-size:1.2rem}.items{grid-template-columns:1fr}header{margin-bottom:14px}}
   </style>
   <script src="/static/js/db.js" defer></script>
   <script src="/static/js/offline_academico.js" defer></script>
+  <script src="/static/js/offline_relatorios.js" defer></script>
   <script src="/static/js/offline_workspace.js" defer></script>
 </head>
 <body>
@@ -36,7 +44,7 @@
   <header><div class="brand">ClasseApp <span class="tag">Espaço offline</span></div><a class="button" href="/">Voltar ao ClasseApp online</a></header>
   <h1>Seus dados disponíveis no dispositivo</h1>
   <p class="muted">Navegue entre turmas, alunos e alterações locais sem precisar abrir páginas autenticadas. Esse espaço utiliza a cópia que você baixou anteriormente.</p>
-  <p class="warning">Turmas e alunos podem ser consultados e editados. É possível cadastrar avaliações e lançar notas offline; o Diário de Bordo permite criar e excluir anotações. Agora é possível marcar notas para exclusão e excluir avaliações sem notas vinculadas; exclusões efetivas dependem da sincronização. Relatórios e a navegação completa ainda exigem conexão. Nenhuma edição é enviada sem sua confirmação quando a conexão voltar.</p>
+  <p class="warning">Consulte e edite turmas, alunos, notas e diário sem conexão. A seção Relatórios gera uma prévia do Mapa Final e um Excel local, usando notas, recuperações e frequências do ano escolhido. Esses resultados podem incluir alterações pendentes e <strong>não substituem a exportação oficial online</strong>. Nenhuma edição é enviada sem sua confirmação.</p>
   <section id="offline-erro" class="panel" hidden role="status"></section>
   <div id="offline-app" hidden>
     <section class="stats" aria-label="Resumo local"><div class="stat"><strong id="stat-turmas">0</strong><small>Turmas</small></div><div class="stat"><strong id="stat-alunos">0</strong><small>Alunos</small></div><div class="stat"><strong id="stat-edicoes">0</strong><small>Edições pendentes</small></div></section>
@@ -46,6 +54,7 @@
       <button type="button" data-view="alunos" aria-pressed="false">Alunos</button>
       <button type="button" data-view="notas" aria-pressed="false">Notas</button>
       <button type="button" data-view="diario" aria-pressed="false">Diário</button>
+      <button type="button" data-view="relatorios" aria-pressed="false">Relatórios</button>
       <button type="button" data-view="pendencias" aria-pressed="false">Alterações pendentes</button>
       <button type="button" id="offline-refresh">Atualizar dados locais</button>
     </nav>
@@ -53,9 +62,10 @@
       <div class="filters"><h2 id="offline-title">Turmas</h2><input id="offline-filter" type="search" placeholder="Pesquisar nesta seção" aria-label="Pesquisar registros offline"></div>
       <div id="offline-items" class="items" aria-live="polite"></div>
       <div id="offline-academico" hidden></div>
+      <div id="offline-relatorios" hidden></div>
     </section>
   </div>
-  <p class="footer">Os dados locais permanecem neste navegador e ainda não possuem proteção adicional por PIN ou criptografia. Não utilize o espaço offline em dispositivos compartilhados. Para baixar uma cópia nova ou sincronizar, conecte-se e acesse Meu Perfil.</p>
+  <p class="footer">Para conferir o ano letivo, atualizar o histórico de frequência ou refletir operações já sincronizadas, conecte-se e use Meu Perfil → Baixar da nuvem novamente. Os dados locais permanecem neste navegador e ainda não possuem proteção adicional por PIN ou criptografia. Não utilize o espaço offline em dispositivos compartilhados. Para baixar uma cópia nova ou sincronizar, conecte-se e acesse Meu Perfil.</p>
 </div>
 </body>
 </html>
