@@ -71,6 +71,33 @@ async function atualizarPendente(item) {
     return executarTransacao('readwrite', store => store.put(item));
 }
 
+// Remove ou modifica somente a versão da pendência que foi realmente enviada.
+// A comparação e a escrita acontecem na MESMA transação do IndexedDB.
+async function modificarPendenteSeIgual(esperado, novo = null) {
+    if (!esperado?.usuario_id || !Number.isInteger(esperado.id) ||
+        (novo && (novo.id !== esperado.id || novo.usuario_id !== esperado.usuario_id))) {
+        throw new Error('Pendência de frequência inválida.');
+    }
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(CLASSE_QUEUE, 'readwrite');
+        const store = tx.objectStore(CLASSE_QUEUE);
+        let alterou = false;
+        const req = store.get(esperado.id);
+        req.onsuccess = () => {
+            const atual = req.result;
+            if (!atual || atual.usuario_id !== esperado.usuario_id ||
+                JSON.stringify(atual) !== JSON.stringify(esperado)) return;
+            if (novo) store.put(novo);
+            else store.delete(esperado.id);
+            alterou = true;
+        };
+        tx.oncomplete = () => { db.close(); resolve(alterou); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+        tx.onabort = () => { db.close(); reject(tx.error || new Error('Transação cancelada.')); };
+    });
+}
+
 // Cópia local de consulta, separada da fila de alterações pendentes.
 function executarSnapshot(modo, operacao) {
     return openDB().then(db => new Promise((resolve, reject) => {

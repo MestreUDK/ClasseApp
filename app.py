@@ -1,7 +1,10 @@
 # app.py
 
 import os
+import secrets
+import warnings
 from datetime import datetime
+from urllib.parse import urlparse
 from flask import Flask, session # <-- IMPORTAR SESSION
 from flask_login import LoginManager
 
@@ -27,15 +30,36 @@ app = Flask(__name__)
 # ==========================================
 # --- NOVO: CONFIGURAÇÃO DE VERSÃO ---
 # ==========================================
-app.config['VERSION'] = '2.2.23.3'
+app.config['VERSION'] = '2.2.24'
 
 # Context Processor para injetar a variável em todos os templates HTML
 @app.context_processor
 def inject_version():
     return dict(app_version=app.config['VERSION'], current_year=datetime.now().year)
 
-# CONFIGURAÇÃO DE SEGURANÇA
-app.secret_key = os.environ.get("SECRET_KEY", "minha_chave_secreta_super_segura")
+# Segurança da sessão: não usar chave conhecida/publicada no repositório.
+# Em produção, configure SECRET_KEY com valor aleatório e estável na hospedagem.
+segredo_sessao = os.environ.get('SECRET_KEY', '').strip()
+if not segredo_sessao or segredo_sessao == 'minha_chave_secreta_super_segura':
+    warnings.warn(
+        'SECRET_KEY ausente ou insegura: usando chave temporária aleatória. '
+        'Configure SECRET_KEY na hospedagem; caso contrário, logins serão '
+        'invalidados sempre que o processo reiniciar.',
+        RuntimeWarning,
+        stacklevel=1,
+    )
+    segredo_sessao = secrets.token_urlsafe(48)
+app.secret_key = segredo_sessao
+
+# Cookies da sessão protegidos por HTTPOnly e SameSite. Secure é ativado na
+# hospedagem HTTPS definida por APP_PUBLIC_URL, preservando testes locais HTTP.
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=(
+        urlparse(os.environ.get('APP_PUBLIC_URL', '')).scheme == 'https'
+    ),
+)
 
 # Configura o Flask-Login
 login_manager = LoginManager()

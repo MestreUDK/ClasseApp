@@ -87,14 +87,16 @@
                 `Conflito de frequência\n\n${texto(item)}\nNuvem: ${valorRemoto} (revisão ${revisaoRemota})\n\nDigite:\n1 — Manter nuvem (descartar pendência local)\n2 — Aplicar valor local após confirmar a revisão atual\n3 — Resolver depois`, '3');
             if (escolha === '1') {
                 if (!confirm('Descartar somente esta pendência local? O registro da nuvem será mantido.')) return;
-                await limparPendentes(item.id);
-                mensagem = 'Pendência descartada; nuvem preservada.';
+                const descartou = await modificarPendenteSeIgual(item);
+                mensagem = descartou ? 'Pendência descartada; nuvem preservada.' :
+                    'Esta chamada foi modificada em outra aba. A alteração nova foi preservada.';
             } else if (escolha === '2') {
                 if (!confirm(`Aplicar ${item.dados.presente ? 'Presente' : 'Ausente'} sobre ${valorRemoto}? A operação verificará novamente a revisão no servidor.`)) return;
                 try {
                     await enviarRegistro(item, revisaoRemota);
-                    await limparPendentes(item.id);
-                    mensagem = 'Alteração local aplicada com revisão verificada.';
+                    const retirou = await modificarPendenteSeIgual(item);
+                    mensagem = retirou ? 'Alteração local aplicada com revisão verificada.' :
+                        'Alteração aplicada, mas existe uma marcação local mais recente ainda pendente.';
                 } catch (erro) {
                     if (erro.status === 409 || erro.status === 428) {
                         mensagem = 'A nuvem mudou novamente. Pendência preservada; compare outra vez.';
@@ -125,15 +127,15 @@
             for (const item of itens) {
                 try {
                     await enviarRegistro(item, item.dados.revision);
-                    await limparPendentes(item.id);
-                    enviados++;
+                    if (await modificarPendenteSeIgual(item)) enviados++;
+                    else falhas++; // não descartar a alteração mais recente
                 } catch (erro) {
                     falhas++;
                     if (erro.status === 409 || erro.status === 428) {
-                        item.conflito = true;
-                        item.erro_conflito = erro.message;
-                        await atualizarPendente(item);
-                        conflitos++;
+                        const marcou = await modificarPendenteSeIgual(item, {
+                            ...item, conflito: true, erro_conflito: erro.message
+                        });
+                        if (marcou) conflitos++;
                     }
                     if (erro.status === 401 || erro.status === 403) break;
                 }

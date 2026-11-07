@@ -214,19 +214,52 @@
         return guardar(S.frequencia,item);
     };
     limparPendentes=async function(id){return escrever(S.frequencia,'delete',id);};
+
+    // Comparação atômica para impedir que um envio antigo apague a chamada mais
+    // recente. O envelope AES guarda a impressão SHA-256 do registro cifrado.
+    modificarPendenteSeIgual=async function(esperado,novo=null) {
+        if (!esperado?.usuario_id || !Number.isInteger(esperado.id) ||
+            (novo && (novo.id!==esperado.id || novo.usuario_id!==esperado.usuario_id))) {
+            throw new Error('Pendência de frequência inválida.');
+        }
+        const chave=await chaveDaConta(esperado.usuario_id);
+        if (!chave) throw new Error('Desbloqueie a conta antes da sincronização.');
+        // Os primeiros registros cifrados tinham id autoincremental atribuído
+        // somente DEPOIS da cifragem. Aceitar as duas assinaturas antigas.
+        const semId={...esperado};
+        delete semId.id;
+        const assinaturas=[await assinar(esperado),await assinar(semId)];
+        const substituto=novo?await cifrar(S.frequencia,novo,chave):null;
+        return transacao([S.frequencia],'readwrite',(tx,set)=>{
+            const store=tx.objectStore(S.frequencia);
+            const req=store.get(esperado.id);
+            req.onsuccess=()=>{
+                const atual=req.result;
+                const igual=atual && atual.usuario_id===esperado.usuario_id &&
+                    (atual.cofre_v1 ? assinaturas.includes(atual.impressao) :
+                        JSON.stringify(atual)===JSON.stringify(esperado));
+                if (!igual) {set(false);return;}
+                if (substituto) store.put(substituto);
+                else store.delete(esperado.id);
+                set(true);
+            };
+        });
+    };
     // Atualiza a última marcação do mesmo aluno/dia, preservando revisão base.
     window.salvarFrequenciaUnica=async function(item) {
-        const antigos=(await getPendentes()).filter(x=>x.usuario_id===item.usuario_id &&
-            x.dados?.aluno_id===item.dados?.aluno_id && x.dados?.turma_id===item.dados?.turma_id &&
-            x.dados?.data===item.dados?.data);
-        if(!antigos.length) return salvarOffline(item);
-        const anterior=antigos[0];
-        await atualizarPendente({...anterior,dados:{...item.dados,
-            revision:anterior.dados.revision},conflito:false,erro_conflito:null,
-            criado_em:new Date().toISOString()});
-        // Os duplicados legados não são apagados automaticamente: suas revisões
-        // podem representar mudanças distintas que exigem análise.
-        return anterior.id;
+        for (let tentativa=0; tentativa<4; tentativa++) {
+            const antigos=(await getPendentes()).filter(x=>x.usuario_id===item.usuario_id &&
+                x.dados?.aluno_id===item.dados?.aluno_id && x.dados?.turma_id===item.dados?.turma_id &&
+                x.dados?.data===item.dados?.data);
+            if (!antigos.length) return salvarOffline(item);
+            const anterior=antigos[0];
+            const novo={...anterior,dados:{...item.dados,
+                revision:anterior.dados.revision},conflito:false,erro_conflito:null,
+                criado_em:new Date().toISOString()};
+            if (await modificarPendenteSeIgual(anterior,novo)) return anterior.id;
+        }
+        throw new Error('A chamada foi alterada em outra aba. Atualize e tente novamente.');
+        // Duplicados legados permanecem para revisão: não os apagamos aqui.
     };
     // Edições de turmas/alunos.
     listarEdicoesOffline=async function(usuario){

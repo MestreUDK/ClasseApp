@@ -89,16 +89,18 @@ async function syncPendentes() {
                 // Erros 401/403/500 não são confirmação de salvamento.
                 if (!resposta.ok) {
                     if (resposta.status === 409 || resposta.status === 428) {
-                        item.conflito = true;
-                        item.erro_conflito = `HTTP ${resposta.status}`;
-                        await atualizarPendente(item);
+                        await modificarPendenteSeIgual(item, {
+                            ...item, conflito: true,
+                            erro_conflito: `HTTP ${resposta.status}`
+                        });
                     }
                     throw new Error(`Servidor retornou HTTP ${resposta.status}`);
                 }
                 const gravado = await resposta.json();
                 revisoesFrequencia.set(`${item.dados.data}:${item.dados.aluno_id}`, gravado.revision);
-                await limparPendentes(item.id);
-                enviados += 1;
+                // Não apagar uma marcação feita enquanto este POST aguardava.
+                if (await modificarPendenteSeIgual(item)) enviados += 1;
+                else falhas += 1; // uma versão mais recente continua pendente
             } catch (erro) {
                 falhas += 1;
                 console.error('Registro mantido na fila local:', item.id, erro);
