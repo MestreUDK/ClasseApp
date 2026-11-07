@@ -3,6 +3,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from utils import supabase
+from modules.rendimento import calcular_rendimento, media_atividades
 
 estatisticas_bp = Blueprint('estatisticas_bp', __name__)
 
@@ -108,116 +109,86 @@ def nome_periodo(periodo_tipo, periodo_numero):
 
 
 def calcular_notas_modulares(turma_id, alunos):
-    av_res, _ = supabase.table('avaliacoes') \
-        .select('id, nome, data, nota_maxima, periodo_tipo, periodo_numero, categoria, peso') \
-        .eq('turma_id', str(turma_id)) \
-        .eq('user_id', current_user.id) \
-        .order('periodo_numero', desc=False) \
-        .order('created_at', desc=False) \
-        .execute()
-
-    avaliacoes = av_res[1] or []
-
+    """Mostra médias por período com recuperações aplicadas sem peso extra."""
+    avaliacoes = (supabase.table('avaliacoes')
+                  .select('id, nome, data, nota_maxima, periodo_tipo, '
+                          'periodo_numero, categoria, peso')
+                  .eq('turma_id', str(turma_id))
+                  .eq('user_id', current_user.id)
+                  .order('periodo_numero', desc=False)
+                  .order('created_at', desc=False)
+                  .execute().data or [])
     if not avaliacoes:
-        return {
-            'periodos': [],
-            'total_avaliacoes': 0
-        }
+        return {'periodos': [], 'total_avaliacoes': 0}
 
-    av_ids = [av['id'] for av in avaliacoes]
-
-    notas_res, _ = supabase.table('notas') \
-        .select('aluno_id, avaliacao_id, valor') \
-        .in_('avaliacao_id', av_ids) \
-        .eq('user_id', current_user.id) \
-        .execute()
-
-    notas = notas_res[1] or []
-
-    notas_por_aluno_av = {}
-
-    for nota in notas:
-        aluno_id = nota.get('aluno_id')
-        avaliacao_id = nota.get('avaliacao_id')
-
-        if aluno_id not in notas_por_aluno_av:
-            notas_por_aluno_av[aluno_id] = {}
-
-        notas_por_aluno_av[aluno_id][avaliacao_id] = nota.get('valor')
+    registros = (supabase.table('notas')
+                 .select('aluno_id, avaliacao_id, valor')
+                 .in_('avaliacao_id', [av['id'] for av in avaliacoes])
+                 .eq('user_id', current_user.id)
+                 .execute().data or [])
+    notas = {}
+    for registro in registros:
+        notas.setdefault(registro['aluno_id'], {})[
+            registro['avaliacao_id']] = registro.get('valor')
 
     grupos = {}
-
     for av in avaliacoes:
-        periodo_tipo = av.get('periodo_tipo') or 'avaliacao'
-        periodo_numero = av.get('periodo_numero') or 1
-        chave = f"{periodo_tipo}_{periodo_numero}"
-
+        # A recuperação pertence à dupla de avaliações, não a um período
+        # comum. Sua nota aparece na prévia do rendimento.
+        if av.get('categoria') == 'recuperacao':
+            continue
+        tipo = av.get('periodo_tipo') or 'avaliacao'
+        numero = av.get('periodo_numero') or 1
+        chave = f'{tipo}_{numero}'
         if chave not in grupos:
             grupos[chave] = {
-                'chave': chave,
-                'periodo_tipo': periodo_tipo,
-                'periodo_numero': periodo_numero,
-                'nome_periodo': nome_periodo(periodo_tipo, periodo_numero),
-                'avaliacoes': [],
-                'alunos': [],
-                'media_turma': None
+                'chave': chave, 'periodo_tipo': tipo,
+                'periodo_numero': numero,
+                'nome_periodo': nome_periodo(tipo, numero),
+                'avaliacoes': [], 'alunos': [], 'media_turma': None,
             }
-
         grupos[chave]['avaliacoes'].append(av)
 
-    for chave, grupo in grupos.items():
+    rendimento_por_aluno = {
+        aluno['id']: calcular_rendimento(aluno['id'], avaliacoes, notas)
+        for aluno in alunos
+    }
+    for grupo in grupos.values():
         medias_turma = []
-
+        tipo, numero = grupo['periodo_tipo'], grupo['periodo_numero']
         for aluno in alunos:
             aluno_id = aluno['id']
-
-            soma_pesos = 0
-            soma_ponderada = 0
-            total_lancadas = 0
-
-            for av in grupo['avaliacoes']:
-                avaliacao_id = av['id']
-                nota_valor = notas_por_aluno_av.get(aluno_id, {}).get(avaliacao_id)
-
-                if nota_valor is None:
-                    continue
-
-                nota_maxima = float(av.get('nota_maxima') or 10)
-                peso = float(av.get('peso') or 1)
-
-                if nota_maxima <= 0:
-                    continue
-
-                nota_normalizada = (float(nota_valor) / nota_maxima) * 10
-
-                soma_ponderada += nota_normalizada * peso
-                soma_pesos += peso
-                total_lancadas += 1
-
-            media_periodo = None
-
-            if soma_pesos > 0:
-                media_periodo = round(soma_ponderada / soma_pesos, 2)
-                medias_turma.append(media_periodo)
-
+            media, lancadas, total = media_atividades(
+                grupo['avaliacoes'], notas.get(aluno_id, {}))
+            original = float(media) if media is not None else None
+            efetiva = original
+            recuperada = False
+            if tipo == 'avaliacao' and numero in (1, 2, 3, 4):
+                detalhe = rendimento_por_aluno[aluno_id]['periodos'][numero]
+                efetiva = detalhe['efetiva']
+                recuperada = detalhe['recuperada']
+            if efetiva is not None:
+                medias_turma.append(efetiva)
             grupo['alunos'].append({
                 'aluno_id': aluno_id,
                 'nome_completo': aluno.get('nome_completo'),
                 'matricula': aluno.get('matricula'),
-                'media_periodo': media_periodo,
-                'total_lancadas': total_lancadas,
-                'total_avaliacoes': len(grupo['avaliacoes'])
+                'media_periodo': round(efetiva, 2) if efetiva is not None else None,
+                'nota_original': round(original, 2) if original is not None else None,
+                'recuperada': recuperada,
+                'total_lancadas': lancadas,
+                'total_avaliacoes': total,
             })
-
         if medias_turma:
             grupo['media_turma'] = round(sum(medias_turma) / len(medias_turma), 2)
 
-    periodos = list(grupos.values())
-    periodos.sort(key=lambda p: (p['periodo_tipo'], p['periodo_numero']))
-
+    periodos = sorted(grupos.values(),
+                      key=lambda item: (item['periodo_tipo'], item['periodo_numero']))
     return {
         'periodos': periodos,
-        'total_avaliacoes': len(avaliacoes)
+        'total_avaliacoes': len(avaliacoes),
+        'recuperacoes_cadastradas': sum(
+            av.get('categoria') == 'recuperacao' for av in avaliacoes),
     }
 
 

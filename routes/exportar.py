@@ -7,6 +7,7 @@ from flask import Blueprint, request, send_file, jsonify
 from flask_login import login_required, current_user
 from openpyxl.styles import Font, Alignment, PatternFill
 from utils import supabase
+from modules.rendimento import calcular_rendimento, media_atividades
 
 exportar_bp = Blueprint('exportar_bp', __name__)
 
@@ -249,212 +250,175 @@ def exportar_frequencia_geral_excel(turma_id):
 
 
 # ==============================
-# NOTAS MODULARES
+# NOTAS MODULARES E RECUPERAÇÃO
 # ==============================
 
+
 def buscar_dados_notas_modulares(turma_id):
+    """Carrega avaliações/notas sem tratar recuperação como peso autônomo."""
     alunos = buscar_alunos_da_turma(turma_id)
-
-    av_res, _ = supabase.table("avaliacoes") \
-        .select("id, nome, data, nota_maxima, periodo_tipo, periodo_numero, categoria, peso") \
-        .eq("turma_id", str(turma_id)) \
-        .eq("user_id", current_user.id) \
-        .order("periodo_numero", desc=False) \
-        .order("created_at", desc=False) \
-        .execute()
-
-    avaliacoes = av_res[1] or []
-
-    if not avaliacoes:
-        return alunos, [], {}
-
-    av_ids = [av["id"] for av in avaliacoes]
-
-    notas_res, _ = supabase.table("notas") \
-        .select("aluno_id, avaliacao_id, valor") \
-        .in_("avaliacao_id", av_ids) \
-        .eq("user_id", current_user.id) \
-        .execute()
-
-    notas = notas_res[1] or []
+    avaliacoes = (supabase.table('avaliacoes')
+                  .select('id, nome, data, nota_maxima, periodo_tipo, '
+                          'periodo_numero, categoria, peso')
+                  .eq('turma_id', str(turma_id))
+                  .eq('user_id', current_user.id)
+                  .order('periodo_numero', desc=False)
+                  .order('created_at', desc=False)
+                  .execute().data or [])
 
     notas_map = {}
-
-    for nota in notas:
-        aluno_id = nota.get("aluno_id")
-        avaliacao_id = nota.get("avaliacao_id")
-
-        if aluno_id not in notas_map:
-            notas_map[aluno_id] = {}
-
-        notas_map[aluno_id][avaliacao_id] = nota.get("valor")
+    if avaliacoes:
+        registros = (supabase.table('notas')
+                     .select('aluno_id, avaliacao_id, valor')
+                     .in_('avaliacao_id', [av['id'] for av in avaliacoes])
+                     .eq('user_id', current_user.id)
+                     .execute().data or [])
+        for registro in registros:
+            notas_map.setdefault(registro['aluno_id'], {})[
+                registro['avaliacao_id']] = registro.get('valor')
 
     grupos = {}
-
     for av in avaliacoes:
-        periodo_tipo = av.get("periodo_tipo") or "avaliacao"
-        periodo_numero = av.get("periodo_numero") or 1
-        chave = f"{periodo_tipo}_{periodo_numero}"
-
+        if av.get('categoria') == 'recuperacao':
+            continue
+        tipo = av.get('periodo_tipo') or 'avaliacao'
+        numero = av.get('periodo_numero') or 1
+        chave = f'{tipo}_{numero}'
         if chave not in grupos:
             grupos[chave] = {
-                "chave": chave,
-                "periodo_tipo": periodo_tipo,
-                "periodo_numero": periodo_numero,
-                "nome_periodo": nome_periodo(periodo_tipo, periodo_numero),
-                "avaliacoes": []
+                'periodo_tipo': tipo, 'periodo_numero': numero,
+                'nome_periodo': nome_periodo(tipo, numero),
+                'avaliacoes': [],
             }
-
-        grupos[chave]["avaliacoes"].append(av)
-
-    periodos = list(grupos.values())
-    periodos.sort(key=lambda p: (p["periodo_tipo"], p["periodo_numero"]))
-
-    return alunos, periodos, notas_map
+        grupos[chave]['avaliacoes'].append(av)
+    periodos = sorted(grupos.values(),
+                      key=lambda grupo: (grupo['periodo_tipo'],
+                                         grupo['periodo_numero']))
+    return alunos, periodos, notas_map, avaliacoes
 
 
-def calcular_media_ponderada(aluno_id, avaliacoes, notas_map):
-    soma_pesos = 0
-    soma_ponderada = 0
-    total_lancadas = 0
-
-    for av in avaliacoes:
-        nota = notas_map.get(aluno_id, {}).get(av["id"])
-
-        if nota is None:
-            continue
-
-        nota_maxima = float(av.get("nota_maxima") or 10)
-        peso = float(av.get("peso") or 1)
-
-        if nota_maxima <= 0:
-            continue
-
-        nota_normalizada = (float(nota) / nota_maxima) * 10
-
-        soma_ponderada += nota_normalizada * peso
-        soma_pesos += peso
-        total_lancadas += 1
-
-    if soma_pesos == 0:
-        return None, total_lancadas
-
-    return round(soma_ponderada / soma_pesos, 2), total_lancadas
+def calcular_media_ponderada(aluno_id, avaliacoes, notas_map,
+                             todas_avaliacoes=None):
+    """Retorna nota efetiva (com REC) e quantidade de lançamentos regulares."""
+    original, lancadas, _ = media_atividades(
+        avaliacoes, notas_map.get(aluno_id, {}))
+    media = float(original) if original is not None else None
+    if todas_avaliacoes and avaliacoes:
+        primeiro = avaliacoes[0]
+        numero = primeiro.get('periodo_numero')
+        if (primeiro.get('periodo_tipo') == 'avaliacao'
+                and numero in (1, 2, 3, 4)):
+            media = calcular_rendimento(
+                aluno_id, todas_avaliacoes, notas_map)['periodos'][numero]['efetiva']
+    return round(media, 2) if media is not None else None, lancadas
 
 
-@exportar_bp.route("/exportar/turma/<uuid:turma_id>/notas", methods=["GET"])
+def _celula_segura(texto):
+    """Não interpreta nomes digitados como fórmulas em uma planilha Excel."""
+    valor = str(texto or '')
+    if valor.lstrip().startswith(('=', '+', '-', '@')):
+        return "'" + valor
+    return valor
+
+
+@exportar_bp.route('/exportar/turma/<uuid:turma_id>/notas', methods=['GET'])
 @login_required
 def exportar_notas_excel(turma_id):
+    """Resumo ponderado e abas modulares, sem somar REC como avaliação extra."""
     try:
         if not verificar_dono_turma(turma_id):
-            return jsonify({"error": "Acesso negado."}), 403
+            return jsonify({'error': 'Acesso negado.'}), 403
 
         turma_nome = buscar_nome_turma(turma_id)
-
-        alunos, periodos, notas_map = buscar_dados_notas_modulares(turma_id)
-
+        alunos, periodos, notas_map, avaliacoes = buscar_dados_notas_modulares(turma_id)
         wb = openpyxl.Workbook()
-        ws_resumo = wb.active
-        ws_resumo.title = "Resumo de Notas"
-
-        ws_resumo.append(["Aluno"] + [p["nome_periodo"] for p in periodos] + ["Média Geral"])
-
+        resumo = wb.active
+        resumo.title = 'Resumo de Notas'
+        resumo.append([
+            'Aluno', '1ª AV. (×2)', '2ª AV. (×3)', '3ª AV. (×2)',
+            '4ª AV. (×3)', '1ª REC', '2ª REC', 'Total ponderado',
+            'Média anual', 'Média parcial',
+        ])
         for aluno in alunos:
-            aluno_id = aluno["id"]
-            row = [aluno.get("nome_completo") or ""]
-
-            medias_periodo = []
-
-            for periodo in periodos:
-                media, _ = calcular_media_ponderada(
-                    aluno_id,
-                    periodo["avaliacoes"],
-                    notas_map
-                )
-
-                row.append(media if media is not None else "-")
-
-                if media is not None:
-                    medias_periodo.append(media)
-
-            media_geral = round(sum(medias_periodo) / len(medias_periodo), 2) if medias_periodo else "-"
-            row.append(media_geral)
-
-            ws_resumo.append(row)
-
-        estilizar_cabecalho_excel(ws_resumo, "6610f2")
-        ws_resumo.column_dimensions["A"].width = 35
-
-        for col in range(2, len(periodos) + 3):
-            ws_resumo.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 18
-
-        ajustar_texto_planilha(ws_resumo)
+            rendimento = calcular_rendimento(aluno['id'], avaliacoes, notas_map)
+            periodos_aluno = rendimento['periodos']
+            recs = rendimento['recuperacoes']
+            resumo.append([
+                _celula_segura(aluno.get('nome_completo')),
+                *(periodos_aluno[n]['efetiva'] for n in (1, 2, 3, 4)),
+                recs[1]['nota'], recs[2]['nota'],
+                rendimento['total_pontos'], rendimento['media_anual'],
+                rendimento['media_parcial'],
+            ])
+        resumo.freeze_panes = 'B2'
+        resumo.auto_filter.ref = resumo.dimensions
+        estilizar_cabecalho_excel(resumo, '6610f2')
+        resumo.column_dimensions['A'].width = 35
+        for coluna in range(2, 11):
+            resumo.column_dimensions[openpyxl.utils.get_column_letter(coluna)].width = 19
+        for linha in resumo.iter_rows(min_row=2, min_col=2, max_col=10):
+            for celula in linha:
+                if isinstance(celula.value, (int, float)):
+                    celula.number_format = '0.00'
+        ajustar_texto_planilha(resumo)
 
         for periodo in periodos:
-            nome_aba = periodo["nome_periodo"][:31]
-            ws = wb.create_sheet(title=nome_aba)
-
-            avaliacoes = periodo["avaliacoes"]
-
-            cabecalho = ["Aluno"]
-
-            for av in avaliacoes:
-                cabecalho.append(f"{av['nome']} / {av.get('nota_maxima') or 10}")
-
-            cabecalho.extend(["Notas Lançadas", "Média Ponderada"])
-
-            ws.append(cabecalho)
-
+            ws = wb.create_sheet(title=periodo['nome_periodo'][:31])
+            grupo = periodo['avaliacoes']
+            cabecalho = ['Aluno'] + [
+                f"{av['nome']} / {av.get('nota_maxima') or 10}"
+                for av in grupo
+            ] + ['Notas lançadas', 'Média efetiva']
+            ws.append([_celula_segura(item) for item in cabecalho])
             for aluno in alunos:
-                aluno_id = aluno["id"]
-                row = [aluno.get("nome_completo") or ""]
-
-                for av in avaliacoes:
-                    nota = notas_map.get(aluno_id, {}).get(av["id"])
-                    row.append(nota if nota is not None else "-")
-
-                media, total_lancadas = calcular_media_ponderada(
-                    aluno_id,
-                    avaliacoes,
-                    notas_map
-                )
-
-                row.append(f"{total_lancadas}/{len(avaliacoes)}")
-                row.append(media if media is not None else "-")
-
-                ws.append(row)
-
+                aluno_id = aluno['id']
+                linha = [_celula_segura(aluno.get('nome_completo'))]
+                linha.extend(notas_map.get(aluno_id, {}).get(av['id']) for av in grupo)
+                media, lancadas = calcular_media_ponderada(
+                    aluno_id, grupo, notas_map, avaliacoes)
+                linha.extend([f'{lancadas}/{len(grupo)}', media])
+                ws.append(linha)
             ws.append([])
-            ws.append(["Detalhes das Avaliações"])
-            ws.append(["Nome", "Categoria", "Data", "Nota Máxima", "Peso"])
-
-            for av in avaliacoes:
+            ws.append(['Detalhes das avaliações'])
+            ws.append(['Nome', 'Categoria', 'Data', 'Nota máxima', 'Peso'])
+            for av in grupo:
                 ws.append([
-                    av.get("nome") or "",
-                    av.get("categoria") or "",
-                    av.get("data") or "",
-                    av.get("nota_maxima") or "",
-                    av.get("peso") or ""
+                    _celula_segura(av.get('nome')),
+                    av.get('categoria') or '', av.get('data') or '',
+                    av.get('nota_maxima'), av.get('peso'),
                 ])
-
-            estilizar_cabecalho_excel(ws, "6610f2")
-
-            ws.column_dimensions["A"].width = 35
-
+            ws.freeze_panes = 'B2'
+            estilizar_cabecalho_excel(ws, '6610f2')
+            ws.column_dimensions['A'].width = 36
             for col in range(2, len(cabecalho) + 1):
-                ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 22
-
+                ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 21
             ajustar_texto_planilha(ws)
 
-        return gerar_resposta_excel(
-            wb,
-            f"Notas_Modulares_{turma_nome}.xlsx"
-        )
+        recuperacoes = [av for av in avaliacoes
+                        if av.get('categoria') == 'recuperacao']
+        if recuperacoes:
+            ws = wb.create_sheet('Recuperações')
+            ws.append(['Aluno', 'REC 1', 'Alvo REC 1', 'REC 1 aplicada',
+                       'REC 2', 'Alvo REC 2', 'REC 2 aplicada'])
+            for aluno in alunos:
+                result = calcular_rendimento(aluno['id'], avaliacoes, notas_map)
+                rec1, rec2 = result['recuperacoes'][1], result['recuperacoes'][2]
+                ws.append([
+                    _celula_segura(aluno.get('nome_completo')),
+                    rec1['nota'], rec1['alvo'], 'Sim' if rec1['aplicada'] else 'Não',
+                    rec2['nota'], rec2['alvo'], 'Sim' if rec2['aplicada'] else 'Não',
+                ])
+            estilizar_cabecalho_excel(ws, '6610f2')
+            ws.column_dimensions['A'].width = 36
+            for col in 'BCDEFG':
+                ws.column_dimensions[col].width = 20
+            ajustar_texto_planilha(ws)
 
-    except Exception as e:
+        return gerar_resposta_excel(wb, f'Notas_Modulares_{turma_nome}.xlsx')
+    except Exception as exc:
         return jsonify({
-            "error": "Erro ao gerar boletim de notas.",
-            "details": str(e)
+            'error': 'Erro ao gerar boletim de notas.',
+            'details': str(exc),
         }), 500
 
 

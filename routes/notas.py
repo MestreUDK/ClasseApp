@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from utils import supabase
 from modules.revisoes import salvar_versionado
+from modules.rendimento import calcular_rendimento
 
 notas_bp = Blueprint('notas_bp', __name__)
 
@@ -26,6 +27,25 @@ def verificar_dono_avaliacao(avaliacao_id):
         .execute()
 
     return len(res[1]) > 0
+
+
+def validar_recuperacao(turma_id, tipo, numero, categoria, ignorar_id=None):
+    """Evita múltiplas recuperações no mesmo par de avaliações."""
+    if categoria != 'recuperacao':
+        return None
+    if tipo != 'avaliacao' or numero not in (1, 2):
+        return 'A recuperação deve ser 1ª ou 2ª, no tipo de período Avaliação.'
+    query = (supabase.table('avaliacoes').select('id')
+             .eq('turma_id', str(turma_id))
+             .eq('user_id', current_user.id)
+             .eq('periodo_tipo', 'avaliacao')
+             .eq('periodo_numero', numero)
+             .eq('categoria', 'recuperacao'))
+    if ignorar_id:
+        query = query.neq('id', str(ignorar_id))
+    if query.limit(1).execute().data:
+        return f'A {numero}ª recuperação já está cadastrada nesta turma.'
+    return None
 
 
 @notas_bp.route('/turma/<uuid:turma_id>/avaliacoes', methods=['GET'])
@@ -93,17 +113,40 @@ def create_avaliacao():
         if not verificar_dono_turma(turma_id):
             return jsonify({"error": "Acesso negado."}), 403
 
-        if not dados.get('nome'):
-            return jsonify({"error": "O nome da avaliação é obrigatório."}), 400
-
+        nome = str(dados.get('nome') or '').strip()
+        if not nome or len(nome) > 200:
+            return jsonify({'error': 'Informe um nome com até 200 caracteres.'}), 400
+        try:
+            periodo_numero = int(dados.get('periodo_numero', 1))
+            nota_maxima = float(dados.get('nota_maxima', 10))
+            peso = (1 if dados.get('categoria') == 'recuperacao'
+                    else float(dados.get('peso', 1)))
+            if not (1 <= periodo_numero <= 12 and 0 < nota_maxima <= 100):
+                raise ValueError()
+            if not (0 < peso <= 100):
+                raise ValueError()
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Período, nota máxima ou peso inválido.'}), 400
+        tipo = dados.get('periodo_tipo') or 'avaliacao'
+        categoria = dados.get('categoria') or 'atividade'
+        if tipo not in ('avaliacao', 'bimestre', 'trimestre', 'semestre'):
+            return jsonify({'error': 'Tipo de período inválido.'}), 400
+        if categoria not in ('atividade', 'trabalho', 'prova', 'participacao', 'recuperacao', 'outro'):
+            return jsonify({'error': 'Categoria inválida.'}), 400
+        erro = validar_recuperacao(turma_id, tipo, periodo_numero, categoria)
+        if erro:
+            return jsonify({'error': erro}), 400
+        # O banco pode exigir peso não nulo: 1 é neutro e IGNORADO nas médias.
+        if categoria == 'recuperacao':
+            peso = 1
         data, _ = supabase.table('avaliacoes').insert({
-            'nome': dados.get('nome'),
+            'nome': nome,
             'data': dados.get('data') or None,
-            'nota_maxima': dados.get('nota_maxima') or 10,
-            'periodo_tipo': dados.get('periodo_tipo') or 'avaliacao',
-            'periodo_numero': dados.get('periodo_numero') or 1,
-            'categoria': dados.get('categoria') or 'atividade',
-            'peso': dados.get('peso') or 1,
+            'nota_maxima': nota_maxima,
+            'periodo_tipo': tipo,
+            'periodo_numero': periodo_numero,
+            'categoria': categoria,
+            'peso': peso,
             'turma_id': turma_id,
             'user_id': current_user.id
         }).execute()
@@ -135,7 +178,8 @@ def editar_avaliacao(avaliacao_id):
             return jsonify({'error': 'Informe um nome com até 200 caracteres.'}), 400
         try:
             nota_maxima = float(dados.get('nota_maxima'))
-            peso = float(dados.get('peso'))
+            peso = (1 if dados.get('categoria') == 'recuperacao'
+                    else float(dados.get('peso')))
             periodo_numero = int(dados.get('periodo_numero'))
             if not (0 < nota_maxima <= 100 and 0 < peso <= 100 and 1 <= periodo_numero <= 12):
                 raise ValueError()
@@ -147,8 +191,12 @@ def editar_avaliacao(avaliacao_id):
             return jsonify({'error': 'Tipo de período inválido.'}), 400
         if categoria not in ('atividade', 'trabalho', 'prova', 'participacao', 'recuperacao', 'outro'):
             return jsonify({'error': 'Categoria inválida.'}), 400
-        if categoria == 'recuperacao' and periodo_numero not in (1, 2):
-            return jsonify({'error': 'A recuperação deve ser a 1ª ou a 2ª.'}), 400
+        erro = validar_recuperacao(atuais[0]['turma_id'], tipo, periodo_numero,
+                                  categoria, ignorar_id=avaliacao_id)
+        if erro:
+            return jsonify({'error': erro}), 400
+        if categoria == 'recuperacao':
+            peso = 1
         valores = {
             'nome': nome, 'data': dados.get('data') or None,
             'nota_maxima': nota_maxima, 'peso': peso,
@@ -246,6 +294,48 @@ def get_notas_avaliacao(avaliacao_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@notas_bp.route('/turma/<uuid:turma_id>/rendimento', methods=['GET'])
+@login_required
+def consultar_rendimento(turma_id):
+    """Prévia sem alterar notas, para conferência de recuperação e média."""
+    try:
+        if not verificar_dono_turma(turma_id):
+            return jsonify({'error': 'Acesso negado.'}), 403
+        avs = (supabase.table('avaliacoes')
+               .select('id, categoria, periodo_tipo, periodo_numero, nota_maxima, peso')
+               .eq('turma_id', str(turma_id))
+               .eq('user_id', current_user.id)
+               .execute().data or [])
+        vinculos = (supabase.table('turmas_alunos')
+                    .select('alunos(id, nome_completo, matricula)')
+                    .eq('turma_id', str(turma_id)).execute().data or [])
+        notas = {}
+        if avs:
+            registros = (supabase.table('notas')
+                         .select('aluno_id, avaliacao_id, valor')
+                         .in_('avaliacao_id', [av['id'] for av in avs])
+                         .eq('user_id', current_user.id)
+                         .execute().data or [])
+            for registro in registros:
+                notas.setdefault(registro['aluno_id'], {})[
+                    registro['avaliacao_id']] = registro.get('valor')
+        alunos = []
+        for vinculo in vinculos:
+            aluno = vinculo.get('alunos')
+            if not aluno:
+                continue
+            alunos.append({
+                'aluno_id': aluno['id'],
+                'nome': aluno.get('nome_completo'),
+                'matricula': aluno.get('matricula'),
+                'rendimento': calcular_rendimento(aluno['id'], avs, notas),
+            })
+        alunos.sort(key=lambda item: (item['nome'] or '').casefold())
+        return jsonify({'alunos': alunos, 'pesos': [2, 3, 2, 3]})
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
 
 
 @notas_bp.route('/notas', methods=['POST'])
