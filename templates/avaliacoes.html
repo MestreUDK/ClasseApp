@@ -76,6 +76,14 @@
                 </div>
             </div>
 
+            <div id="box-modo-recuperacao" hidden>
+                <label for="recuperacao_modo">Como aplicar a recuperação:</label>
+                <select id="recuperacao_modo">
+                    <option value="automatico">Automático (avaliação vermelha; maior peso se ambas)</option>
+                    <option value="manual">Manual (escolher destino para cada aluno)</option>
+                </select>
+            </div>
+
             <p id="aviso-recuperacao" hidden style="color: var(--text-sec); font-size:0.9em; margin:8px 0 14px;">
                 A recuperação não possui peso próprio: a 1ª atende as avaliações
                 1 e 2; a 2ª atende as avaliações 3 e 4. A nota só substitui uma
@@ -110,7 +118,7 @@
     </div>
 
     <style>
-        #aviso-recuperacao[hidden] { display: none !important; }
+        #aviso-recuperacao[hidden], #box-modo-recuperacao[hidden] { display: none !important; }
         #quadro-rendimento table { border-collapse:collapse; min-width:760px; width:100%; }
         #quadro-rendimento th, #quadro-rendimento td {
             border:1px solid var(--border-color); padding:8px; text-align:center;

@@ -15,17 +15,38 @@
         Voltar
     </a>
 
+    <section id="opcoes-recuperacao" class="card-form" hidden aria-label="Opções da recuperação">
+        <div class="recuperacao-controles">
+            <div>
+                <label for="modo-recuperacao"><strong>Aplicação da recuperação</strong></label>
+                <select id="modo-recuperacao">
+                    <option value="automatico">Automático: priorizar nota vermelha de maior peso</option>
+                    <option value="manual">Manual: escolher avaliação por aluno</option>
+                </select>
+            </div>
+            <label class="mostrar-todos">
+                <input type="checkbox" id="mostrar-todos-alunos">
+                Mostrar todos os alunos
+            </label>
+        </div>
+        <p id="resumo-elegiveis" class="nota-orientacao" aria-live="polite"></p>
+        <p id="aviso-modo-recuperacao" class="nota-orientacao"></p>
+    </section>
+
     <div class="card-form" style="padding: 10px;">
+        <div class="tabela-notas-wrapper">
         <table id="tabela-notas">
             <thead>
                 <tr>
                     <th style="width: 60%;">Aluno</th>
                     <th style="width: 40%; text-align: center;">Nota</th>
+                    <th id="coluna-destino" hidden>Recuperar qual avaliação?</th>
                 </tr>
             </thead>
 
             <tbody id="tbody-notas"></tbody>
         </table>
+        </div>
     </div>
 
     <p style="font-size: 0.8em; color: var(--text-sec); text-align: center; margin-top: 10px;">
@@ -76,6 +97,39 @@
             border-color: #dc3545 !important;
         }
 
+        .tabela-notas-wrapper { overflow-x: auto; }
+        #tabela-notas.modo-manual { min-width: 485px; }
+        #opcoes-recuperacao[hidden], #coluna-destino[hidden],
+        .coluna-destino[hidden] { display: none !important; }
+        .recuperacao-controles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: end;
+            justify-content: space-between;
+        }
+        .recuperacao-controles > div { flex: 1 1 260px; }
+        .recuperacao-controles select {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-card);
+            color: var(--text-main);
+        }
+        .mostrar-todos { display:flex; align-items:center; gap:8px; cursor:pointer; }
+        .mostrar-todos input { width:18px; height:18px; }
+        .nota-orientacao { color:var(--text-sec); font-size:0.9em; line-height:1.5; }
+        .status-recuperacao { display:block; font-size:0.8em; margin-top:4px; }
+        .nota-baixa { color:#f59e0b; font-weight:600; }
+        .seletor-destino { min-width:155px; max-width:100%; padding:8px;
+            border-radius:6px; border:1px solid var(--border-color);
+            color:var(--text-main); background:var(--bg-card); }
+        @media (max-width:600px) {
+            #tabela-notas td, #tabela-notas th { padding:6px 4px; }
+            #tabela-notas .input-nota { width:65px; }
+            #tabela-notas { font-size:0.9em; }
+        }
         .meta-avaliacao {
             display: flex;
             gap: 8px;
