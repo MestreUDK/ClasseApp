@@ -58,8 +58,8 @@
                     </select>
                 </div>
 
-                <div>
-                    <label for="peso">Peso:</label>
+                <div id="box-peso">
+                    <label for="peso">Peso da atividade (sem recuperação):</label>
                     <input type="number" id="peso" min="0.1" step="0.1" value="1">
                 </div>
             </div>
@@ -76,6 +76,11 @@
                 </div>
             </div>
 
+            <p id="aviso-recuperacao" hidden style="color: var(--text-sec); font-size:0.9em; margin:8px 0 14px;">
+                A recuperação não possui peso próprio: a 1ª atende as avaliações
+                1 e 2; a 2ª atende as avaliações 3 e 4. A nota só substitui uma
+                avaliação vermelha se melhorar o resultado.
+            </p>
             <button type="submit">
                 Cadastrar Avaliação
             </button>
@@ -91,7 +96,31 @@
         <p>Carregando...</p>
     </div>
 
+    <div class="card-form" style="margin-top:22px;">
+        <h2>Prévia do rendimento e das recuperações</h2>
+        <p style="color:var(--text-sec); font-size:0.9em;">
+            As notas originais permanecem no banco. Os valores com REC são
+            calculados apenas para o rendimento, usando pesos anuais 2, 3, 2 e 3.
+            A média anual só aparece após todas as quatro avaliações estarem completas.
+        </p>
+        <button type="button" id="atualizar-rendimento" class="botao-acao">Atualizar prévia</button>
+        <div id="quadro-rendimento" style="margin-top:12px; overflow-x:auto;">
+            <p>Carregando rendimento...</p>
+        </div>
+    </div>
+
     <style>
+        #aviso-recuperacao[hidden] { display: none !important; }
+        #quadro-rendimento table { border-collapse:collapse; min-width:760px; width:100%; }
+        #quadro-rendimento th, #quadro-rendimento td {
+            border:1px solid var(--border-color); padding:8px; text-align:center;
+            color:var(--text-main);
+        }
+        #quadro-rendimento th:first-child, #quadro-rendimento td:first-child {
+            text-align:left; min-width:160px;
+        }
+        #quadro-rendimento .rec-aplicada { color: #3dbb79; font-weight:700; }
+        #quadro-rendimento .rec-origem { display:block; font-size:0.8em; color:var(--text-sec); }
         .grid-form {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
