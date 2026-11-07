@@ -95,19 +95,27 @@
         <hr>
 
         <div class="box-opcao">
-            <h3>📝 Notas Modulares</h3>
+            <h3>📝 Mapa Final do Rendimento Escolar</h3>
             <p>
-                Exporta as notas agrupadas por avaliação, bimestre, trimestre ou semestre,
-                incluindo pesos e médias ponderadas.
+                Exporta o Mapa Final com 1ª a 4ª avaliações, duas recuperações,
+                pesos oficiais 2/3/2/3, média anual e frequência.
+                Os lançamentos ainda incompletos aparecem em branco.
             </p>
-
+            <label for="mapa-ano">Ano letivo do Mapa Final:</label>
+            <input type="number" id="mapa-ano" min="2000" max="2100" step="1">
+            <p class="texto-auxiliar">
+                Resultado indicativo: média 5,0 e frequência 75%.
+                Confira os critérios de aprovação definidos pela escola.
+                A frequência e as avaliações datadas correspondem ao ano escolhido; avaliações sem data também são incluídas.
+            </p>
             <div class="botoes-export">
-                <button 
-                    onclick="baixarNotas('xlsx')" 
-                    class="btn-excel" 
-                    style="background-color: #6f42c1;"
-                >
-                    Baixar Notas Modulares
+                <button type="button" onclick="baixarNotas('mapa')"
+                        class="btn-excel" style="background-color: #285e71;">
+                    Baixar Mapa Final (Excel)
+                </button>
+                <button type="button" onclick="baixarNotas('modular')"
+                        class="btn-excel" style="background-color: #6f42c1;">
+                    Baixar Notas Modulares (detalhes)
                 </button>
             </div>
         </div>
