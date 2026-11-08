@@ -352,16 +352,15 @@ def visualizar_compartilhamento(codigo):
 
         turma_id = compartilhamento["recurso_id"]
 
-        turma_res, _ = supabase.table("turmas") \
-            .select("*") \
-            .eq("id", turma_id) \
-            .single() \
-            .execute()
-
-        turma = turma_res[1]
-
-        if not turma:
+        # Compartilhamento mostra apenas os campos necessários à consulta.
+        # Evita enviar metadados internos ou identificadores do proprietário.
+        turmas = (supabase.table("turmas")
+                  .select("id, nome, descricao")
+                  .eq("id", turma_id)
+                  .limit(1).execute().data or [])
+        if not turmas:
             return jsonify({"error": "Turma não encontrada."}), 404
+        turma = turmas[0]
 
         resposta = {
             "compartilhamento": compartilhamento,

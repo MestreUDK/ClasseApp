@@ -5,7 +5,7 @@ from utils import supabase
 
 def buscar_alunos_compartilhados(turma_id):
     alunos_res, _ = supabase.table("turmas_alunos") \
-        .select("alunos(*)") \
+        .select("alunos(id, nome_completo, matricula, data_nascimento)") \
         .eq("turma_id", turma_id) \
         .execute()
 

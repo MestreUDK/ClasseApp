@@ -410,17 +410,18 @@ def excluir_nota():
 @login_required
 def get_notas_avaliacao(avaliacao_id):
     try:
-        av_res, _ = supabase.table('avaliacoes') \
-            .select('id, nome, turma_id, data, nota_maxima, periodo_tipo, periodo_numero, categoria, peso, revision, recuperacao_modo') \
-            .eq('id', str(avaliacao_id)) \
-            .eq('user_id', current_user.id) \
-            .single() \
-            .execute()
+        # Uma avaliação excluída em outro dispositivo deve retornar 404,
+        # evitando transformar a ausência de linhas em PGRST116/HTTP 500.
+        avaliacoes = (supabase.table('avaliacoes')
+                      .select('id, nome, turma_id, data, nota_maxima, periodo_tipo, periodo_numero, categoria, peso, revision, recuperacao_modo')
+                      .eq('id', str(avaliacao_id))
+                      .eq('user_id', current_user.id)
+                      .limit(1).execute().data or [])
 
-        if not av_res[1]:
-            return jsonify({"error": "Avaliação não encontrada."}), 404
+        if not avaliacoes:
+            return jsonify({"error": "Avaliação não encontrada ou acesso negado."}), 404
 
-        avaliacao = av_res[1]
+        avaliacao = avaliacoes[0]
         turma_id = avaliacao['turma_id']
 
         if not verificar_dono_turma(turma_id):

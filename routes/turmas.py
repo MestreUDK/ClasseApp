@@ -215,28 +215,28 @@ def vincular_aluno_turma():
 @turmas_bp.route('/turmas/remover_aluno/<uuid:vinculo_id>', methods=['DELETE'])
 @login_required
 def remover_aluno_turma(vinculo_id):
+    """Remove vínculo somente de turma pertencente ao professor autenticado."""
     try:
-        vinculo_res, _ = supabase.table('turmas_alunos') \
-            .select('id, turma_id') \
-            .eq('id', str(vinculo_id)) \
-            .single() \
-            .execute()
+        # .single() gerava PGRST116 quando o vínculo já havia sido removido.
+        vinculos = (supabase.table('turmas_alunos')
+                    .select('id, turma_id')
+                    .eq('id', str(vinculo_id))
+                    .limit(1).execute().data or [])
+        if not vinculos:
+            return jsonify({'error': 'Vínculo não encontrado.'}), 404
 
-        if not vinculo_res[1]:
-            return jsonify({"error": "Vínculo não encontrado."}), 404
+        turma_id = vinculos[0]['turma_id']
+        if not verificar_dono_turma(turma_id):
+            return jsonify({'error': 'Acesso negado.'}), 403
 
-        if not verificar_dono_turma(vinculo_res[1]['turma_id']):
-            return jsonify({"error": "Acesso negado."}), 403
-
-        data, _ = supabase.table('turmas_alunos') \
-            .delete() \
-            .eq('id', str(vinculo_id)) \
-            .execute()
-
-        if not data[1]:
-            return jsonify({"error": "Vínculo não encontrado."}), 404
-
-        return jsonify({"message": "Aluno removido."}), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        # Revalida o vínculo à turma na própria operação de exclusão.
+        removidos = (supabase.table('turmas_alunos')
+                     .delete()
+                     .eq('id', str(vinculo_id))
+                     .eq('turma_id', turma_id)
+                     .execute().data or [])
+        if not removidos:
+            return jsonify({'error': 'Vínculo não encontrado.'}), 404
+        return jsonify({'message': 'Aluno removido.'}), 200
+    except Exception:
+        return jsonify({'error': 'Não foi possível remover o vínculo.'}), 500
