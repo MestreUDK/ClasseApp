@@ -1,0 +1,21 @@
+# Credenciais e configurações privadas (nunca publicar no GitHub)
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.jks.base64.txt
+*.pem
+*.p12
+*.pfx
+
+# Ambiente de desenvolvimento
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+*.log
+*.sqlite3
+.DS_Store
