@@ -29,7 +29,7 @@ def resumo_notificacoes():
         inicio = 0
         while True:
             resposta = (supabase.table('alunos')
-                        .select('id,nome_completo,data_nascimento')
+                        .select('id,nome_completo,data_nascimento,aniversario_dia_mes')
                         .eq('user_id', str(current_user.id))
                         .order('id')
                         .range(inicio, inicio + pagina - 1)

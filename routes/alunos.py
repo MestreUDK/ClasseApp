@@ -3,6 +3,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user # <-- IMPORTAR
 from utils import supabase
+from modules.aniversarios import validar_campos_aniversario
 
 alunos_bp = Blueprint('alunos_bp', __name__)
 
@@ -30,13 +31,18 @@ def create_aluno():
         if not dados or 'nome_completo' not in dados:
             return jsonify({"error": "O campo 'nome_completo' é obrigatório."}), 400
 
+        try:
+            nascimento = validar_campos_aniversario(dados)
+        except ValueError as exc:
+            return jsonify({'error': str(exc)}), 400
+
         # Insere vinculando ao seu usuário
         data, count = supabase.table('alunos').insert({
             'nome_completo': dados.get('nome_completo'),
             'matricula': dados.get('matricula'),
             'telefone': dados.get('telefone'),
             'email': dados.get('email'),
-            'data_nascimento': dados.get('data_nascimento'), # <-- ADICIONADO
+            **nascimento,
             'detalhes': dados.get('detalhes'),               # <-- ADICIONADO
             'user_id': current_user.id # <-- VÍNCULO DE PROPRIEDADE
         }).execute()
@@ -82,6 +88,17 @@ def update_aluno(aluno_id):
         if not dados or 'nome_completo' not in dados:
             return jsonify({"error": "O campo 'nome_completo' é obrigatório."}), 400
 
+        # Clientes antigos podem não enviar o novo campo. Em uma edição
+        # comum, preservar o aniversário parcial em vez de apagá-lo.
+        nascimento = {}
+        if 'aniversario_dia_mes' in dados or 'data_nascimento' in dados:
+            try:
+                nascimento = validar_campos_aniversario(dados)
+                if 'aniversario_dia_mes' not in dados and not dados.get('data_nascimento'):
+                    nascimento.pop('aniversario_dia_mes', None)
+            except ValueError as exc:
+                return jsonify({'error': str(exc)}), 400
+
         revisao = dados.get('expected_revision')
         if revisao is not None and (type(revisao) is not int or revisao < 1):
             return jsonify({'error': 'Revisão inválida.'}), 400
@@ -91,7 +108,7 @@ def update_aluno(aluno_id):
             'matricula': dados.get('matricula'),
             'telefone': dados.get('telefone'),
             'email': dados.get('email'),
-            'data_nascimento': dados.get('data_nascimento'), # <-- ADICIONADO
+            **nascimento,
             'detalhes': dados.get('detalhes')                # <-- ADICIONADO
         }).eq('id', str(aluno_id)).eq('user_id', current_user.id)
         if revisao is not None:
