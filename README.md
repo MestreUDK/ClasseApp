@@ -6,7 +6,7 @@
 
 Aplicação web responsiva, com recursos offline e compartilhamento controlado, voltada à rotina de professores.
 
-**Versão:** `2.2.28` · **Idioma:** Português (Brasil) · **Licença:** MIT
+**Versão:** `2.2.28.1` · **Idioma:** Português (Brasil) · **Licença:** MIT
 
 </div>
 
@@ -24,21 +24,29 @@ Aplicação web responsiva, com recursos offline e compartilhamento controlado, 
 | **Compartilhamento** | Compartilhamento de turmas por código, permissões de visualização e cópia seletiva. |
 | **Sincronização** | Central de comparação entre cópia local e nuvem, resolução de conflitos e envio de pendências. |
 | **Histórico local** | Pacotes nomeados das alterações ainda não enviadas, com retenção configurável de 3 a 10 versões. |
-| **Notificações** | Aniversários dos alunos (7 ou 30 dias) e status das frequências pendentes; indicador no sino do menu. |
+| **Notificações** | Aniversários dos alunos (7 ou 30 dias), idade a completar quando o ano é conhecido e avisos sem ano; indicador no sino do menu. |
 | **Personalização** | Temas claro/escuro/automático, layouts Clássico/Estúdio e cores de destaque. |
 
 Há ainda uma **demonstração pública com dados fictícios**, separada das contas reais.
 
 ## 🔔 Como funcionam os aniversários
 
-1. No cadastro ou edição do aluno, preencha **Data de Nascimento**.
+1. No cadastro ou edição do aluno, informe **dia e mês**. O **ano é opcional**: quando informado, o aviso mostra a idade que o aluno completará; sem ano, o aviso mostra somente o aniversário.
 2. Abra **🔔 Notificações** para consultar os aniversários de hoje e dos próximos **7 ou 30 dias**.
 3. Quando houver aniversários nos próximos 7 dias, o sino no menu mostra um **contador**.
 4. É possível **dispensar** um aviso para o ano corrente neste dispositivo. O aviso volta a ser gerado no próximo ano.
 
-Os aniversários são calculados segundo o fuso da escola (`APP_TIMEZONE`, por padrão `America/Fortaleza`). O caso de nascimento em **29/02** é considerado em **28/02** nos anos não bissextos. Cada usuário consulta apenas os alunos vinculados à própria conta. Alunos sem data cadastrada não geram avisos.
+Os aniversários são calculados segundo o fuso da escola (`APP_TIMEZONE`, por padrão `America/Fortaleza`). O caso de nascimento em **29/02** é considerado em **28/02** nos anos não bissextos. Cada usuário consulta apenas os alunos vinculados à própria conta. Alunos sem dia e mês cadastrados não geram avisos. O campo `data_nascimento` continua sendo uma data completa; o aniversário sem ano é armazenado separadamente em `alunos.aniversario_dia_mes` (formato `MM-DD`).
 
 **Limite atual:** são **avisos dentro do ClasseApp**, consultados ao acessar o sistema; não são notificações push do Android nem mensagens enviadas fora do aplicativo. O contador é atualizado periodicamente e não exige manter a página de Notificações aberta.
+
+### Migração de banco necessária na v2.2.28.1
+
+Antes de publicar esta versão, execute no **Supabase → SQL Editor** o arquivo
+`migracao-v2.2.28.1-aniversario-sem-ano.sql`, que adiciona a coluna opcional
+`aniversario_dia_mes` à tabela `public.alunos`. Não modifica as datas de
+nascimento já existentes. Execute o SQL **antes do deploy** para evitar falha
+na busca de aniversários.
 
 ## 🔐 Privacidade e uso offline
 
@@ -128,6 +136,7 @@ Alguns testes de interface e lógica offline podem ser executados com Node.js, s
 node tests/test_pacotes_offline.js
 node tests/test_tela_senha_offline.js
 node tests/test_notificacoes.js
+node tests/test_data_aniversario.js
 ```
 
 Os testes automatizados não substituem testes reais no dispositivo: valide login, frequências, dados offline, sincronização e permissões usando contas de teste antes de liberar uma versão.
