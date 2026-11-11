@@ -95,3 +95,15 @@
 .notificacoes-filtros select {max-width:250px;min-width:0;}
 #notificacoes-lista .notificacoes-item strong {display:block;overflow-wrap:anywhere;}
 @media(max-width:540px) {.notificacoes-filtros>* {width:100%;max-width:none!important;}}
+
+/* Cadastro de nascimento: dia e mês obrigatórios somente quando informados;
+   ano opcional, inclusive em telas pequenas. */
+.data-aniversario-campos {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr);
+    gap: 10px;
+    margin: 6px 0;
+}
+.data-aniversario-campos label { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.data-aniversario-campos input { width: 100%; min-width: 0; box-sizing: border-box; }
+.data-aniversario-ajuda { display: block; color: var(--text-sec); margin-bottom: 10px; }
