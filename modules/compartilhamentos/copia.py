@@ -50,6 +50,7 @@ def copiar_alunos(turma_original_id, nova_turma_id, user_id):
             "telefone": aluno.get("telefone"),
             "email": aluno.get("email"),
             "data_nascimento": aluno.get("data_nascimento"),
+            "aniversario_dia_mes": aluno.get("aniversario_dia_mes"),
             "detalhes": aluno.get("detalhes"),
             "user_id": user_id
         }).execute()
