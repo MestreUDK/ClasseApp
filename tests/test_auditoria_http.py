@@ -77,7 +77,7 @@ class ConsultasSeguras(unittest.TestCase):
     def test_cadastro_compartilhado_nao_solicita_contatos_ou_detalhes(self):
         conteudo = (RAIZ / 'modules/compartilhamentos/consultas.py').read_text()
         trecho = conteudo.split('def buscar_alunos_compartilhados', 1)[1].split('\n\ndef ', 1)[0]
-        self.assertIn('alunos(id, nome_completo, matricula, data_nascimento)', trecho)
+        self.assertIn('alunos(id, nome_completo, matricula, data_nascimento, aniversario_dia_mes)', trecho)
         self.assertNotIn('alunos(*)', trecho)
 
     def test_ausencia_de_vinculo_retorna_404(self):
