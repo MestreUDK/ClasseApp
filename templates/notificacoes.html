@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Notificações — ClasseApp{% endblock %}
+{% block content %}
+<h1>🔔 Notificações</h1>
+<p class="notificacoes-descricao">Avisos da sua conta, aniversários e pendências importantes.</p>
+        <section id="notificacoes" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
+            <h3>🔔 Central de Notificações <span id="notificacoes-contador" class="notificacoes-contador" hidden></span></h3>
+            <p class="notificacoes-descricao">Aniversários nos próximos 7 dias e frequências aguardando sincronização neste dispositivo.</p>
+            <p id="notificacoes-estado" role="status">Carregando avisos...</p>
+            <div id="notificacoes-lista" aria-live="polite"></div>
+            <button type="button" id="notificacoes-atualizar" class="notificacoes-atualizar">Atualizar avisos</button>
+        </section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/db.js', v=app_version) }}"></script>
+<script src="{{ url_for('static', filename='js/vault.js', v=app_version) }}"></script>
+<script src="{{ url_for('static', filename='js/offline_access.js', v=app_version) }}"></script>
+<script src="{{ url_for('static', filename='js/notificacoes.js', v=app_version) }}"></script>
+{% endblock %}

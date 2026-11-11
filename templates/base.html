@@ -43,6 +43,7 @@
     <script src="{{ url_for('static', filename='js/aparencia.js', v=app_version) }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v=app_version) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='aparencia.css', v=app_version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='controles.css', v=app_version) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='password_visibility.css', v=app_version) }}">
 
     <link 
@@ -225,9 +226,11 @@
                 </svg>
             </button>
 
-            <a href="/perfil#aparencia" class="btn-icon" title="Personalizar aparência" aria-label="Personalizar aparência" style="text-decoration:none; font-size:21px;">🎨</a>
+            <a href="/sincronizacao" class="btn-icon" title="Sincronização e versões" aria-label="Sincronização e versões" style="text-decoration:none;font-size:21px;">☁️</a>
 
-            <a href="/perfil#notificacoes" class="btn-icon" title="Notificações" aria-label="Central de notificações" style="text-decoration:none; font-size:22px;">🔔</a>
+            <a href="/configuracoes" class="btn-icon" title="Configurações" aria-label="Configurações" style="text-decoration:none; font-size:21px;">⚙️</a>
+
+            <a href="/notificacoes" class="btn-icon" title="Notificações" aria-label="Central de notificações" style="text-decoration:none; font-size:22px;">🔔</a>
 
             <a 
                 href="/perfil" 

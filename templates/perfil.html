@@ -1,197 +1,14 @@
 {% extends 'base.html' %}
-
 {% block title %}Meu Perfil{% endblock %}
-
 {% block content %}
-    <h1>Meu Perfil</h1>
-
-    <div class="card-form perfil-card">
-        <div style="text-align: center; margin-bottom: 20px;">
-            <div class="avatar-circle">
-                👤
-            </div>
-            <h2 style="margin: 10px 0 5px;">Minha Conta</h2>
-            <p class="email-text">{{ email }}</p>
-        </div>
-
-        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
-
-        <section id="aparencia" class="appearance-section" aria-labelledby="aparencia-titulo">
-            <div class="appearance-heading">
-                <span class="appearance-heading-icon" aria-hidden="true">🎨</span>
-                <div>
-                    <h3 id="aparencia-titulo">Aparência do ClasseApp</h3>
-                    <p>Personalize o layout e as cores. As mudanças aparecem imediatamente.</p>
-                </div>
-            </div>
-
-            <fieldset class="appearance-fieldset">
-                <legend>Modelo de layout</legend>
-                <div class="appearance-layouts">
-                    <label class="appearance-layout-option">
-                        <input type="radio" name="appearance-layout" value="classic" checked>
-                        <span class="appearance-layout-sample sample-classic" aria-hidden="true">
-                            <span class="sample-top"></span><span class="sample-content"><i></i><i></i></span>
-                        </span>
-                        <strong>Clássico</strong>
-                        <small>Visual atual do ClasseApp</small>
-                    </label>
-                    <label class="appearance-layout-option">
-                        <input type="radio" name="appearance-layout" value="studio">
-                        <span class="appearance-layout-sample sample-studio" aria-hidden="true">
-                            <span class="sample-side"></span><span class="sample-top"></span>
-                            <span class="sample-content"><i></i><i></i></span>
-                        </span>
-                        <strong>Estúdio</strong>
-                        <small>Inspirado na demonstração</small>
-                    </label>
-                </div>
-            </fieldset>
-
-            <fieldset class="appearance-fieldset">
-                <legend>Iluminação</legend>
-                <div class="appearance-mode-options">
-                    <label><input type="radio" name="appearance-mode" value="system" checked> Automático</label>
-                    <label><input type="radio" name="appearance-mode" value="light"> Claro</label>
-                    <label><input type="radio" name="appearance-mode" value="dark"> Escuro</label>
-                </div>
-            </fieldset>
-
-            <fieldset class="appearance-fieldset">
-                <legend>Cor de destaque</legend>
-                <div class="appearance-accents">
-                    <label><input type="radio" name="appearance-accent" value="blue" checked><span class="appearance-dot" style="--dot-color:#287bd2"></span> Azul</label>
-                    <label><input type="radio" name="appearance-accent" value="green"><span class="appearance-dot" style="--dot-color:#168153"></span> Verde</label>
-                    <label><input type="radio" name="appearance-accent" value="purple"><span class="appearance-dot" style="--dot-color:#8053c7"></span> Roxo</label>
-                    <label><input type="radio" name="appearance-accent" value="orange"><span class="appearance-dot" style="--dot-color:#bd721a"></span> Laranja</label>
-                    <label><input type="radio" name="appearance-accent" value="teal"><span class="appearance-dot" style="--dot-color:#0e8795"></span> Turquesa</label>
-                    <label><input type="radio" name="appearance-accent" value="rose"><span class="appearance-dot" style="--dot-color:#bc477b"></span> Rosa</label>
-                </div>
-            </fieldset>
-
-            <div class="appearance-actions">
-                <button type="button" id="appearance-reset" class="appearance-reset">Restaurar padrão</button>
-                <span id="appearance-status" role="status" aria-live="polite">Preferências salvas neste dispositivo.</span>
-            </div>
-            <p class="appearance-note">As opções ficam salvas neste navegador para sua conta, inclusive sem internet. Não modificam os dados das turmas nem a aparência de outros professores.</p>
-        </section>
-
-        <section id="notificacoes" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
-            <h3>🔔 Central de Notificações <span id="notificacoes-contador" class="notificacoes-contador" hidden></span></h3>
-            <p class="notificacoes-descricao">Aniversários nos próximos 7 dias e frequências aguardando sincronização neste dispositivo.</p>
-            <p id="notificacoes-estado" role="status">Carregando avisos...</p>
-            <div id="notificacoes-lista" aria-live="polite"></div>
-            <button type="button" id="notificacoes-atualizar" class="notificacoes-atualizar">Atualizar avisos</button>
-        </section>
-
-        <section id="sincronizacao" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
-            <h3>☁️ Central de Sincronização</h3>
-            <p class="notificacoes-descricao">Gerencie os lançamentos de frequência armazenados neste dispositivo. Envie apenas alterações associadas à sua conta.</p>
-            <p id="sync-estado" role="status">Consultando armazenamento local...</p>
-            <div id="sync-resumo"></div>
-            <div id="sync-registros"></div>
-            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:12px">
-                <button type="button" id="sync-atualizar" class="notificacoes-atualizar">Atualizar lista</button>
-                <button type="button" id="sync-enviar" class="notificacoes-atualizar">Enviar minhas pendências</button>
-            </div>
-            <p class="notificacoes-descricao">Registros antigos sem identificação de conta ficam bloqueados para envio automático. Conflitos de frequência podem ser comparados e resolvidos manualmente abaixo. A edição offline de turmas e alunos está disponível na seção de dados locais abaixo.</p>
-        </section>
-
-        <section id="offline-acesso" class="notificacoes-painel" data-user-id="{{ notification_user_id }}"
-                 data-user-email="{{ email }}">
-            <h3>🔐 Acesso local ao Espaço offline</h3>
-            <p class="notificacoes-descricao">Configure uma senha <strong>exclusiva deste dispositivo</strong> para abrir o Espaço offline e criptografar a cópia e as pendências locais. Após a atualização, o primeiro desbloqueio também protege os dados antigos.</p>
-            <p id="offline-acesso-estado" role="status">Verificando acesso local...</p>
-            <form id="offline-acesso-form" autocomplete="off"
-                  style="background:transparent;border:0;padding:0;box-shadow:none;display:grid;gap:10px;max-width:440px">
-                <label id="offline-acesso-atual-box" hidden style="display:none!important">Senha local atual (obrigatória para troca)
-                    <input id="offline-acesso-atual" type="password" minlength="10" maxlength="128" autocomplete="current-password">
-                </label>
-                <label>Nova senha local (10 a 128 caracteres)
-                    <input id="offline-acesso-senha" type="password" minlength="10" maxlength="128"
-                           autocomplete="new-password" required>
-                </label>
-                <label>Confirmar senha local
-                    <input id="offline-acesso-confirmar" type="password" minlength="10" maxlength="128"
-                           autocomplete="new-password" required>
-                </label>
-                <button type="submit" id="offline-acesso-salvar" class="notificacoes-atualizar">Ativar acesso offline</button>
-            </form>
-            <div style="margin:14px 0;display:grid;gap:10px;max-width:440px">
-                <label for="offline-acesso-prazo">Manter o Espaço offline desbloqueado nesta aba por:</label>
-                <select id="offline-acesso-prazo" class="notificacoes-atualizar" style="max-width:260px">
-                    <option value="0">Sempre solicitar senha</option>
-                    <option value="5">5 minutos</option>
-                    <option value="15">15 minutos</option>
-                    <option value="30" selected>30 minutos (padrão)</option>
-                    <option value="60">60 minutos</option>
-                </select>
-                <label for="offline-acesso-desbloqueio-senha">Senha local para desbloqueio
-                    <input id="offline-acesso-desbloqueio-senha" type="password"
-                           maxlength="128" autocomplete="off" spellcheck="false"
-                           placeholder="Digite a senha local uma vez"
-                           style="display:block;width:100%;max-width:330px;margin-top:6px">
-                </label>
-                <div style="display:flex;gap:10px;flex-wrap:wrap">
-                    <button id="offline-acesso-desbloquear" type="button" class="notificacoes-atualizar">🔓 Desbloquear dados locais</button>
-                    <button id="offline-acesso-bloquear" type="button" class="notificacoes-atualizar">🔒 Bloquear agora</button>
-                </div>
-                <p id="offline-acesso-sessao" class="notificacoes-descricao" role="status"></p>
-            </div>
-            <p class="notificacoes-descricao"><strong>Segurança:</strong> sua senha não é salva. Para evitar pedidos repetidos, ao escolher um prazo o material da chave de criptografia fica temporariamente na sessão desta aba e é apagado ao bloquear, sair da conta ou vencer o prazo. Não use esta conveniência em dispositivos compartilhados. A autenticação online continua independente da senha local.</p>
-        </section>
-
-        <section id="dados-offline" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
-            <h3>📥 Dados locais e edição offline</h3>
-            <p class="notificacoes-descricao">A <strong>cópia baixada</strong> é o ponto de partida. Suas <strong>edições pendentes</strong> ficam guardadas separadamente e não alteram a cópia original até um novo download. A comparação abaixo mostra ambas, para evitar confusão.</p>
-            <p id="offline-pendencias-resumo" class="notificacoes-descricao" role="status">Consultando alterações locais...</p>
-            <div id="offline-pendencias-lista" aria-live="polite"></div>
-            <p><a href="/offline" class="notificacoes-atualizar" style="display:inline-block;text-decoration:none">📱 Abrir espaço offline</a> <small>Turmas, alunos, notas e diário, com uma cópia já baixada.</small></p>
-            <p id="offline-estado" role="status">Verificando cópia local...</p>
-            <div id="offline-resumo"></div>
-            <label for="offline-ano" class="notificacoes-descricao">Ano letivo da frequência para os relatórios offline:
-                <input id="offline-ano" type="number" min="2000" max="2100" step="1" value="{{ current_year }}" style="max-width:120px;padding:7px;margin-left:6px">
-            </label>
-            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">
-                <button type="button" id="offline-baixar" class="notificacoes-atualizar">Baixar da nuvem</button>
-                <button type="button" id="offline-consultar" class="notificacoes-atualizar">Consultar cópia</button>
-                <button type="button" id="offline-exportar" class="notificacoes-atualizar">Exportar JSON</button>
-                <button type="button" id="offline-versoes" class="notificacoes-atualizar">Versões anteriores</button>
-                <button type="button" id="offline-comparar" class="notificacoes-atualizar">Ver diferenças e edições pendentes</button>
-                <button type="button" id="offline-apagar" class="notificacoes-atualizar">Apagar cópia local</button>
-            </div>
-            <div id="offline-edicoes" style="margin-top:16px">
-                <h4>✏️ Editar turmas e alunos</h4>
-                <p class="notificacoes-descricao">As alterações ficam no dispositivo. Use <strong>Ver diferenças e edições pendentes</strong> acima para conferi-las sem enviar; use <strong>Enviar edições pendentes</strong> somente quando estiver conectado e quiser salvar na nuvem.</p>
-                <p class="notificacoes-descricao">Se houver conflito, clique em <strong>Comparar e resolver</strong> para escolher campo a campo entre sua edição e a versão da nuvem. Você também pode manter a nuvem ou decidir depois. Nenhuma versão é substituída automaticamente.</p>
-                <div style="display:flex;flex-wrap:wrap;gap:10px">
-                    <button type="button" id="edicoes-listar" class="notificacoes-atualizar">Editar dados locais</button>
-                    <button type="button" id="edicoes-enviar" class="notificacoes-atualizar">Enviar edições pendentes</button>
-                </div>
-                <p id="edicoes-estado" role="status"></p>
-                <div id="edicoes-lista"></div>
-            </div>
-            <div id="offline-dados" hidden style="margin-top:12px"></div>
-            <div id="offline-historico" hidden style="margin-top:12px"></div>
-            <div id="offline-comparacao" hidden style="margin-top:12px" aria-live="polite"></div>
-            <p class="notificacoes-descricao">As últimas três cópias anteriores podem ser restauradas localmente. <strong>Comparar</strong> não envia nada e exige internet; <strong>Editar</strong> salva uma pendência no navegador; <strong>Enviar</strong> tenta salvar a pendência na nuvem, verificando a revisão. Nem toda diferença é conflito.</p>
-            <p class="notificacoes-descricao">Atenção: configure e desbloqueie o cofre local para criptografar as cópias, histórico e filas da sua conta. Mantenha sua senha local segura. Exportações JSON e Excel são arquivos não criptografados, portanto guarde-os com cuidado.</p>
-        </section>
-
-        <section id="sync-academico" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
-            <h3>📝 Sincronização de avaliações, notas e Diário de Bordo</h3>
-            <p class="notificacoes-descricao">As edições feitas no Espaço offline ficam guardadas neste navegador até que você decida enviá-las. A aplicação confere a revisão da nuvem antes de salvar; conflitos não são sobrescritos automaticamente.</p>
-            <p id="sync-academico-estado" role="status">Consultando notas e diário locais...</p>
-            <div id="sync-academico-lista" aria-live="polite"></div>
-            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:12px">
-                <button type="button" id="sync-academico-atualizar" class="notificacoes-atualizar">Atualizar pendências</button>
-                <button type="button" id="sync-academico-enviar" class="notificacoes-atualizar">Enviar avaliações, notas e diário</button>
-            </div>
-            <p class="notificacoes-descricao">Em caso de conflito, clique em <strong>Comparar e resolver</strong> para manter a nuvem ou tentar aplicar sua alteração usando a revisão remota atual. A decisão exige confirmação e é novamente validada no servidor.</p>
-        </section>
-
-        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
-
+<h1>Meu Perfil</h1>
+<div class="card-form perfil-card">
+    <div style="text-align:center; margin-bottom:20px">
+        <div class="avatar-circle">👤</div>
+        <h2 style="margin:10px 0 5px">Minha Conta</h2>
+        <p class="email-text">{{ email }}</p>
+    </div>
+    <hr>
         <h3>Alterar Senha</h3>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -215,7 +32,9 @@
                 Alterar senha da conta
             </button>
             <p class="notificacoes-descricao">Para sua segurança, confirme a senha atual.
-                Após a alteração, você precisará entrar novamente.</p>
+                Após a alteração, você precisará entrar novamente. <strong>Se utiliza cópias offline,
+                atualize a proteção em Configurações antes de esquecer a senha anterior:</strong>
+                os dados criptografados não são reconfigurados automaticamente em outros dispositivos.</p>
         </form>
 
         <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
@@ -224,90 +43,5 @@
         <p style="color: var(--text-sec);">Deseja sair da sua conta?</p>
 
         <a href="/logout" class="btn-logout">Sair do Sistema (Logout)</a>
-    </div>
-
-    <style>
-        .notificacoes-painel { padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; margin: 18px 0; }
-        .notificacoes-descricao { color: var(--text-sec); font-size: .9rem; }
-        .notificacoes-item { border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin: 10px 0; }
-        .notificacoes-item p { margin: 6px 0; overflow-wrap: anywhere; }
-        .notificacoes-item button, .notificacoes-atualizar { cursor: pointer; padding: 8px 12px; border-radius: 7px; border: 1px solid var(--border-color); background: var(--icon-bg); color: var(--text-main); }
-        .notificacoes-contador { font-size: .8rem; padding: 2px 7px; border-radius: 10px; background: #b42318; color: white; }
-        .edicoes-pendente { border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin: 10px 0; overflow-wrap: anywhere; }
-        .edicoes-pendente > p { margin: 0 0 10px; }
-        .edicoes-formulario { margin: 10px 0; padding: 12px; box-shadow: none; }
-        .edicoes-formulario[hidden] { display: none !important; }
-        .edicoes-conflito { margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 10px; }
-        .edicoes-conflito h5 { font-size: 1rem; margin: 8px 0; }
-        .edicoes-conflito p { overflow-wrap: anywhere; }
-        .edicoes-campo { margin: 12px 0; padding: 12px; border: 1px solid var(--border-color); border-radius: 9px; }
-        .edicoes-campo > strong { display: block; margin-bottom: 8px; }
-        .edicoes-campo small { display: block; color: var(--text-sec); margin: 3px 0; }
-        .edicoes-valores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 9px; }
-        .edicoes-valores > div { background: var(--icon-bg); border-radius: 7px; padding: 10px; min-width: 0; }
-        .edicoes-valores p { margin: 3px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
-        .edicoes-campo select { width: 100%; margin: 5px 0 0; }
-        .edicoes-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-        .edicoes-acoes button { background: var(--icon-bg); border: 1px solid var(--border-color); color: var(--text-main); }
-        .edicoes-acoes button:first-child { background: var(--primary); border-color: var(--primary); color: white; }
-        .edicoes-pendente button:disabled { cursor: wait; opacity: .55; }
-        @media (max-width: 440px) { .edicoes-valores { grid-template-columns: 1fr; } .edicoes-acoes button { width: 100%; } }
-
-
-        /* Estilos específicos apenas para centralizar e ajustar layout */
-        .perfil-card {
-            max-width: 500px; 
-            margin: 0 auto;
-        }
-
-        .avatar-circle {
-            width: 80px; 
-            height: 80px; 
-            background: var(--icon-bg); /* Cor dinâmica */
-            color: var(--text-main);    /* Cor dinâmica */
-            border-radius: 50%; 
-            display: inline-flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 40px;
-            border: 1px solid var(--border-color);
-        }
-
-        .email-text {
-            color: var(--text-sec); /* Cinza que se adapta */
-            margin: 0;
-        }
-
-        /* Botão de Logout */
-        .btn-logout {
-            display: block;
-            width: 100%;
-            text-align: center;
-            background-color: #dc3545;
-            color: white;
-            padding: 12px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: bold;
-            margin-top: 10px;
-            box-sizing: border-box;
-            border: none;
-        }
-        .btn-logout:hover { background-color: #c82333; }
-
-        /* Alertas */
-        .alert { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
-        .alert.success { background: #d4edda; color: #155724; }
-        .alert.error { background: #f8d7da; color: #721c24; }
-    </style>
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/db.js', v=app_version) }}"></script>
-<script src="{{ url_for('static', filename='js/vault.js', v=app_version) }}"></script>
-<script src="{{ url_for('static', filename='js/offline_access.js', v=app_version) }}"></script>
-<script src="{{ url_for('static', filename='js/notificacoes.js') }}"></script>
-<script src="{{ url_for('static', filename='js/sincronizacao.js') }}"></script>
-<script src="{{ url_for('static', filename='js/dados_offline.js') }}"></script>
-<script src="{{ url_for('static', filename='js/edicoes_offline.js', v=app_version) }}"></script>
-<script src="{{ url_for('static', filename='js/sync_academico.js', v=app_version) }}"></script>
-{% endblock %}
+</div>
 {% endblock %}
