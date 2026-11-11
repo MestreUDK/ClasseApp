@@ -84,3 +84,14 @@
 .central-comparacao-item summary {cursor:pointer;}
 .central-comparacao-item li {margin:4px 0;overflow-wrap:anywhere;}
 @media(max-width:540px) {.central-toolbar label,.central-toolbar button {width:100%;max-width:none;} .central-toolbar a {flex:1 1 auto;text-align:center;} .central-comparacao-item,.central-pacote-item{padding:10px;}}
+
+/* Notificações de aniversário — menu e página (móvel/desktop). */
+.notificacoes-sino-badge {position:absolute;top:-5px;right:-7px;min-width:18px;height:18px;
+    box-sizing:border-box;padding:1px 4px;border-radius:11px;font-size:11px;line-height:16px;
+    text-align:center;font-weight:700;background:#b42318;color:#fff;pointer-events:none;}
+.notificacoes-sino-badge[hidden] {display:none!important;}
+.notificacoes-filtros {display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0;}
+.notificacoes-filtros label {font-size:.9rem;color:var(--text-sec);}
+.notificacoes-filtros select {max-width:250px;min-width:0;}
+#notificacoes-lista .notificacoes-item strong {display:block;overflow-wrap:anywhere;}
+@media(max-width:540px) {.notificacoes-filtros>* {width:100%;max-width:none!important;}}
