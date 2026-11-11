@@ -25,8 +25,19 @@
         </div>
 
         <div>
-            <label for="data_nascimento">Data de Nascimento (opcional):</label>
-            <input type="date" id="data_nascimento" name="data_nascimento">
+            <label>Data de nascimento / aniversário (opcional):</label>
+            <div class="data-aniversario-campos" role="group" aria-label="Nascimento: dia, mês e ano opcional">
+                <label for="nascimento_dia">Dia
+                    <input type="number" id="nascimento_dia" min="1" max="31" step="1" inputmode="numeric" placeholder="DD">
+                </label>
+                <label for="nascimento_mes">Mês
+                    <input type="number" id="nascimento_mes" min="1" max="12" step="1" inputmode="numeric" placeholder="MM">
+                </label>
+                <label for="nascimento_ano">Ano (opcional)
+                    <input type="number" id="nascimento_ano" min="1" max="9999" step="1" inputmode="numeric" placeholder="AAAA">
+                </label>
+            </div>
+            <small class="data-aniversario-ajuda">Informe dia e mês para receber avisos; acrescente o ano para mostrar a idade que o aluno completará.</small>
         </div>
         <div>
             <label for="detalhes">Detalhes Extras (opcional):</label>
@@ -41,5 +52,6 @@
 {% endblock %}
 
 {% block scripts %}
-    <script src="{{ url_for('static', filename='js/editar_aluno.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/data_aniversario.js', v=app_version) }}"></script>
+    <script src="{{ url_for('static', filename='js/editar_aluno.js', v=app_version) }}"></script>
 {% endblock %}
