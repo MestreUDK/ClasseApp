@@ -18,7 +18,8 @@
         turmas: [['nome', 'Nome'], ['descricao', 'Descrição']],
         alunos: [['nome_completo', 'Nome completo'], ['matricula', 'Matrícula'],
             ['telefone', 'Telefone'], ['email', 'E-mail'],
-            ['data_nascimento', 'Nascimento'], ['detalhes', 'Detalhes']]
+            ['data_nascimento', 'Nascimento (AAAA-MM-DD)'],
+            ['aniversario_dia_mes', 'Aniversário sem ano (MM-DD)'], ['detalhes', 'Detalhes']]
     };
     let ocupado = false;
 

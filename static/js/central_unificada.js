@@ -40,7 +40,7 @@
     };
     const campos={
         turmas:['nome','ano','ano_letivo','disciplina_id','descricao'],
-        alunos:['nome_completo','matricula','data_nascimento','telefone','email','observacoes'],
+        alunos:['nome_completo','matricula','data_nascimento','aniversario_dia_mes','telefone','email','observacoes'],
         vinculos:[],
         avaliacoes:['nome','data','nota_maxima','periodo_tipo','periodo_numero','categoria','peso','turma_id','recuperacao_modo'],
         notas:['valor','recupera_periodo','nota_id'],

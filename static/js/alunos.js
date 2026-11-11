@@ -23,7 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // ==========================================
         // --- NOVO: REFERÊNCIAS DOS NOVOS CAMPOS ---
         // ==========================================
-        dataNascimento: document.getElementById('data_nascimento'),
+        nascimentoDia: document.getElementById('nascimento_dia'),
+        nascimentoMes: document.getElementById('nascimento_mes'),
+        nascimentoAno: document.getElementById('nascimento_ano'),
         detalhes: document.getElementById('detalhes'),
         
         msgErro: document.getElementById('msg-erro'),
@@ -54,52 +56,66 @@ async function carregarAlunos() {
 
 // --- RENDERIZAÇÃO ---
 function renderizarLista(alunos) {
-    els.lista.innerHTML = ''; 
-
+    els.lista.replaceChildren();
     if (alunos.length === 0) {
-        els.lista.innerHTML = '<p style="color: #666; font-style: italic;">Nenhum aluno encontrado.</p>';
+        const vazio = document.createElement('p');
+        vazio.style.cssText = 'color: #666; font-style: italic;';
+        vazio.textContent = 'Nenhum aluno encontrado.';
+        els.lista.append(vazio);
         return;
     }
-
     alunos.forEach(aluno => {
         const div = document.createElement('div');
         div.className = 'aluno';
-
-        const criarInfo = (label, valor) => valor 
-            ? `<span style="margin-right: 10px; color: #666; font-size: 0.9em;">${label}: ${valor}</span>` 
-            : '';
-
-        // Formata a data de nascimento para padrão BR se existir
-        const dataNascFormatada = aluno.data_nascimento 
-            ? aluno.data_nascimento.split('-').reverse().join('/') 
-            : null;
-
-        const infoHTML = [
-            criarInfo('Mat', aluno.matricula),
-            criarInfo('Tel', aluno.telefone),
-            criarInfo('Email', aluno.email),
-            criarInfo('Nasc', dataNascFormatada) // <-- ADICIONADO NA LISTA
-        ].join('') || '<span style="color: #999; font-style: italic; font-size: 0.8em;">Sem dados adicionais</span>';
-
-        // Mostra um pequeno aviso se houver detalhes extras
-        const badgeDetalhes = aluno.detalhes 
-            ? `<span style="background: #17a2b8; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em; margin-left: 5px;">Tem Detalhes</span>` 
-            : '';
-
-        div.innerHTML = `
-            <div style="flex: 1; overflow: hidden;">
-                <h3 style="margin-bottom: 5px;">${aluno.nome_completo} ${badgeDetalhes}</h3>
-                <div style="display: flex; flex-wrap: wrap;">
-                    ${infoHTML}
-                </div>
-            </div>
-            <div class="botoes-acao" style="margin-left: 10px; display: flex; flex-direction: column; gap: 5px;">
-                <button class="edit" style="background-color: #ffc107; color: #000;" 
-                    onclick='prepararEdicao(${JSON.stringify(aluno)})'>Editar</button>
-                <button class="delete" onclick="handleDelete('${aluno.id}')">Excluir</button>
-            </div>
-        `;
-        els.lista.appendChild(div);
+        const conteudo = document.createElement('div');
+        conteudo.style.cssText = 'flex: 1; overflow: hidden;';
+        const titulo = document.createElement('h3');
+        titulo.style.marginBottom = '5px';
+        titulo.textContent = aluno.nome_completo || 'Aluno';
+        if (aluno.detalhes) {
+            const badge = document.createElement('span');
+            badge.style.cssText = 'background: #17a2b8; color: white; padding: 2px 6px; border-radius: 4px; font-size: .7em; margin-left: 5px;';
+            badge.textContent = 'Tem Detalhes';
+            titulo.append(' ', badge);
+        }
+        conteudo.append(titulo);
+        const infos = document.createElement('div');
+        infos.style.cssText = 'display:flex;flex-wrap:wrap;';
+        const criarInfo = (rotulo, valor) => {
+            if (valor === null || valor === undefined || valor === '') return;
+            const info = document.createElement('span');
+            info.style.cssText = 'margin-right:10px;color:#666;font-size:.9em;';
+            info.textContent = `${rotulo}: ${valor}`;
+            infos.append(info);
+        };
+        criarInfo('Mat', aluno.matricula);
+        criarInfo('Tel', aluno.telefone);
+        criarInfo('Email', aluno.email);
+        criarInfo('Nasc', ClasseDataAniversario.formatar(aluno));
+        if (!infos.childNodes.length) {
+            const vazio = document.createElement('span');
+            vazio.style.cssText = 'color:#999;font-style:italic;font-size:.8em;';
+            vazio.textContent = 'Sem dados adicionais';
+            infos.append(vazio);
+        }
+        conteudo.append(infos);
+        const botoes = document.createElement('div');
+        botoes.className = 'botoes-acao';
+        botoes.style.cssText = 'margin-left:10px;display:flex;flex-direction:column;gap:5px;';
+        const editar = document.createElement('button');
+        editar.type = 'button';
+        editar.className = 'edit';
+        editar.style.cssText = 'background-color:#ffc107;color:#000;';
+        editar.textContent = 'Editar';
+        editar.addEventListener('click', () => window.prepararEdicao(aluno));
+        const excluir = document.createElement('button');
+        excluir.type = 'button';
+        excluir.className = 'delete';
+        excluir.textContent = 'Excluir';
+        excluir.addEventListener('click', () => window.handleDelete(aluno.id));
+        botoes.append(editar, excluir);
+        div.append(conteudo, botoes);
+        els.lista.append(div);
     });
 }
 
@@ -125,7 +141,7 @@ window.prepararEdicao = function(aluno) {
     // ==========================================
     // --- NOVO: PREENCHE OS NOVOS CAMPOS ---
     // ==========================================
-    els.dataNascimento.value = aluno.data_nascimento || '';
+    ClasseDataAniversario.preencher(els, aluno);
     els.detalhes.value = aluno.detalhes || '';
 
     els.tituloForm.textContent = `Editando: ${aluno.nome_completo}`;
@@ -160,7 +176,8 @@ async function handleFormSubmit(event) {
     limparMensagens();
 
     const id = els.id.value;
-    const dados = {
+    try {
+        const dados = {
         nome_completo: els.nome.value,
         matricula: els.matricula.value || null,
         telefone: els.telefone.value || null,
@@ -168,12 +185,11 @@ async function handleFormSubmit(event) {
         // ==========================================
         // --- NOVO: ENVIA OS NOVOS CAMPOS ---
         // ==========================================
-        data_nascimento: els.dataNascimento.value || null,
+        ...ClasseDataAniversario.obter(els),
         detalhes: els.detalhes.value || null,
         ...(editMode ? { expected_revision: revisaoEmEdicao } : {})
     };
 
-    try {
         const url = editMode ? `/api/alunos/${id}` : '/api/alunos';
         const metodo = editMode ? 'PUT' : 'POST';
 

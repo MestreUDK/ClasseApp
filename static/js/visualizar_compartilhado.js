@@ -143,7 +143,8 @@ function renderizarAlunos(alunos) {
         div.innerHTML = `
             <h3>${escapeHTML(aluno.nome_completo)}</h3>
             <p>Matrícula: ${escapeHTML(aluno.matricula || '-')}</p>
-            <p>Nascimento: ${formatarData(aluno.data_nascimento)}</p>
+            <p>Nascimento: ${aluno.data_nascimento ? formatarData(aluno.data_nascimento) :
+                (aluno.aniversario_dia_mes ? escapeHTML(aluno.aniversario_dia_mes.slice(3, 5) + '/' + aluno.aniversario_dia_mes.slice(0, 2) + ' (sem ano)') : '-')}</p>
         `;
 
         els.listaAlunos.appendChild(div);

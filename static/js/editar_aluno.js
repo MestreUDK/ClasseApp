@@ -17,7 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // ==========================================
         // --- NOVO: REFERÊNCIAS DOS NOVOS CAMPOS ---
         // ==========================================
-        dataNascimento: document.getElementById('data_nascimento'),
+        nascimentoDia: document.getElementById('nascimento_dia'),
+        nascimentoMes: document.getElementById('nascimento_mes'),
+        nascimentoAno: document.getElementById('nascimento_ano'),
         detalhes: document.getElementById('detalhes'),
 
         msgErro: document.getElementById('msg-erro'),
@@ -48,7 +50,7 @@ async function carregarDadosAluno() {
         // ==========================================
         // --- NOVO: PREENCHE OS NOVOS CAMPOS ---
         // ==========================================
-        els.dataNascimento.value = aluno.data_nascimento || '';
+        ClasseDataAniversario.preencher(els, aluno);
         els.detalhes.value = aluno.detalhes || '';
 
     } catch (error) {
@@ -63,7 +65,8 @@ async function handleEditSubmit(event) {
     els.msgErro.style.display = 'none';
     els.msgSucesso.style.display = 'none';
 
-    const dados = {
+    try {
+        const dados = {
         nome_completo: els.nome.value,
         matricula: els.matricula.value || null,
         telefone: els.telefone.value || null, 
@@ -72,12 +75,11 @@ async function handleEditSubmit(event) {
         // ==========================================
         // --- NOVO: ENVIA OS NOVOS CAMPOS ---
         // ==========================================
-        data_nascimento: els.dataNascimento.value || null,
+        ...ClasseDataAniversario.obter(els),
         detalhes: els.detalhes.value || null,
         expected_revision: revisaoAluno
     };
 
-    try {
         const response = await fetch(`/api/alunos/${ALUNO_ID}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
