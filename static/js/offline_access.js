@@ -162,7 +162,9 @@
         let chaveAntiga = null;
         if (anterior) {
             const anteriorValidado = await chaveValidada(usuarioId,senhaAntiga || senha,anterior);
-            if (!anteriorValidado) throw new Error('Não foi possível abrir os dados com essa senha. Informe no campo anterior a senha que protegia o cofre antes da mudança.');
+            if (!anteriorValidado) throw new Error(anterior.modo_senha === 'login' ?
+                'A senha de login foi confirmada, mas o cofre ainda usa uma senha anterior. Informe a senha de login anterior para preservar seus dados offline.' :
+                'Não foi possível abrir os dados antigos. Informe a senha local anterior para migrar as cópias com segurança.');
             chaveAntiga = anteriorValidado.chave;
             await window.ClasseVault.migrarLegado(usuarioId,chaveAntiga);
             chaves.set(usuarioId, {chave:chaveAntiga, criado_em:Date.now(), expira_em:Infinity});
@@ -281,11 +283,48 @@
         const estado = document.getElementById('offline-acesso-estado');
         const atualSenha = document.getElementById('offline-acesso-atual');
         const atualBox = document.getElementById('offline-acesso-atual-box');
+        const atualTitulo = document.getElementById('offline-acesso-atual-titulo');
+        const atualAjuda = document.getElementById('offline-acesso-atual-ajuda');
+        const trocaSenha = document.getElementById('offline-acesso-troca-senha');
         const botao = document.getElementById('offline-acesso-salvar');
         const botaoDesbloquear = document.getElementById('offline-acesso-desbloquear');
         const senhaDesbloqueio = document.getElementById('offline-acesso-desbloqueio-senha');
         const botaoBloquear = document.getElementById('offline-acesso-bloquear');
         let desbloqueioEmAndamento = false;
+        let perfilAtual = null;
+        let trocarSenhaLogin = false;
+        // Cofres anteriores à v2.2.27 não têm modo_senha: 'login'.
+        // Só esses usuários veem de imediato o campo de migração.
+        function mostrarSenhaAnterior(perfil) {
+            const legado = Boolean(perfil && perfil.modo_senha !== 'login');
+            const mostrar = legado || (Boolean(perfil) && trocarSenhaLogin);
+            if (atualBox) {
+                atualBox.hidden = !mostrar;
+                atualBox.style.setProperty('display', mostrar ? 'grid' : 'none', 'important');
+            }
+            if (atualSenha) {
+                atualSenha.required = Boolean(perfil && !legado && trocarSenhaLogin);
+                if (!mostrar) atualSenha.value = '';
+            }
+            if (atualTitulo) atualTitulo.textContent = legado ?
+                'Senha local antiga (somente para migrar o cofre)' :
+                'Senha de login anterior (antes de alterar a senha da conta)';
+            if (atualAjuda) atualAjuda.textContent = legado ?
+                'Informe a senha local que você usava antes desta atualização. Ela será necessária apenas nesta migração, caso seja diferente da senha de login.' :
+                'Informe a senha que protegia os dados locais antes de alterar a senha do ClasseApp. A senha não ficará armazenada.';
+            if (trocaSenha) {
+                trocaSenha.hidden = !perfil || legado;
+                trocaSenha.style.setProperty('display', perfil && !legado ? 'inline-block' : 'none', 'important');
+                trocaSenha.textContent = trocarSenhaLogin ?
+                    'Cancelar uso da senha anterior' : 'Alterei minha senha de login';
+                trocaSenha.setAttribute('aria-expanded', String(trocarSenhaLogin));
+            }
+        }
+        trocaSenha?.addEventListener('click', () => {
+            trocarSenhaLogin = !trocarSenhaLogin;
+            mostrarSenhaAnterior(perfilAtual);
+            if (trocarSenhaLogin) atualSenha?.focus();
+        });
         const prazoSelect = document.getElementById('offline-acesso-prazo');
         const estadoSessao = document.getElementById('offline-acesso-sessao');
         if (prazoSelect) {
@@ -342,13 +381,13 @@
         async function atualizar() {
             try {
                 const perfil = await obterAcessoOffline(usuario);
+                perfilAtual = perfil;
                 if (perfil && !obterChave(usuario)) await restaurarSessao(usuario);
                 const fechado = Boolean(perfil && !obterChave(usuario));
                 const copia = fechado ? null : await obterSnapshot(usuario);
                 botao.disabled = false;
                 botao.textContent = perfil ? 'Atualizar proteção com a senha de login' : 'Ativar proteção com a senha de login';
-                if (atualBox) { atualBox.hidden = !perfil; atualBox.style.setProperty('display',perfil?'grid':'none','important'); }
-                if (atualSenha) atualSenha.required = false;
+                mostrarSenhaAnterior(perfil);
                 estadoDaSessao();
                 estado.textContent = (perfil ? 'Proteção offline já configurada para esta conta. ' :
                     'Proteção offline ainda não configurada. ') +
@@ -374,10 +413,16 @@
                 senha.value = '';
                 confirmar.value = '';
                 if (atualSenha) atualSenha.value = '';
+                trocarSenhaLogin = false;
+                await atualizar(); // Após a migração, esconder definitivamente o campo legado.
                 estado.textContent = 'Dados criptografados. O cofre já está desbloqueado temporariamente nesta aba.';
                 estadoDaSessao();
-                botao.textContent = 'Atualizar proteção com a senha de login';
             } catch (error) {
+                if (perfilAtual?.modo_senha === 'login' &&
+                    error?.message?.includes('o cofre ainda usa uma senha anterior')) {
+                    trocarSenhaLogin = true;
+                    mostrarSenhaAnterior(perfilAtual);
+                }
                 estado.textContent = error?.message || 'Falha ao configurar proteção offline.';
             } finally { senha.value = ''; confirmar.value = ''; botao.disabled = false; }
         });
