@@ -230,7 +230,7 @@
 
             <a href="/configuracoes" class="btn-icon" title="Configurações" aria-label="Configurações" style="text-decoration:none; font-size:21px;">⚙️</a>
 
-            <a href="/notificacoes" class="btn-icon" title="Notificações" aria-label="Central de notificações" style="text-decoration:none; font-size:22px;">🔔</a>
+            <a href="/notificacoes" id="notificacoes-sino" class="btn-icon" title="Notificações" aria-label="Central de notificações" style="text-decoration:none; font-size:22px; position:relative;">🔔<span id="notificacoes-sino-contador" class="notificacoes-sino-badge" hidden></span></a>
 
             <a 
                 href="/perfil" 
@@ -263,6 +263,7 @@
         ClasseApp &copy; {{ current_year }} &middot; Versão {{ app_version }}
     </footer>
 
+    <script src="{{ url_for('static', filename='js/notificacoes_nav.js', v=app_version) }}"></script>
     {% block scripts %}{% endblock %}
     <script src="{{ url_for('static', filename='js/password_visibility.js', v=app_version) }}" defer></script>
 

@@ -2,14 +2,25 @@
 {% block title %}Notificações — ClasseApp{% endblock %}
 {% block content %}
 <h1>🔔 Notificações</h1>
-<p class="notificacoes-descricao">Avisos da sua conta, aniversários e pendências importantes.</p>
-        <section id="notificacoes" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
-            <h3>🔔 Central de Notificações <span id="notificacoes-contador" class="notificacoes-contador" hidden></span></h3>
-            <p class="notificacoes-descricao">Aniversários nos próximos 7 dias e frequências aguardando sincronização neste dispositivo.</p>
-            <p id="notificacoes-estado" role="status">Carregando avisos...</p>
-            <div id="notificacoes-lista" aria-live="polite"></div>
-            <button type="button" id="notificacoes-atualizar" class="notificacoes-atualizar">Atualizar avisos</button>
-        </section>
+<p class="notificacoes-descricao">Aniversários dos seus alunos e pendências deste dispositivo.</p>
+<section id="notificacoes" class="notificacoes-painel" data-user-id="{{ notification_user_id }}">
+    <h2>🎂 Aniversários <span id="notificacoes-contador" class="notificacoes-contador" hidden></span></h2>
+    <p class="notificacoes-descricao">Os avisos usam a data de nascimento cadastrada em Alunos e respeitam o fuso horário da escola.</p>
+    <div class="notificacoes-filtros">
+        <label for="notificacoes-periodo">Mostrar aniversários de</label>
+        <select id="notificacoes-periodo" class="notificacoes-atualizar">
+            <option value="7">Hoje e próximos 7 dias</option>
+            <option value="30">Hoje e próximos 30 dias</option>
+        </select>
+        <button type="button" id="notificacoes-atualizar" class="notificacoes-atualizar">Atualizar aniversários</button>
+    </div>
+    <p id="notificacoes-estado" role="status">Carregando aniversários...</p>
+    <div id="notificacoes-lista" aria-live="polite"></div>
+</section>
+<section class="notificacoes-painel">
+    <h2>☁️ Sincronização local</h2>
+    <p id="notificacoes-fila-estado" role="status">Verificando frequências pendentes...</p>
+</section>
 {% endblock %}
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/db.js', v=app_version) }}"></script>
