@@ -1,5 +1,5 @@
 /* ClasseApp - cofre local. Cifra snapshots, histórico e filas por conta com AES-GCM.
- * A chave deriva da senha local (PBKDF2). A janela pode conservar seu material
+ * A chave deriva da senha da conta configurada localmente (PBKDF2). A janela pode conservar seu material
  * derivado por prazo limitado na sessionStorage para não exigir nova senha a
  * cada navegação. Nunca usa tokens do Supabase para desbloquear dados.
  */
@@ -8,7 +8,8 @@
     const S = {
         frequencia: 'frequencia_pendente', copia: 'snapshots_consulta',
         historico: 'snapshots_historico', edicoes: 'edicoes_offline',
-        academico: 'edicoes_academicas', acessos: 'acessos_offline'
+        academico: 'edicoes_academicas', acessos: 'acessos_offline',
+        pacotes: 'pacotes_alteracoes'
     };
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
@@ -16,12 +17,12 @@
     const un64 = str => Uint8Array.from(atob(str), c => c.charCodeAt(0));
     const encarte = (usuario, loja, chave, item, iv, cifrado, hash) => ({
         usuario_id: usuario, ...(chave === undefined ? {} : {[loja === S.frequencia ? 'id' :
-            [S.copia,S.historico,S.acessos].includes(loja) ? 'usuario_id' : 'chave']: chave}),
+            [S.copia,S.historico,S.acessos,S.pacotes].includes(loja) ? 'usuario_id' : 'chave']: chave}),
         cofre_v1: true, iv: b64(iv), dados_cifrados: b64(new Uint8Array(cifrado)),
         impressao: hash
     });
     const chaveLogica = (loja, item) => loja === S.frequencia ? item.id :
-        [S.copia, S.historico, S.acessos].includes(loja) ? item.usuario_id : item.chave;
+        [S.copia, S.historico, S.acessos, S.pacotes].includes(loja) ? item.usuario_id : item.chave;
     const aad = (u, loja, k) => encoder.encode(`ClasseApp:cofre:v1:${u}:${loja}:${loja === S.frequencia ? 'lancamento' : k ?? 'novo'}`);
     async function assinar(obj) {
         const dig = await crypto.subtle.digest('SHA-256', encoder.encode(JSON.stringify(obj)));
@@ -89,7 +90,7 @@
     async function guardar(loja,item) {
         if (!item?.usuario_id) throw new Error('Operação local sem identificação da conta.');
         const key=await chaveDaConta(item.usuario_id);
-        if (!key) throw new Error('Configure sua senha local no Perfil para armazenar dados protegidos.');
+        if (!key) throw new Error('Ative o cofre nas Configurações com sua senha de login para armazenar dados protegidos.');
         return escrever(loja,'put',await cifrar(loja,item,key));
     }
     async function carregar(loja,item) {
@@ -103,7 +104,7 @@
     }
     // A migração é atômica. Em caso de erro, os registros originais permanecem.
     async function migrar(usuario,chaveAnterior,chaveNova=chaveAnterior,novoPerfil=null) {
-        const lojas=[S.copia,S.historico,S.frequencia,S.edicoes,S.academico];
+        const lojas=[S.copia,S.historico,S.frequencia,S.edicoes,S.academico,S.pacotes];
         const originais=await Promise.all(lojas.map(loj=>lerLoja(loj)));
         const blocos=[];
         for (let i=0;i<lojas.length;i++) {
@@ -150,9 +151,9 @@
         }
         const usuario=snapshot.usuario_id;
         const [atual,versoes]=await Promise.all([obterSnapshot(usuario),listarVersoesSnapshot(usuario)]);
-        const lista=atual?[atual,...versoes].slice(0,3):versoes.slice(0,3);
+        const lista=atual?[atual,...versoes].slice(0,limiteHistorico(usuario)):versoes.slice(0,limiteHistorico(usuario));
         const key=await chaveDaConta(usuario);
-        if(!key) throw new Error('Ative o cofre local no Perfil antes de baixar os dados escolares.');
+        if(!key) throw new Error('Ative o cofre local nas Configurações antes de baixar os dados escolares.');
         const nova={...snapshot,formato_versao:1};
         const historico={usuario_id:usuario,versoes:lista};
         const [a,b]=await Promise.all([key?cifrar(S.copia,nova,key):nova,
@@ -172,7 +173,7 @@
         const selecionada={...lista[indice],usuario_id:usuario};
         const resto=lista.filter((_,i)=>i!==indice);
         if (atual) resto.unshift(atual);
-        const historico={usuario_id:usuario,versoes:resto.slice(0,3)};
+        const historico={usuario_id:usuario,versoes:resto.slice(0,limiteHistorico(usuario))};
         const key=await chaveDaConta(usuario);
         const [a,b]=await Promise.all([key?cifrar(S.copia,selecionada,key):selecionada,
             key?cifrar(S.historico,historico,key):historico]);
@@ -185,12 +186,134 @@
             tx.objectStore(S.copia).delete(usuario);tx.objectStore(S.historico).delete(usuario);
         });
     };
+    // Pacotes versionados: guardam SÓ as mudanças locais, para evitar duplicar
+    // a cópia inteira de notas/frequências e causar consumo excessivo de memória.
+    const lojasDeEdicao=[S.frequencia,S.edicoes,S.academico];
+    async function lerPacotes(usuario,key) {
+        const raw=await lerLoja(S.pacotes,'get',usuario);
+        const valor=raw?await decifrar(S.pacotes,raw,key):null;
+        return valor?.versoes || [];
+    }
+    async function capturarFilas(usuario,key) {
+        const raws=await Promise.all(lojasDeEdicao.map(loja=>lerLoja(loja)));
+        const payload={};
+        for (let i=0;i<lojasDeEdicao.length;i++) {
+            const loja=lojasDeEdicao[i];
+            payload[loja]=[];
+            for (const raw of raws[i]) {
+                if (raw.usuario_id!==usuario) continue;
+                const registro=await decifrar(loja,raw,key);
+                payload[loja].push({...registro,...(loja===S.frequencia?{id:raw.id}:{})});
+            }
+        }
+        return {raws,payload};
+    }
+    function criacaoPacote(nome,payload) {
+        return {id:crypto.randomUUID(),nome:String(nome||'Ponto de controle').trim().slice(0,80),
+            criado_em:new Date().toISOString(),filas:payload};
+    }
+    async function criarPacoteAlteracoes(usuario,nome) {
+        const key=await chaveDaConta(usuario);
+        if(!key) throw new Error('Desbloqueie o cofre antes de salvar pacotes.');
+        const [atual,pacotes]=await Promise.all([capturarFilas(usuario,key),lerPacotes(usuario,key)]);
+        const pacote=criacaoPacote(nome,atual.payload);
+        const novo={usuario_id:usuario,versoes:[pacote,...pacotes].slice(0,limiteHistorico(usuario))};
+        await escrever(S.pacotes,'put',await cifrar(S.pacotes,novo,key));
+        document.dispatchEvent(new Event('classeapp:pacotes-atualizados'));
+        return pacote;
+    }
+    async function listarPacotesAlteracoes(usuario) {
+        const key=await chaveDaConta(usuario);
+        const versoes=await lerPacotes(usuario,key);
+        return versoes.map(p=>({id:p.id,nome:p.nome,criado_em:p.criado_em,
+            totais:Object.fromEntries(lojasDeEdicao.map(loja=>[loja,p.filas[loja]?.length||0]))}));
+    }
+    async function compararPacoteAlteracoes(usuario,id) {
+        const key=await chaveDaConta(usuario);
+        const [pacotes,atual]=await Promise.all([lerPacotes(usuario,key),capturarFilas(usuario,key)]);
+        const pacote=pacotes.find(x=>x.id===id);
+        if(!pacote) throw new Error('Pacote não encontrado.');
+        return lojasDeEdicao.map(loja=>{
+            const indice=reg=>String(loja===S.frequencia?reg.id:reg.chave);
+            const base=new Map((pacote.filas[loja]||[]).map(reg=>[indice(reg),reg]));
+            const recente=new Map((atual.payload[loja]||[]).map(reg=>[indice(reg),reg]));
+            let adicionados=0,retirados=0,modificados=0;
+            for(const [id,r] of recente){
+                if(!base.has(id))adicionados++;
+                else if(JSON.stringify(base.get(id))!==JSON.stringify(r))modificados++;
+            }
+            for(const id of base.keys())if(!recente.has(id))retirados++;
+            return {tipo:loja,adicionados,retirados,modificados,
+                pacote:base.size,atuais:recente.size};
+        });
+    }
+    async function restaurarPacoteAlteracoes(usuario,id) {
+        const key=await chaveDaConta(usuario);
+        if(!key) throw new Error('Desbloqueie o cofre.');
+        const [pacotes,atual,rawPacotes]=await Promise.all([
+            lerPacotes(usuario,key),capturarFilas(usuario,key),lerLoja(S.pacotes,'get',usuario)]);
+        const alvo=pacotes.find(v=>v.id===id);
+        if(!alvo) throw new Error('Versão não encontrada.');
+        // Sempre criamos uma versão de segurança das pendências anteriores.
+        const backup=criacaoPacote('Backup antes de restaurar '+alvo.nome,atual.payload);
+        const novoPacotes={usuario_id:usuario,
+            versoes:[backup,...pacotes].slice(0,limiteHistorico(usuario))};
+        const pacotesCifrados=await cifrar(S.pacotes,novoPacotes,key);
+        const cifrados={};
+        for(const loja of lojasDeEdicao){
+            cifrados[loja]=[];
+            for(const reg of alvo.filas[loja]||[]){
+                if(reg.usuario_id!==usuario || (loja===S.frequencia&&!Number.isInteger(reg.id)) ||
+                    (loja!==S.frequencia&&!reg.chave)) throw new Error('Pacote inválido para esta conta.');
+                cifrados[loja].push(await cifrar(loja,reg,key));
+            }
+        }
+        // A comparação do conteúdo lido e a substituição acontecem na mesma
+        // transação, sem apagar registros pertencentes a outras contas.
+        await transacao([...lojasDeEdicao,S.pacotes],'readwrite',tx=>{
+            const carregados={};
+            let pronto=0;
+            const conferir=()=>{
+                if(++pronto!==lojasDeEdicao.length+1)return;
+                if(JSON.stringify(carregados[S.pacotes])!==JSON.stringify(rawPacotes)){
+                    tx.abort();return;
+                }
+                for(let i=0;i<lojasDeEdicao.length;i++){
+                    const loja=lojasDeEdicao[i];
+                    if(JSON.stringify(carregados[loja])!==JSON.stringify(atual.raws[i])){
+                        tx.abort();return;
+                    }
+                }
+                for(const loja of lojasDeEdicao){
+                    const store=tx.objectStore(loja);
+                    for(const registro of carregados[loja])if(registro.usuario_id===usuario){
+                        store.delete(chaveLogica(loja,registro));
+                    }
+                    for(const registro of cifrados[loja])store.put(registro);
+                }
+                tx.objectStore(S.pacotes).put(pacotesCifrados);
+            };
+            for(const loja of lojasDeEdicao){
+                const req=tx.objectStore(loja).getAll();
+                req.onsuccess=()=>{carregados[loja]=req.result;conferir();};
+            }
+            const req=tx.objectStore(S.pacotes).get(usuario);
+            req.onsuccess=()=>{carregados[S.pacotes]=req.result;conferir();};
+        });
+        document.dispatchEvent(new Event('classeapp:edicoes-atualizadas'));
+        document.dispatchEvent(new Event('classeapp:pacotes-atualizados'));
+        return backup;
+    }
+    window.ClassePacotes={criar:criarPacoteAlteracoes,listar:listarPacotesAlteracoes,
+        comparar:compararPacoteAlteracoes,restaurar:restaurarPacoteAlteracoes,
+        limite:limiteHistorico};
+
     // Fila de frequência. O id local não é conteúdo acadêmico; payload é cifrado.
     salvarOffline=async function(item) {
         if(!item?.usuario_id) throw new Error('Identificação da conta necessária para salvar frequência.');
         const novo={...item,criado_em:new Date().toISOString()};
         const key=await chaveDaConta(item.usuario_id);
-        if(!key) throw new Error('Ative a senha local no Perfil antes de salvar frequências offline.');
+        if(!key) throw new Error('Ative o cofre nas Configurações antes de salvar frequências offline.');
         const envelope=await cifrar(S.frequencia,novo,key);
         return escrever(S.frequencia,'add',envelope);
     };

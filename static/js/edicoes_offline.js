@@ -364,6 +364,9 @@
         }
     }
 
+    document.addEventListener('classeapp:pacotes-restaurado', () => {
+        if (area.children.length) desenhar().catch(() => mensagem('Atualize a lista de edições.'));
+    });
     listar.addEventListener('click', async () => {
         if (ocupado) return;
         bloqueio(true);

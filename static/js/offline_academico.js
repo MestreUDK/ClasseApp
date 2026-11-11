@@ -35,7 +35,7 @@
     async function desenharNotas(snapshot, conta, fila) {
         const copias = Array.isArray(snapshot.avaliacoes) ? snapshot.avaliacoes : null;
         if (!copias || !Array.isArray(snapshot.notas) || !Array.isArray(snapshot.vinculos)) {
-            area.append(elemento('p', 'Esta cópia não contém os vínculos, avaliações e notas necessários. Conecte-se e use Meu Perfil → Baixar da nuvem.', 'warning'));
+            area.append(elemento('p', 'Esta cópia não contém os vínculos, avaliações e notas necessários. Conecte-se e use Sincronização → Baixar da nuvem.', 'warning'));
             return;
         }
         const criacoes = fila.filter(item => item.tipo === 'avaliacao_criar');
@@ -227,7 +227,7 @@
             const criacaoPendente=criacoes.find(item=>String(item.id)===String(av.id));
             if(criacaoPendente){
                 lista.append(elemento('p',criacaoPendente.estado==='conflito'?
-                    'A criação desta avaliação apresenta conflito. Resolva no Perfil antes de enviar suas notas.':
+                    'A criação desta avaliação apresenta conflito. Resolva na Central de Sincronização antes de enviar suas notas.':
                     'Avaliação ainda não enviada. Suas notas serão enviadas somente depois dela.','pending'));
             }
             const idsVinculados=snapshot.vinculos.filter(v=>String(v.turma_id)===String(av.turma_id))
@@ -246,7 +246,7 @@
                 card.append(elemento('h3',nomeAluno(snapshot,nota.aluno_id)));
                 if (pendencia?.tipo === 'nota_excluir') {
                     card.append(elemento('p', pendencia.estado === 'conflito' ?
-                        'Exclusão com conflito: resolver no Perfil.' :
+                        'Exclusão com conflito: resolver na Central de Sincronização.' :
                         'Exclusão da nota pendente de sincronização.', 'pending'));
                     const desfazer = elemento('button', 'Desfazer exclusão da nota');
                     desfazer.type = 'button';
@@ -264,7 +264,7 @@
                 }
                 card.append(elemento('p',`Nota: ${valor==null?'Não lançada':valor} / ${av.nota_maxima} · Revisão base: ${nota.revision??0}`,'meta'));
                 if(pendencia)card.append(elemento('p',pendencia.estado==='conflito'?
-                    'Conflito: resolver online no Perfil.':'Alteração ainda não enviada','pending'));
+                    'Conflito: resolver online na Central de Sincronização.':'Alteração ainda não enviada','pending'));
                 const editar=elemento('button',valor==null?'Lançar nota no dispositivo':'Editar nota no dispositivo');
                 editar.type='button';
                 editar.addEventListener('click',()=>{
@@ -353,11 +353,11 @@
     // salvar duas vezes o mesmo rascunho não gera dois registros na nuvem.
     async function desenharDiario(snapshot, conta, fila) {
         if (!Array.isArray(snapshot.diario)) {
-            area.append(elemento('p', 'Esta cópia não contém o diário. Conecte-se e use Meu Perfil → Baixar da nuvem.', 'warning'));
+            area.append(elemento('p', 'Esta cópia não contém o diário. Conecte-se e use Sincronização → Baixar da nuvem.', 'warning'));
             return;
         }
         area.append(elemento('h3', 'Diário de Bordo — sem conexão'));
-        area.append(elemento('p', 'Crie, edite ou marque anotações para exclusão. As operações só serão realizadas na nuvem após confirmar o envio no Perfil.', 'muted'));
+        area.append(elemento('p', 'Crie, edite ou marque anotações para exclusão. As operações só serão realizadas na nuvem após confirmar o envio na Central de Sincronização.', 'muted'));
 
         const criacao = elemento('div', '', 'academico-selecao');
         const novo = elemento('button', 'Nova anotação offline'); novo.type = 'button';
@@ -444,7 +444,7 @@
             card.append(elemento('p', `${atual.data_referencia || 'Sem data'} · ${atual.turma_id ? nomeTurma(snapshot, atual.turma_id) : 'Sem turma'}${registro._criado ? ' · Nova anotação' : ''}`, 'meta'));
             card.append(elemento('p', (atual.conteudo || '').slice(0, 180)));
             if (pendencia) card.append(elemento('p', pendencia.estado === 'conflito' ?
-                'Conflito: resolver online no Perfil.' : 'Operação ainda não enviada', 'pending'));
+                'Conflito: resolver online na Central de Sincronização.' : 'Operação ainda não enviada', 'pending'));
             const editar = elemento('button', 'Editar no dispositivo'); editar.type = 'button';
             editar.addEventListener('click', () => {
                 card.querySelector('.editor')?.remove();

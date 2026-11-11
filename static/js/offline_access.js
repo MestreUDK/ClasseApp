@@ -2,7 +2,7 @@
  * o professor autoriza, seu material derivado é conservado TEMPORARIAMENTE na
  * sessionStorage desta aba (nunca no localStorage/IndexedDB). É um equilíbrio
  * explícito de conveniência: scripts da mesma origem podem ler a sessão.
- * A senha original e tokens do Supabase nunca são armazenados aqui.
+ * A senha de login não é armazenada aqui nem recuperável do Supabase.
  */
 (() => {
     'use strict';
@@ -156,13 +156,13 @@
     }
     async function configurar(usuarioId, identificacao, senha, senhaAntiga = '') {
         exigirCriptografia();
-        if (!valido(usuarioId) || typeof senha !== 'string' || senha.length < 10 ||
-            senha.length > 128) throw new Error('Use uma senha local entre 10 e 128 caracteres.');
+        if (!valido(usuarioId) || typeof senha !== 'string' || senha.length < 8 ||
+            senha.length > 256) throw new Error('Use sua senha de login (entre 8 e 256 caracteres).');
         const anterior = await obterAcessoOffline(usuarioId);
         let chaveAntiga = null;
         if (anterior) {
-            const anteriorValidado = await chaveValidada(usuarioId,senhaAntiga,anterior);
-            if (!anteriorValidado) throw new Error('Para trocar a senha local, informe a senha anterior correta.');
+            const anteriorValidado = await chaveValidada(usuarioId,senhaAntiga || senha,anterior);
+            if (!anteriorValidado) throw new Error('Não foi possível abrir os dados com essa senha. Informe no campo anterior a senha que protegia o cofre antes da mudança.');
             chaveAntiga = anteriorValidado.chave;
             await window.ClasseVault.migrarLegado(usuarioId,chaveAntiga);
             chaves.set(usuarioId, {chave:chaveAntiga, criado_em:Date.now(), expira_em:Infinity});
@@ -178,7 +178,7 @@
         const perfil = {
             usuario_id:usuarioId, identificacao:String(identificacao || 'Conta offline').slice(0,150),
             sal:base64(sal),iv:base64(iv),verificador:base64(new Uint8Array(check)),
-            iteracoes:ITERACOES,criado_em:new Date().toISOString()
+            iteracoes:ITERACOES,modo_senha:'login',criado_em:new Date().toISOString()
         };
         // Cifra todas as cópias, versões e operações em uma única transação.
         // Só grava o novo verificador se toda a migração tiver sucesso.
@@ -189,7 +189,7 @@
     }
     async function verificar(usuarioId, senha) {
         exigirCriptografia();
-        if (!valido(usuarioId) || typeof senha !== 'string' || senha.length > 128) return false;
+        if (!valido(usuarioId) || typeof senha !== 'string' || senha.length > 256) return false;
         const perfil = await obterAcessoOffline(usuarioId);
         const material = await chaveValidada(usuarioId,senha,perfil);
         if (!material) return false;
@@ -209,12 +209,12 @@
             if (restaurada) return restaurada;
             // Não interromper páginas online com prompts ao carregar os painéis.
             // A chave é necessária para ler o cofre: o usuário pode desbloquear
-            // explicitamente no Perfil. Já no modo offline, o portão pede a senha.
-            // No Perfil, só o botão explícito pode pedir a senha. Evita que
+            // explicitamente nas Configurações. Já no modo offline, o portão pede a senha.
+            // Nas Configurações, só o botão explícito pode pedir a senha. Evita que
             // leituras simultâneas de cópias/filas abram um segundo prompt.
             if (document.getElementById('offline-acesso') || navigator.onLine) {
                 throw new Error(
-                    'Cofre local bloqueado. Use “Desbloquear dados locais” no Perfil.');
+                    'Cofre local bloqueado. Use “Desbloquear dados locais” nas Configurações.');
             }
             // Use o formulário existente, com campo protegido e botão de olho.
             // Prompts nativos não ocultam a senha nem oferecem esse controle.
@@ -256,10 +256,24 @@
         if (!document.hidden) for (const usuarioId of chaves.keys()) obterChave(usuarioId);
     });
 
+    async function validarSenhaOnline(senha, csrfToken) {
+        if (!navigator.onLine) throw new Error('Conecte-se para confirmar sua senha de login antes de configurar o cofre.');
+        const response = await fetch('/api/offline/validar-senha', {
+            method:'POST', credentials:'same-origin', cache:'no-store',
+            headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},
+            body:JSON.stringify({senha})
+        });
+        if (!response.ok) {
+            const dados = await response.json().catch(()=>({}));
+            throw new Error(dados.error || `Falha ao verificar a senha (HTTP ${response.status}).`);
+        }
+    }
+
     function iniciarPerfil() {
         const painel = document.getElementById('offline-acesso');
         if (!painel) return;
         const usuario = painel.dataset.userId;
+        const csrfToken = painel.dataset.csrfToken || '';
         const email = painel.dataset.userEmail;
         const form = document.getElementById('offline-acesso-form');
         const senha = document.getElementById('offline-acesso-senha');
@@ -295,7 +309,7 @@
         }
         botaoDesbloquear?.addEventListener('click', async () => {
             // Uma única solicitação explícita por clique; leituras de outras
-            // seções não devem abrir janelas de senha no Perfil.
+            // seções não devem abrir janelas de senha nas Configurações.
             if (desbloqueioEmAndamento) return;
             desbloqueioEmAndamento = true;
             estadoDaSessao();
@@ -306,13 +320,13 @@
                 }
                 const tentativa = senhaDesbloqueio?.value || '';
                 if (!tentativa) {
-                    estado.textContent = 'Digite sua senha local no campo acima e clique em Desbloquear dados locais.';
+                    estado.textContent = 'Digite sua senha da conta no campo e clique em Desbloquear dados locais.';
                     senhaDesbloqueio?.focus();
                     return;
                 }
                 // Limpa o campo imediatamente; não armazenar a senha digitada.
                 senhaDesbloqueio.value = '';
-                if (!await verificar(usuario, tentativa)) throw new Error('Senha local incorreta.');
+                if (!await verificar(usuario, tentativa)) throw new Error('Senha incorreta para este cofre. Se alterou sua senha da conta, atualize a proteção nas Configurações.');
                 estado.textContent = 'Cofre desbloqueado. Você pode utilizar os dados locais até vencer o prazo escolhido.';
                 document.dispatchEvent(new Event('classeapp:cofre:liberado'));
                 // Atualiza os painéis que iniciaram bloqueados sem abrir prompts.
@@ -332,15 +346,15 @@
                 const fechado = Boolean(perfil && !obterChave(usuario));
                 const copia = fechado ? null : await obterSnapshot(usuario);
                 botao.disabled = false;
-                botao.textContent = perfil ? 'Trocar senha e recriptografar' : 'Ativar proteção e criptografar';
+                botao.textContent = perfil ? 'Atualizar proteção com a senha de login' : 'Ativar proteção com a senha de login';
                 if (atualBox) { atualBox.hidden = !perfil; atualBox.style.setProperty('display',perfil?'grid':'none','important'); }
-                if (atualSenha) atualSenha.required = Boolean(perfil);
+                if (atualSenha) atualSenha.required = false;
                 estadoDaSessao();
-                estado.textContent = (perfil ? 'Acesso local já configurado para esta conta. ' :
-                    'Acesso local ainda não configurado. ') +
+                estado.textContent = (perfil ? 'Proteção offline já configurada para esta conta. ' :
+                    'Proteção offline ainda não configurada. ') +
                     (fechado ? 'Os dados locais estão criptografados. Clique em “Desbloquear dados locais” somente quando precisar usá-los.' :
                         copia ? 'Sua cópia está pronta para uso neste dispositivo.' :
-                            'Após ativar a proteção, baixe seus dados na seção abaixo.');
+                            'Após ativar a proteção, baixe seus dados na Central de Sincronização.');
             } catch (_) {
                 estado.textContent = 'Não foi possível consultar o acesso local neste navegador.';
             }
@@ -349,22 +363,23 @@
             event.preventDefault();
             if (botao.disabled) return;
             if (senha.value !== confirmar.value) {
-                estado.textContent = 'As senhas locais não coincidem.';
+                estado.textContent = 'As duas digitações da senha de login não coincidem.';
                 return;
             }
             botao.disabled = true;
-            estado.textContent = 'Configurando acesso local neste dispositivo...';
+            estado.textContent = 'Conferindo senha de login e recriptografando dados locais...';
             try {
+                await validarSenhaOnline(senha.value, csrfToken);
                 await configurar(usuario, email, senha.value, atualSenha?.value || '');
                 senha.value = '';
                 confirmar.value = '';
                 if (atualSenha) atualSenha.value = '';
                 estado.textContent = 'Dados criptografados. O cofre já está desbloqueado temporariamente nesta aba.';
                 estadoDaSessao();
-                botao.textContent = 'Trocar senha e recriptografar';
+                botao.textContent = 'Atualizar proteção com a senha de login';
             } catch (error) {
-                estado.textContent = error?.message || 'Falha ao configurar senha local.';
-            } finally { botao.disabled = false; }
+                estado.textContent = error?.message || 'Falha ao configurar proteção offline.';
+            } finally { senha.value = ''; confirmar.value = ''; botao.disabled = false; }
         });
         document.addEventListener('classeapp:snapshot:atualizado', atualizar);
         atualizar();
@@ -382,7 +397,7 @@
         async function abrirConta(usuarioId) {
             const copia = await obterSnapshot(usuarioId);
             if (!copia) {
-                status.textContent = 'A cópia desta conta não existe. Baixe os dados pelo Perfil quando estiver online.';
+                status.textContent = 'A cópia desta conta não existe. Baixe os dados pela Central de Sincronização quando estiver online.';
                 return false;
             }
             desbloqueado = usuarioId;
@@ -403,9 +418,9 @@
             }
             if (!contas.length) {
                 botao.disabled = true;
-                status.textContent = 'Nenhuma conta configurada. Conecte-se, faça login, baixe uma cópia e cadastre uma senha local no Perfil.';
+                status.textContent = 'Nenhuma conta configurada. Conecte-se e ative a proteção usando sua senha de login em Configurações.';
             } else {
-                status.textContent = 'A senha local não autentica no Supabase nem envia alterações à nuvem.';
+                status.textContent = 'A senha da conta desbloqueia apenas o cofre neste dispositivo quando está offline; não inicia sessão no Supabase.';
                 const sessao = lerSessao();
                 const correspondente = contas.some(conta => conta.usuario_id === sessao?.usuario_id);
                 if (correspondente) {
@@ -430,14 +445,14 @@
             const tentativa = senha.value;
             senha.value = '';
             botao.disabled = true;
-            status.textContent = 'Verificando a senha local...';
+            status.textContent = 'Desbloqueando dados criptografados...';
             try {
                 const liberado = await verificar(usuarioId, tentativa);
                 if (!liberado) {
                     falhas += 1;
                     if (falhas >= 5) bloqueadoAte = Date.now() + 30000;
                     status.textContent = falhas >= 5 ?
-                        'Muitas tentativas incorretas. Aguarde 30 segundos.' : 'Senha local incorreta.';
+                        'Muitas tentativas incorretas. Aguarde 30 segundos.' : 'Senha incorreta para este cofre. Se alterou sua senha da conta, atualize a proteção nas Configurações.';
                     return;
                 }
                 falhas = 0;

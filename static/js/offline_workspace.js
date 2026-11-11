@@ -118,7 +118,7 @@
                     estado: previous?.estado === 'conflito' ? 'conflito' : 'pendente'
                 });
                 drafts = await listarEdicoesOffline(account);
-                info.textContent = 'Edição salva somente neste dispositivo. Para enviar, reconecte-se e abra Meu Perfil.';
+                info.textContent = 'Edição salva somente neste dispositivo. Para enviar, reconecte-se e abra Central de Sincronização.';
                 draw();
             } catch (error) {
                 console.error(error);
@@ -225,7 +225,7 @@
                 const d=item.dados || {};
                 const element=text('article','','item');
                 element.append(text('h3',`Chamada ${d.data}: ${d.presente?'Presença':'Falta'}`));
-                element.append(text('p',`Aluno ${d.aluno_id} · ${item.conflito?'Conflito a resolver':'Pendente de envio no Perfil'}`,'pending'));
+                element.append(text('p',`Aluno ${d.aluno_id} · ${item.conflito?'Conflito a resolver':'Pendente de envio na Central de Sincronização'}`,'pending'));
                 list.append(element);
             }
             for (const item of academicDrafts) {
@@ -240,7 +240,7 @@
                 element.append(text('h3', descricao));
                 element.append(text('p', `Revisão base ${item.expected_revision}`, 'meta'));
                 element.append(text('p', item.estado === 'conflito' ?
-                    'Conflito: resolver no Perfil quando houver conexão' : 'Aguardando envio pelo Perfil', 'pending'));
+                    'Conflito: resolver na Central de Sincronização quando houver conexão' : 'Aguardando envio pela Central de Sincronização', 'pending'));
                 list.append(element);
             }
         } else {
@@ -272,7 +272,7 @@
         academicDrafts = novasPendencias;
         frequenciaDrafts = chamadas.filter(x => x.usuario_id === contaConsultada);
         if (!snapshot || !Array.isArray(snapshot.turmas) || !Array.isArray(snapshot.alunos)) {
-            showError('Não existe uma cópia local desta conta. Conecte-se, faça login e use Meu Perfil → Baixar da nuvem antes de utilizar o espaço offline.');
+            showError('Não existe uma cópia local desta conta. Conecte-se, faça login e use Sincronização → Baixar da nuvem antes de utilizar o espaço offline.');
             return;
         }
         root.hidden = false;
@@ -284,7 +284,7 @@
     }
     async function abrirContaOffline(usuarioId) {
         if (!window.ClasseOfflineAccess?.estaDesbloqueado(usuarioId)) {
-            showError('Desbloqueie sua conta com a senha local antes de abrir os dados.');
+            showError('Desbloqueie sua conta com a senha do ClasseApp antes de abrir os dados.');
             return;
         }
         account = usuarioId;

@@ -150,6 +150,7 @@
         }
     }
 
+    document.addEventListener('classeapp:pacotes-restaurado', listar);
     atualizar.addEventListener('click', listar);
     enviar.addEventListener('click', sincronizar);
     window.addEventListener('online', listar);

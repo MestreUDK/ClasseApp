@@ -1,13 +1,20 @@
 // Persistência local das frequências ainda não enviadas.
 // Não armazene credenciais ou tokens de autenticação neste banco.
 const CLASSE_DB_NAME = 'ClasseAppDB';
-const CLASSE_DB_VERSION = 6;
+const CLASSE_DB_VERSION = 7;
 const CLASSE_QUEUE = 'frequencia_pendente';
 const CLASSE_SNAPSHOTS = 'snapshots_consulta';
 const CLASSE_HISTORICO = 'snapshots_historico';
 const CLASSE_EDICOES = 'edicoes_offline';
 const CLASSE_ACADEMICO_EDICOES = 'edicoes_academicas';
 const CLASSE_ACESSOS_OFFLINE = 'acessos_offline';
+const CLASSE_PACOTES = 'pacotes_alteracoes';
+function limiteHistorico(usuarioId) {
+    try {
+        const n = Number(localStorage.getItem('classeapp:pacotes:limite:' + usuarioId));
+        return [3, 5, 7, 10].includes(n) ? n : 3;
+    } catch (_) { return 3; }
+}
 
 function openDB() {
     return new Promise((resolve, reject) => {
@@ -31,6 +38,9 @@ function openDB() {
             }
             if (!db.objectStoreNames.contains(CLASSE_ACESSOS_OFFLINE)) {
                 db.createObjectStore(CLASSE_ACESSOS_OFFLINE, {keyPath: 'usuario_id'});
+            }
+            if (!db.objectStoreNames.contains(CLASSE_PACOTES)) {
+                db.createObjectStore(CLASSE_PACOTES, {keyPath: 'usuario_id'});
             }
         };
         request.onsuccess = () => resolve(request.result);
@@ -146,7 +156,7 @@ function salvarSnapshotVersionado(snapshot) {
             if (anterior === undefined || versoes === undefined) return;
             const lista = Array.isArray(versoes?.versoes) ? versoes.versoes : [];
             if (anterior) lista.unshift(anterior);
-            historico.put({usuario_id: snapshot.usuario_id, versoes: lista.slice(0, 3)});
+            historico.put({usuario_id: snapshot.usuario_id, versoes: lista.slice(0, limiteHistorico(snapshot.usuario_id))});
             atual.put({...snapshot, formato_versao: 1});
         };
         reqAtual.onsuccess = () => { anterior = reqAtual.result || null; persistir(); };
@@ -182,7 +192,7 @@ function restaurarVersaoSnapshot(usuarioId, indice) {
             const selecionada = lista[indice];
             const restantes = lista.filter((_, i) => i !== indice);
             if (existente) restantes.unshift(existente);
-            historico.put({usuario_id: usuarioId, versoes: restantes.slice(0, 3)});
+            historico.put({usuario_id: usuarioId, versoes: restantes.slice(0, limiteHistorico(usuarioId))});
             atual.put({...selecionada, usuario_id: usuarioId});
         };
         reqAtual.onsuccess = () => { existente = reqAtual.result || null; restaurar(); };

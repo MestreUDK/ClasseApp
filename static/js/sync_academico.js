@@ -406,5 +406,8 @@
             'Para visualizar os dados confirmados, baixe uma cópia atualizada da nuvem.');
         bloquear(false);
     });
+    document.addEventListener('classeapp:pacotes-restaurado', () => {
+        desenhar().catch(() => mostrar('Atualize as pendências acadêmicas.'));
+    });
     desenhar().catch(()=>mostrar('Não foi possível ler as pendências de avaliações, notas e diário.'));
 })();
