@@ -62,14 +62,19 @@ def resumo_notificacoes():
         return jsonify({'error': 'Não foi possível consultar os aniversários.'}), 503
 
 
+def _csrf_perfil():
+    token = session.get('perfil_csrf_token')
+    if not token:
+        token = token_urlsafe(32)
+        session['perfil_csrf_token'] = token
+    return token
+
+
 @perfil_bp.route('/perfil', methods=['GET', 'POST'])
 @login_required
 def perfil():
     """Mostra o Perfil e atualiza a senha somente após reautenticação."""
-    csrf = session.get('perfil_csrf_token')
-    if not csrf:
-        csrf = token_urlsafe(32)
-        session['perfil_csrf_token'] = csrf
+    csrf = _csrf_perfil()
 
     if request.method == 'POST':
         token_recebido = request.form.get('csrf_token', '')
@@ -107,3 +112,50 @@ def perfil():
     return render_template('perfil.html', email=current_user.email,
                            notification_user_id=str(current_user.id),
                            perfil_csrf_token=csrf)
+
+
+@perfil_bp.route('/notificacoes')
+@login_required
+def pagina_notificacoes():
+    return render_template('notificacoes.html', notification_user_id=str(current_user.id))
+
+
+@perfil_bp.route('/configuracoes')
+@login_required
+def pagina_configuracoes():
+    return render_template('configuracoes.html', email=current_user.email,
+                           notification_user_id=str(current_user.id),
+                           perfil_csrf_token=_csrf_perfil())
+
+
+@perfil_bp.route('/sincronizacao')
+@login_required
+def pagina_sincronizacao():
+    return render_template('sincronizacao.html', notification_user_id=str(current_user.id))
+
+
+@perfil_bp.route('/api/offline/validar-senha', methods=['POST'])
+@login_required
+def validar_senha_cofre():
+    """Confirma a senha online antes de derivar a chave local no navegador.
+
+    Não emite tokens, não persiste senhas e não reutiliza a sessão Auth global.
+    O verificador offline só será criado após esta confirmação explícita.
+    """
+    if not compare_digest(request.headers.get('X-CSRF-Token') or '', _csrf_perfil()):
+        return jsonify({'error': 'Verificação de formulário inválida. Atualize Configurações.'}), 403
+    dados = request.get_json(silent=True) or {}
+    if not isinstance(dados, dict):
+        return jsonify({'error': 'Formato de solicitação inválido.'}), 400
+    senha = dados.get('senha', '')
+    if not isinstance(senha, str) or not 8 <= len(senha) <= 256:
+        return jsonify({'error': 'Informe a senha da sua conta (8 a 256 caracteres).'}), 400
+    try:
+        resposta = novo_cliente_supabase().auth.sign_in_with_password({
+            'email': current_user.email, 'password': senha,
+        })
+        if not resposta.user or str(resposta.user.id) != str(current_user.id):
+            return jsonify({'error': 'Senha de login incorreta.'}), 401
+    except Exception:
+        return jsonify({'error': 'Senha incorreta ou autenticação indisponível. Tente novamente.'}), 401
+    return jsonify({'valida': True})
