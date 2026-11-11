@@ -69,8 +69,10 @@
             <p id="offline-acesso-estado" role="status">Verificando acesso local...</p>
             <form id="offline-acesso-form" autocomplete="off"
                   style="background:transparent;border:0;padding:0;box-shadow:none;display:grid;gap:10px;max-width:440px">
-                <label id="offline-acesso-atual-box" hidden style="display:none!important">Senha anterior do cofre (preencha se era diferente da senha atual)
-                    <input id="offline-acesso-atual" type="password" minlength="10" maxlength="128" autocomplete="off">
+                <label id="offline-acesso-atual-box" hidden style="display:none!important">
+                    <span id="offline-acesso-atual-titulo">Senha local antiga (somente para migrar o cofre)</span>
+                    <input id="offline-acesso-atual" type="password" maxlength="256" autocomplete="off">
+                    <small id="offline-acesso-atual-ajuda">Informe a senha usada no cofre antigo apenas durante a migração.</small>
                 </label>
                 <label>Senha atual de login do ClasseApp (8 a 256 caracteres)
                     <input id="offline-acesso-senha" type="password" minlength="8" maxlength="256"
@@ -81,6 +83,10 @@
                            autocomplete="off" required>
                 </label>
                 <button type="submit" id="offline-acesso-salvar" class="notificacoes-atualizar">Ativar acesso offline</button>
+                <button type="button" id="offline-acesso-troca-senha" class="appearance-reset"
+                        aria-controls="offline-acesso-atual-box" aria-expanded="false" hidden style="display:none!important">
+                    Alterei minha senha de login
+                </button>
             </form>
             <div style="margin:14px 0;display:grid;gap:10px;max-width:440px">
                 <label for="offline-acesso-prazo">Manter o Espaço offline desbloqueado nesta aba por:</label>
